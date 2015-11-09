@@ -1,5 +1,10 @@
 #include <cpp_wrapper.hpp>
+#include <sstream>
 
+extern "C" double half_c(const double input)
+{
+  return input*0.5;
+}
 
 namespace functions
 {
@@ -15,10 +20,8 @@ T half_template (const T x)
 	return x / static_cast<T>(2);
 }
 
-void init_functions_module()
+void init_half_module(cpp_wrapper::Module& mod)
 {
-	cpp_wrapper::module& mod = cpp_wrapper::register_module("functions");
-
 	// register a standard C++ function
 	mod.def("half_d", &half_function);
 
@@ -27,15 +30,36 @@ void init_functions_module()
 	mod.def("half_u", &half_template<unsigned int>);
 
 	// Register a lambda
-	mod.def("third_lambda", std::function<double(double)>([](const double a) {return a/3.;}));
+  mod.def("half_lambda", std::function<double(double)>([](const double a) {return a*0.5;}));
 }
 
-}
-
-extern "C"
+// Test for string conversion. Pointer to this function is passed to Julia as-is.
+std::string concatenate_numbers(int i, double d)
 {
-  void init()
-  {
-		functions::init_functions_module();
-  }
+  std::stringstream stream;
+  stream << i << d;
+  return stream.str();
 }
+
+std::string concatenate_strings(const int n, std::string s, const std::string& s2)
+{
+  std::string result;
+  for(int i = 0; i != n; ++i)
+  {
+    result += s;
+  }
+  return result;
+}
+
+void init_test_module(cpp_wrapper::Module& mod)
+{
+  mod.def("concatenate_numbers", &concatenate_numbers);
+  mod.def("concatenate_strings", &concatenate_strings);
+}
+
+}
+
+JULIA_CPP_MODULE_BEGIN(registry)
+  functions::init_half_module(registry.create_module("CppHalfFunctions"));
+  functions::init_test_module(registry.create_module("CppTestFunctions"));
+JULIA_CPP_MODULE_END

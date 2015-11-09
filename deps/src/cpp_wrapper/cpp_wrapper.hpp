@@ -1,18 +1,24 @@
+#ifndef CPP_WRAPPER_HPP
+#define CPP_WRAPPER_HPP
+
 #include <cassert>
 #include <functional>
 #include <map>
 #include <memory>
 #include <string>
+#include <typeinfo>
+#include <typeindex>
+#include <vector>
 
-extern "C"
-{
+#include <iostream>
 
-void* get_function(const char* module_name, const char* function_name);
-void* get_data(const char* module_name, const char* function_name);
-
-}
+#include "type_conversion.hpp"
 
 namespace cpp_wrapper
+{
+
+/// Some helper functions
+namespace detail
 {
 
 /// Call a C++ std::function, passed as a void pointer since it comes from Julia
@@ -21,76 +27,233 @@ R call_functor(const void* functor, Args... args)
 {
 	auto std_func = reinterpret_cast<const std::function<R(Args...)>*>(functor);
 	assert(std_func != nullptr);
-	return (*std_func)(args...);
+	return auto_convert_to_julia<R>((*std_func)(args...));
 }
 
-/// Store all exposed C++ functions associated with a module
-class module
+/// Make a vector with the types in the variadic template parameter pack
+template<typename... Args>
+std::vector<std::type_index> typeid_vector()
 {
+	return {typeid(Args)...};
+}
+
+/// Helpers to find if a type needs conversion to julia
+template<typename T> inline bool needs_convert() { return true; }
+template<> inline bool needs_convert<double>() {return false;}
+template<> inline bool needs_convert<int>() {return false;}
+template<> inline bool needs_convert<unsigned int>() {return false;}
+template<> inline bool needs_convert<void>() {return false;}
+template<> inline bool needs_convert<void*>() {return false;}
+
+} // end namespace detail
+
+/// Abstract base class for storing any function
+class FunctionWrapperBase
+{
+public:
+	/// Function pointer as void*, since that's what Julia expects
+	virtual void* pointer() = 0;
+
+	/// The thunk (i.e. std::function) to pass as first argument to the function pointed to by function_pointer
+	virtual void* thunk() = 0;
+
+	/// Types of the arguments
+	virtual std::vector<std::type_index> argument_types() const = 0;
+
+	/// Return type
+	virtual std::type_index return_type() const = 0;
+
+	virtual ~FunctionWrapperBase() {}
+
+	inline void set_name(const std::string& name)
+	{
+		m_name = name;
+	}
+
+	inline const std::string& name() const
+	{
+		return m_name;
+	}
+
+	/// True if the return type needs conversion
+	inline bool needs_convert() const
+	{
+		return m_needs_convert;
+	}
+
+	inline void set_needs_convert(const bool b)
+	{
+		m_needs_convert = b;
+	}
+
 private:
+	std::string m_name;
+	bool m_needs_convert = true;
+};
 
-	/// Abstract base class for storing any function
-	class function_wrapper_base
+/// Implementation of function storage, case of std::function
+template<typename R, typename... Args>
+class FunctionWrapper : public FunctionWrapperBase
+{
+public:
+	typedef std::function<R(Args...)> functor_t;
+
+	FunctionWrapper(const functor_t& function) : m_function(function)
 	{
-	public:
-		/// Function pointer as void*, since that's what Julia expects
-		virtual void* function_pointer() = 0;
+	}
 
-		/// The data (i.e. std::function) to pass as first argument to the function pointed to by function_pointer
-		virtual void* data_pointer() = 0;
-		virtual ~function_wrapper_base() {}
-	};
-
-	/// Implementation of function storage
-	template<typename R, typename... Args>
-	struct function_wrapper : public function_wrapper_base
+	virtual void* pointer()
 	{
-		typedef std::function<R(Args...)> functor_t;
+		return reinterpret_cast<void*>(&detail::call_functor<R, Args...>);
+	}
 
-		function_wrapper(const functor_t& function) : m_function(function)
-		{
-		}
+	virtual void* thunk()
+	{
+		return reinterpret_cast<void*>(&m_function);
+	}
 
-		virtual void* function_pointer()
-		{
-			return reinterpret_cast<void*>(&call_functor<R, Args...>);
-		}
+	virtual std::vector<std::type_index> argument_types() const
+	{
+		return detail::typeid_vector<Args...>();
+	}
 
-		virtual void* data_pointer()
-		{
-			return reinterpret_cast<void*>(&m_function);
-		}
+	virtual std::type_index return_type() const
+	{
+		return typeid(R);
+	}
 
-		functor_t m_function;
-	};
+private:
+	functor_t m_function;
+};
 
+/// Implementation of function storage, case of a function pointer
+template<typename R, typename... Args>
+class FunctionPtrWrapper : public FunctionWrapperBase
+{
+public:
+	typedef std::function<R(Args...)> functor_t;
+
+	FunctionPtrWrapper(R(*f)(Args...)) : m_function(f)
+	{
+	}
+
+	virtual void* pointer()
+	{
+		return reinterpret_cast<void*>(m_function);
+	}
+
+	virtual void* thunk()
+	{
+		return nullptr;
+	}
+
+	virtual std::vector<std::type_index> argument_types() const
+	{
+		return detail::typeid_vector<Args...>();
+	}
+
+	virtual std::type_index return_type() const
+	{
+		return typeid(R);
+	}
+
+private:
+	R(*m_function)(Args...);
+};
+
+/// Store all exposed C++ functions associated with a module
+class Module
+{
 public:
 
-	module(const std::string& name);
+	Module(const std::string& name);
 
 	/// Define a new function
 	template<typename R, typename... Args>
 	void def(const std::string& name,  std::function<R(Args...)> f)
 	{
-		m_functions[name].reset(new function_wrapper<R, Args...>(f));
+		auto* new_wrapper = new FunctionWrapper<R, Args...>(f);
+		new_wrapper->set_name(name);
+		new_wrapper->set_needs_convert(detail::needs_convert<R>());
+		m_functions[name].reset(new_wrapper);
 	}
 
 	/// Define a new function. Overload for pointers
 	template<typename R, typename... Args>
 	void def(const std::string& name,  R(*f)(Args...))
 	{
-		m_functions[name].reset(new function_wrapper<R, Args...>(std::function<R(Args...)>(f)));
+		bool need_convert = detail::needs_convert<R>();
+		for(const bool b : {detail::needs_convert<Args>()...})
+		{
+			if(need_convert)
+				break;
+			need_convert = b;
+		}
+
+		// Conversion is automatic when using the std::function calling method, so if we need conversion we use that
+		if(need_convert)
+		{
+			def(name, std::function<R(Args...)>(f));
+			return;
+		}
+
+		// No conversion needed -> call can be through a naked function pointer
+		auto* new_wrapper = new FunctionPtrWrapper<R, Args...>(f);
+		new_wrapper->set_name(name);
+		new_wrapper->set_needs_convert(false);
+		m_functions[name].reset(new_wrapper);
 	}
 
-	void* get_function(const std::string& name);
-	void* get_data(const std::string& name);
+	/// Loop over the functions
+	template<typename F>
+	void for_each_function(const F f) const
+	{
+		for(const auto& item : m_functions)
+		{
+			f(*item.second);
+		}
+	}
+
+	const std::string& name() const
+	{
+		return m_name;
+	}
 
 private:
 
 	std::string m_name;
-	std::map<std::string, std::unique_ptr<function_wrapper_base>> m_functions;
+	std::map<std::string, std::unique_ptr<FunctionWrapperBase>> m_functions;
 };
 
-module& register_module(const std::string& name);
+/// Registry containing different modules
+class ModuleRegistry
+{
+public:
+	/// Create a module and register it
+	Module& create_module(const std::string& name);
+
+	/// Loop over the modules
+	template<typename F>
+	void for_each_module(const F f) const
+	{
+		for(const auto& item : m_modules)
+		{
+			f(*item.second);
+		}
+	}
+
+private:
+	std::map<std::string, std::unique_ptr<Module>> m_modules;
+};
+
 
 } // namespace cpp_wrapper
+
+/// Register a new module
+#define JULIA_CPP_MODULE_BEGIN(registry) \
+extern "C" void register_julia_modules(void* void_reg) { \
+	cpp_wrapper::ModuleRegistry& registry = *reinterpret_cast<cpp_wrapper::ModuleRegistry*>(void_reg);
+
+#define JULIA_CPP_MODULE_END }
+
+#endif

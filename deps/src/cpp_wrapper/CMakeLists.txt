@@ -7,14 +7,21 @@ set(CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE ON)
 
 set(CppWrapper_VERSION 0.1)
 
+include(GenerateExportHeader)
+
 list(APPEND CMAKE_CXX_FLAGS "-std=c++11")
 
 set(JULIA_INCLUDE_DIRECTORY "/usr/include/julia" CACHE PATH "Julia include directory")
 set(JULIA_LIBRARY "/usr/lib/julia/libjulia.so" CACHE FILEPATH "Julia library")
 
-include_directories(${JULIA_INCLUDE_DIRECTORY})
-
-add_library(cpp_wrapper SHARED cpp_wrapper.cpp)
+add_library(cpp_wrapper SHARED
+	array.hpp
+	c_interface.cpp
+	cpp_wrapper.cpp
+  type_conversion.cpp
+)
+target_include_directories(cpp_wrapper PUBLIC ${JULIA_INCLUDE_DIRECTORY})
+generate_export_header(cpp_wrapper)
 
 target_link_libraries(cpp_wrapper ${JULIA_LIBRARY})
 
@@ -35,6 +42,7 @@ install(TARGETS cpp_wrapper EXPORT CppWrapperTargets
 install(
 	FILES
 		cpp_wrapper.hpp
+    type_conversion.hpp
 	DESTINATION
 		include
 	COMPONENT
@@ -49,6 +57,24 @@ write_basic_package_version_file(
 )
 
 export(EXPORT CppWrapperTargets
-	FILE "${CMAKE_CURRENT_BINARY_DIR}/CppWrapperConfig.cmake"
+  FILE "${CMAKE_CURRENT_BINARY_DIR}/CppWrapperConfig.cmake"
 	NAMESPACE CppWrapper::
+)
+
+install(EXPORT CppWrapperTargets
+  FILE
+    CppWrapperConfig.cmake
+  NAMESPACE
+    CppWrapper::
+  DESTINATION
+    lib/cmake
+)
+
+install(
+  FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/CppWrapperConfigVersion.cmake"
+  DESTINATION
+    lib/cmake
+  COMPONENT
+    Devel
 )

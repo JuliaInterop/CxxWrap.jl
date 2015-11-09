@@ -6,7 +6,7 @@ set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 
 list(APPEND CMAKE_CXX_FLAGS "-std=c++11")
 
-set(CppWrapper_DIR "${CMAKE_CURRENT_BINARY_DIR}/../cpp_wrapper")
+set(CppWrapper_DIR "${CMAKE_CURRENT_BINARY_DIR}/../../usr/lib/cmake")
 find_package(CppWrapper)
 
 add_library(functions SHARED functions.cpp)
