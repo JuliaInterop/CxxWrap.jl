@@ -14,24 +14,12 @@ std::map<std::type_index, jl_datatype_t*>& cpp_to_julia_map()
 	if(map_instance.empty())
 	{
 		map_instance[typeid(double)] = jl_float64_type;
-		map_instance[typeid(int)] = jl_int64_type;
-		map_instance[typeid(unsigned int)] = jl_uint64_type;
+		map_instance[typeid(int)] = jl_int32_type; // TODO: Verify if this is always compatible
+		map_instance[typeid(unsigned int)] = jl_uint32_type; // TODO: Verify if this is always compatible
 		map_instance[typeid(void)] = jl_void_type;
 		map_instance[typeid(void*)] = jl_voidpointer_type;
-		map_instance[typeid(std::string)] = jl_ascii_string_type;
-	}
-
-	return map_instance;
-}
-
-std::map<std::type_index, void*> conversion_functions()
-{
-	static std::map<std::type_index, void*> map_instance;
-
-	// Register default conversions
-	if(map_instance.empty())
-	{
-		map_instance[typeid(std::string)] = reinterpret_cast<void*>(&convert<jl_value_t*, std::string>);
+		map_instance[typeid(std::string)] = jl_any_type;
+		map_instance[typeid(jl_datatype_t*)] = jl_datatype_type;
 	}
 
 	return map_instance;
@@ -52,22 +40,6 @@ jl_datatype_t* type(const std::type_index& cpp_type)
 		throw std::runtime_error("Type was not registered");
 
 	return cpp_to_julia_map()[cpp_type];
-}
-
-void register_conversion_function(const std::type_index& cpp_type, void* fpointer)
-{
-	if(conversion_functions().count(cpp_type) != 0)
-		throw std::runtime_error("Conversion was already registered");
-
-	conversion_functions()[cpp_type] = fpointer;
-}
-
-void* conversion_function(const std::type_index& cpp_type)
-{
-	if(conversion_functions().count(cpp_type) == 0)
-		return nullptr;
-
-	return conversion_functions()[cpp_type];
 }
 
 }

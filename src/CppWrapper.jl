@@ -35,29 +35,36 @@ function build_function_expression(func)
   fname = symbol(ccall(Libdl.dlsym(cpp_wrapper_lib, "get_function_name"), Any, (Ptr{Void},), func))
 
   # Arguments and types
-  argtypes = ccall(Libdl.dlsym(cpp_wrapper_lib, "get_function_arguments"), Array{DataType, 1}, (Ptr{Void},), func)
+  @show argtypes = ccall(Libdl.dlsym(cpp_wrapper_lib, "get_function_arguments"), Array{DataType,1}, (Ptr{Void},), func)
   argsymbols = map((i) -> symbol(:arg,i[1]), enumerate(argtypes))
   argmap = Expr[]
   for (t, s) in zip(argtypes, argsymbols)
     push!(argmap, :($s::$t))
   end
 
-  # Return type and conversion
+  # Return type
   return_type = ccall(Libdl.dlsym(cpp_wrapper_lib, "get_function_return_type"), Any, (Ptr{Void},), func)
-  needs_convert = Bool(ccall(Libdl.dlsym(cpp_wrapper_lib, "get_function_needs_convert"), Cuchar, (Ptr{Void},), func))
 
-  # Build conversion expression
-  conversion_expression = nothing
-  if(needs_convert)
-    conversion_func = ccall(Libdl.dlsym(cpp_wrapper_lib, "get_conversion_function"), Ptr{Void}, (Ptr{Void},), func)
-    if(conversion_func == C_NULL)
-      throw(KeyError("Conversion function for $fname return type $return_type"))
-    end
+  # Function pointer
+  fpointer = ccall(Libdl.dlsym(cpp_wrapper_lib, "get_function_pointer"), Ptr{Void}, (Ptr{Void},), func)
+  assert(fpointer != C_NULL)
+
+  # Thunk
+  thunk = ccall(Libdl.dlsym(cpp_wrapper_lib, "get_function_thunk"), Ptr{Void}, (Ptr{Void},), func)
+
+  # Build the final call expression
+  call_exp = nothing
+  if thunk == C_NULL
+    call_exp = :(ccall($fpointer, $return_type, ($(argtypes...),), $(argsymbols...))) # Direct pointer call
+  else
+    call_exp = :(ccall($fpointer, $return_type, (Ptr{Void}, $(argtypes...)), $thunk, $(argsymbols...))) # use thunk (= std::function)
   end
+  assert(call_exp != nothing)
 
+  # Return the function definition
   quote
     function $fname($(argmap...))
-      println("Calling function ", string($fname))
+      $call_exp
     end
   end
 end

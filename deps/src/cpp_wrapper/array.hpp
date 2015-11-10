@@ -27,7 +27,7 @@ public:
 		JL_GC_PUSH1(&m_array);
 		const size_t pos = jl_array_len(m_array);
 		jl_array_grow_end(m_array, 1);
-		jl_arrayset(m_array, convert<jl_value_t*>(val), pos);
+		jl_arrayset(m_array, (jl_value_t*)(convert_to_julia(val)), pos);
 		JL_GC_POP();
 	}
 

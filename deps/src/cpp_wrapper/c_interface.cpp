@@ -30,7 +30,7 @@ jl_value_t* get_module_name(void* void_module)
 {
 	assert(void_module != nullptr);
 	const Module& module = *reinterpret_cast<Module*>(void_module);
-	return convert<jl_value_t*>(module.name());
+	return convert_to_julia(module.name());
 }
 
 jl_array_t* get_functions(void* void_module)
@@ -50,7 +50,7 @@ jl_value_t* get_function_name(void* void_function)
 {
 	assert(function != nullptr);
 	FunctionWrapperBase& function = *reinterpret_cast<FunctionWrapperBase*>(void_function);
-	return convert<jl_value_t*>(function.name());
+	return convert_to_julia(function.name());
 }
 
 void* get_function_pointer(void* void_function)
@@ -72,7 +72,7 @@ jl_array_t* get_function_arguments(void* void_function)
 	assert(function != nullptr);
 	FunctionWrapperBase& function = *reinterpret_cast<FunctionWrapperBase*>(void_function);
 	const std::vector<std::type_index> types_vec = function.argument_types();
-	Array<void*> julia_array;
+	Array<jl_datatype_t*> julia_array;
 	for(const auto& t_idx : types_vec)
 	{
 		julia_array.push_back(type(t_idx));
@@ -86,20 +86,6 @@ jl_datatype_t* get_function_return_type(void* void_function)
 	assert(function != nullptr);
 	FunctionWrapperBase& function = *reinterpret_cast<FunctionWrapperBase*>(void_function);
 	return type(function.return_type());
-}
-
-bool get_function_needs_convert(void* void_function)
-{
-	assert(function != nullptr);
-	FunctionWrapperBase& function = *reinterpret_cast<FunctionWrapperBase*>(void_function);
-	return function.needs_convert();
-}
-
-void* get_conversion_function(void* void_function)
-{
-	assert(function != nullptr);
-	FunctionWrapperBase& function = *reinterpret_cast<FunctionWrapperBase*>(void_function);
-	return conversion_function(function.return_type());
 }
 
 }

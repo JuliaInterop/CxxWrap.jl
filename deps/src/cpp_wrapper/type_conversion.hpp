@@ -11,6 +11,9 @@
 namespace cpp_wrapper
 {
 
+/// Helper to easily remove a ref to a const
+template<typename T> using remove_const_ref = typename std::remove_const<typename std::remove_reference<T>::type>::type;
+
 /// Register a new mapping
 void register_type_mapping(const std::type_info& cpp_type, jl_datatype_t* julia_type);
 
@@ -31,52 +34,38 @@ jl_datatype_t* type()
 	return type(typeid(T));
 }
 
-/// Register a conversion function to convert the given C++ type to a jl_value_t*
-void register_conversion_function(const std::type_index& cpp_type, void* fpointer);
-
-/// Get a conversion function for the given C++ type, or null if it doesn't exist
-void* conversion_function(const std::type_index& cpp_type);
-
-/// Convert a value from SourceT to TargetT. Specialize for functionality
-template<typename TargetT, typename SourceT>
-TargetT convert(const SourceT& val);
-
-template<>
-inline jl_value_t* convert(void* const& void_ptr)
-{
-	return jl_box_voidpointer(void_ptr);
-}
-
-template<>
-inline jl_value_t* convert(const std::string& str)
-{
-	return jl_cstr_to_string(str.c_str());
-}
-
 /// Static mapping base template
 template<typename SourceT> struct static_type_mapping { typedef void type; };
 
 /// Using declaration to avoid having to write typename all the time
 template<typename SourceT> using mapped_type = typename static_type_mapping<SourceT>::type;
 
-/// Specialzations
+/// Specializations
 template<> struct static_type_mapping<int> { typedef int type; };
 template<> struct static_type_mapping<unsigned int> { typedef unsigned int type; };
 template<> struct static_type_mapping<double> { typedef double type; };
 template<> struct static_type_mapping<std::string> { typedef jl_value_t* type; };
+template<> struct static_type_mapping<void*> { typedef jl_value_t* type; };
+template<> struct static_type_mapping<jl_datatype_t*> { typedef jl_datatype_t* type; }; // Debatable if this should be jl_value_t*
 
 /// Auto-conversion to the statically mapped target type.
 template<typename T>
-mapped_type<T> auto_convert_to_julia(const T& cpp_val)
+inline mapped_type<T> convert_to_julia(const T& cpp_val)
 {
 	static_assert(!std::is_void<mapped_type<T>>::value, "Unimplemented conversion");
 	return cpp_val;
 }
 
 template<>
-mapped_type<std::string> auto_convert_to_julia(const std::string& s)
+inline mapped_type<std::string> convert_to_julia(const std::string& str)
 {
+	return jl_cstr_to_string(str.c_str());
+}
 
+template<>
+inline mapped_type<void*> convert_to_julia(void* const& p)
+{
+	return jl_box_voidpointer(p);
 }
 
 }

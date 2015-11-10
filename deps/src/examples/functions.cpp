@@ -46,7 +46,7 @@ std::string concatenate_strings(const int n, std::string s, const std::string& s
   std::string result;
   for(int i = 0; i != n; ++i)
   {
-    result += s;
+    result += s + s2;
   }
   return result;
 }

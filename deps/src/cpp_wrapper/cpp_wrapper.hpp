@@ -23,11 +23,11 @@ namespace detail
 
 /// Call a C++ std::function, passed as a void pointer since it comes from Julia
 template<typename R, typename... Args>
-R call_functor(const void* functor, Args... args)
+mapped_type<remove_const_ref<R>> call_functor(const void* functor, Args... args)
 {
 	auto std_func = reinterpret_cast<const std::function<R(Args...)>*>(functor);
 	assert(std_func != nullptr);
-	return auto_convert_to_julia<R>((*std_func)(args...));
+	return convert_to_julia((*std_func)(args...));
 }
 
 /// Make a vector with the types in the variadic template parameter pack
@@ -36,14 +36,6 @@ std::vector<std::type_index> typeid_vector()
 {
 	return {typeid(Args)...};
 }
-
-/// Helpers to find if a type needs conversion to julia
-template<typename T> inline bool needs_convert() { return true; }
-template<> inline bool needs_convert<double>() {return false;}
-template<> inline bool needs_convert<int>() {return false;}
-template<> inline bool needs_convert<unsigned int>() {return false;}
-template<> inline bool needs_convert<void>() {return false;}
-template<> inline bool needs_convert<void*>() {return false;}
 
 } // end namespace detail
 
@@ -75,20 +67,8 @@ public:
 		return m_name;
 	}
 
-	/// True if the return type needs conversion
-	inline bool needs_convert() const
-	{
-		return m_needs_convert;
-	}
-
-	inline void set_needs_convert(const bool b)
-	{
-		m_needs_convert = b;
-	}
-
 private:
 	std::string m_name;
-	bool m_needs_convert = true;
 };
 
 /// Implementation of function storage, case of std::function
@@ -174,7 +154,6 @@ public:
 	{
 		auto* new_wrapper = new FunctionWrapper<R, Args...>(f);
 		new_wrapper->set_name(name);
-		new_wrapper->set_needs_convert(detail::needs_convert<R>());
 		m_functions[name].reset(new_wrapper);
 	}
 
@@ -182,12 +161,12 @@ public:
 	template<typename R, typename... Args>
 	void def(const std::string& name,  R(*f)(Args...))
 	{
-		bool need_convert = detail::needs_convert<R>();
-		for(const bool b : {detail::needs_convert<Args>()...})
+		bool need_convert = !std::is_same<mapped_type<R>,R>::value;
+		for(const bool b : {std::is_same<mapped_type<Args>,Args>::value...})
 		{
 			if(need_convert)
 				break;
-			need_convert = b;
+			need_convert = !b;
 		}
 
 		// Conversion is automatic when using the std::function calling method, so if we need conversion we use that
@@ -200,7 +179,6 @@ public:
 		// No conversion needed -> call can be through a naked function pointer
 		auto* new_wrapper = new FunctionPtrWrapper<R, Args...>(f);
 		new_wrapper->set_name(name);
-		new_wrapper->set_needs_convert(false);
 		m_functions[name].reset(new_wrapper);
 	}
 
