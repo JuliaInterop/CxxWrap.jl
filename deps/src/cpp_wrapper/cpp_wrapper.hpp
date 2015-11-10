@@ -21,13 +21,21 @@ namespace cpp_wrapper
 namespace detail
 {
 
+// Map types, keeping references as needed
+//template<typename T> struct arg_type_mapping
+//{
+//	typedef mapped_type<T> type;
+//};
+
+//template<typename SourceT> using mapped_arg = typename arg_type_mapping<SourceT>::type;
+
 /// Call a C++ std::function, passed as a void pointer since it comes from Julia
 template<typename R, typename... Args>
-mapped_type<remove_const_ref<R>> call_functor(const void* functor, Args... args)
+mapped_type<remove_const_ref<R>> call_functor(const void* functor, mapped_type<remove_const_ref<Args>>... args)
 {
 	auto std_func = reinterpret_cast<const std::function<R(Args...)>*>(functor);
 	assert(std_func != nullptr);
-	return convert_to_julia((*std_func)(args...));
+	return convert_to_julia((*std_func)(convert_to_cpp<remove_const_ref<Args>>(args)...));
 }
 
 /// Make a vector with the types in the variadic template parameter pack
@@ -161,8 +169,8 @@ public:
 	template<typename R, typename... Args>
 	void def(const std::string& name,  R(*f)(Args...))
 	{
-		bool need_convert = !std::is_same<mapped_type<R>,R>::value;
-		for(const bool b : {std::is_same<mapped_type<Args>,Args>::value...})
+		bool need_convert = !std::is_same<mapped_type<remove_const_ref<R>>,remove_const_ref<R>>::value;
+		for(const bool b : {std::is_same<mapped_type<remove_const_ref<Args>>,remove_const_ref<Args>>::value...})
 		{
 			if(need_convert)
 				break;

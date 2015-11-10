@@ -29,18 +29,17 @@ end
 # Get the functions of the given module
 get_functions(mod) = ccall(Libdl.dlsym(cpp_wrapper_lib, "get_functions"), Array{Ptr{Void}, 1}, (Ptr{Void},), mod)
 
+# Get the function name for a given function
+get_function_name(func) = symbol(ccall(Libdl.dlsym(cpp_wrapper_lib, "get_function_name"), Any, (Ptr{Void},), func))
+
 # Build the expression to wrap the given function
 function build_function_expression(func)
   # Name of the function
-  fname = symbol(ccall(Libdl.dlsym(cpp_wrapper_lib, "get_function_name"), Any, (Ptr{Void},), func))
+  fname = get_function_name(func)
 
   # Arguments and types
-  @show argtypes = ccall(Libdl.dlsym(cpp_wrapper_lib, "get_function_arguments"), Array{DataType,1}, (Ptr{Void},), func)
+  argtypes = ccall(Libdl.dlsym(cpp_wrapper_lib, "get_function_arguments"), Array{DataType,1}, (Ptr{Void},), func)
   argsymbols = map((i) -> symbol(:arg,i[1]), enumerate(argtypes))
-  argmap = Expr[]
-  for (t, s) in zip(argtypes, argsymbols)
-    push!(argmap, :($s::$t))
-  end
 
   # Return type
   return_type = ccall(Libdl.dlsym(cpp_wrapper_lib, "get_function_return_type"), Any, (Ptr{Void},), func)
@@ -61,12 +60,44 @@ function build_function_expression(func)
   end
   assert(call_exp != nothing)
 
-  # Return the function definition
-  quote
-    function $fname($(argmap...))
-      $call_exp
+  # Generate overloads for some types
+  overload_map = Dict([(Cint,[Int]), (Cuint,[UInt,Int]), (Float64,[Int])])
+  nargs = length(argtypes)
+
+  counters = ones(Int, nargs);
+  for i in 1:nargs
+    if haskey(overload_map, argtypes[i])
+        counters[i] += length(overload_map[argtypes[i]])
     end
   end
+
+  function recurse_overloads!(idx::Int, newargs, results)
+    if idx > nargs
+        push!(results, deepcopy(newargs))
+        return
+    end
+    for i in 1:counters[idx]
+        newargs[idx] = i == 1 ? argtypes[idx] : overload_map[argtypes[idx]][i-1]
+        recurse_overloads!(idx+1, newargs, results)
+    end
+  end
+
+  newargs = Array{DataType,1}(nargs);
+  overload_sigs = Array{Array{DataType,1},1}();
+  recurse_overloads!(1, newargs, overload_sigs);
+
+  function_expressions = quote end
+  for overloaded_signature in overload_sigs
+    argmap = Expr[]
+    for (t, s) in zip(overloaded_signature, argsymbols)
+      push!(argmap, :($s::$t))
+    end
+
+    func_declaration = :($fname($(argmap...)))
+    push!(function_expressions.args, :($func_declaration = $call_exp))
+  end
+
+  return function_expressions
 end
 
 # Wrap functions from the cpp module to the passed julia module
