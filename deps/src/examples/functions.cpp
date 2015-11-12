@@ -40,7 +40,7 @@ void init_half_module(cpp_wrapper::Module& mod)
   mod.def("half_loop_cpp!", std::function<void(cpp_wrapper::ArrayRef<double>, cpp_wrapper::ArrayRef<double>)>
   ([](cpp_wrapper::ArrayRef<double> in, cpp_wrapper::ArrayRef<double> out)
   {
-    std::transform(in.begin(), in.end(), out.begin(), &half_function);
+    std::transform(in.begin(), in.end(), out.begin(), [](const double d) { return 0.5*d; });
   }));
 }
 

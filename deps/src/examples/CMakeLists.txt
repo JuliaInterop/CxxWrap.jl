@@ -12,4 +12,10 @@ find_package(CppWrapper)
 add_library(functions SHARED functions.cpp)
 target_link_libraries(functions CppWrapper::cpp_wrapper)
 
-install(TARGETS functions LIBRARY DESTINATION lib)
+add_library(hello SHARED hello.cpp)
+target_link_libraries(hello CppWrapper::cpp_wrapper)
+
+install(TARGETS
+  functions
+  hello
+LIBRARY DESTINATION lib)

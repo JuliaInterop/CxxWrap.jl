@@ -6,7 +6,7 @@ using Base.Test
 const functions_lib_path = joinpath(Pkg.dir("CppWrapper"),"deps","usr","lib","libfunctions")
 
 # Wrap the functions defined in C++
-CppWrapper.wrap_modules(functions_lib_path)
+wrap_modules(functions_lib_path)
 
 # Test functions from the CppHalfFunctions module
 @test CppHalfFunctions.half_d(3) == 1.5

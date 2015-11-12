@@ -123,4 +123,6 @@ function wrap_modules(so_path, parent_mod=Main)
   end
 end
 
+export wrap_modules
+
 end # module

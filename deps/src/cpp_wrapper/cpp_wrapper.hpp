@@ -57,6 +57,29 @@ std::vector<jl_datatype_t*> typeid_vector()
   return {static_type_mapping<remove_const_ref<Args>>::julia_type()...};
 }
 
+template<typename... Args>
+struct NeedConvertHelper
+{
+	bool operator()()
+	{
+		for(const bool b : {std::is_same<mapped_type<remove_const_ref<Args>>,remove_const_ref<Args>>::value...})
+		{
+			if(!b)
+				return true;
+		}
+		return false;
+	}
+};
+
+template<>
+struct NeedConvertHelper<>
+{
+	bool operator()()
+	{
+		return false;
+	}
+};
+
 } // end namespace detail
 
 /// Abstract base class for storing any function
@@ -181,13 +204,7 @@ public:
 	template<typename R, typename... Args>
 	void def(const std::string& name,  R(*f)(Args...))
 	{
-		bool need_convert = !std::is_same<mapped_type<remove_const_ref<R>>,remove_const_ref<R>>::value;
-		for(const bool b : {std::is_same<mapped_type<remove_const_ref<Args>>,remove_const_ref<Args>>::value...})
-		{
-			if(need_convert)
-				break;
-			need_convert = !b;
-		}
+		bool need_convert = !std::is_same<mapped_type<remove_const_ref<R>>,remove_const_ref<R>>::value || detail::NeedConvertHelper<Args...>()();
 
 		// Conversion is automatic when using the std::function calling method, so if we need conversion we use that
 		if(need_convert)
