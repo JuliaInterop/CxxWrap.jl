@@ -2,6 +2,7 @@
 #include <map>
 #include <string>
 #include <typeindex>
+#include "array.hpp"
 
 namespace cpp_wrapper
 {
@@ -20,6 +21,7 @@ std::map<std::type_index, jl_datatype_t*>& cpp_to_julia_map()
 		map_instance[typeid(void*)] = jl_voidpointer_type;
 		map_instance[typeid(std::string)] = jl_any_type;
 		map_instance[typeid(jl_datatype_t*)] = jl_datatype_type;
+		map_instance[typeid(ArrayRef<double>)] = jl_ref_type;//(jl_datatype_t*)jl_apply_array_type(jl_float64_type, 1);
 	}
 
 	return map_instance;

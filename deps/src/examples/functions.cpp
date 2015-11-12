@@ -1,9 +1,12 @@
 #include <cpp_wrapper.hpp>
+#include <array.hpp>
+#include <iostream>
 #include <sstream>
 
-extern "C" double half_c(const double input)
+// C function for performance comparison
+extern "C" double half_c(const double d)
 {
-  return input*0.5;
+  return 0.5*d;
 }
 
 namespace functions
@@ -31,6 +34,11 @@ void init_half_module(cpp_wrapper::Module& mod)
 
 	// Register a lambda
   mod.def("half_lambda", std::function<double(double)>([](const double a) {return a*0.5;}));
+
+  // Looping function
+  mod.def("half_loop_cpp!", std::function<void(cpp_wrapper::ArrayRef<double>)>([](cpp_wrapper::ArrayRef<double>) {
+    std::cout << "got an array ref" << std::endl;
+  }));
 }
 
 // Test for string conversion. Pointer to this function is passed to Julia as-is.

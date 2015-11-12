@@ -41,6 +41,7 @@ install(TARGETS cpp_wrapper EXPORT CppWrapperTargets
 )
 install(
 	FILES
+    array.hpp
 		cpp_wrapper.hpp
     type_conversion.hpp
 	DESTINATION

@@ -12,6 +12,7 @@
 
 #include <iostream>
 
+#include "array.hpp"
 #include "type_conversion.hpp"
 
 namespace cpp_wrapper
@@ -21,21 +22,34 @@ namespace cpp_wrapper
 namespace detail
 {
 
-// Map types, keeping references as needed
-//template<typename T> struct arg_type_mapping
-//{
-//	typedef mapped_type<T> type;
-//};
+// Need to treat void specially
+template<typename R, typename... Args>
+struct ReturnTypeAdapter
+{
+	inline mapped_type<remove_const_ref<R>> operator()(const void* functor, mapped_type<remove_const_ref<Args>>... args)
+	{
+		auto std_func = reinterpret_cast<const std::function<R(Args...)>*>(functor);
+		assert(std_func != nullptr);
+		return convert_to_julia((*std_func)(convert_to_cpp<remove_const_ref<Args>>(args)...));
+	}
+};
 
-//template<typename SourceT> using mapped_arg = typename arg_type_mapping<SourceT>::type;
+template<typename... Args>
+struct ReturnTypeAdapter<void, Args...>
+{
+	inline void operator()(const void* functor, mapped_type<remove_const_ref<Args>>... args)
+	{
+		auto std_func = reinterpret_cast<const std::function<void(Args...)>*>(functor);
+		assert(std_func != nullptr);
+		(*std_func)(convert_to_cpp<remove_const_ref<Args>>(args)...);
+	}
+};
 
 /// Call a C++ std::function, passed as a void pointer since it comes from Julia
 template<typename R, typename... Args>
 mapped_type<remove_const_ref<R>> call_functor(const void* functor, mapped_type<remove_const_ref<Args>>... args)
 {
-	auto std_func = reinterpret_cast<const std::function<R(Args...)>*>(functor);
-	assert(std_func != nullptr);
-	return convert_to_julia((*std_func)(convert_to_cpp<remove_const_ref<Args>>(args)...));
+	return ReturnTypeAdapter<R, Args...>()(functor, args...);
 }
 
 /// Make a vector with the types in the variadic template parameter pack
