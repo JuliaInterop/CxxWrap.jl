@@ -10,8 +10,6 @@
 #include <typeindex>
 #include <vector>
 
-#include <iostream>
-
 #include "array.hpp"
 #include "type_conversion.hpp"
 

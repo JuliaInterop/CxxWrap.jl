@@ -5,8 +5,6 @@
 
 #include "type_conversion.hpp"
 
-#include <iostream>
-
 namespace cpp_wrapper
 {
 
@@ -25,16 +23,16 @@ public:
   {
   }
 
-  explicit array_iterator_base(PointedT* p)
-    : m_ptr(p) {}
+	explicit array_iterator_base(PointedT* p) : m_ptr(p)
+	{
+	}
 
   template <class OtherPointedT>
-  array_iterator_base(array_iterator_base<OtherPointedT, OtherPointedT> const& other)
-    : m_ptr(other.m_ptr) {}
+	array_iterator_base(array_iterator_base<OtherPointedT, OtherPointedT> const& other) : m_ptr(other.m_ptr) {}
 
   PointedT& operator*()
   {
-    *m_ptr;
+		return *m_ptr;
   }
 
   array_iterator_base<PointedT, PointedT>& operator++()
@@ -111,7 +109,6 @@ public:
   ArrayRef(jl_array_t* arr) : m_array(arr)
 	{
     assert(m_array != nullptr);
-    std::cout << "created array wrapper, first elem is " << jl_array(m_array) << std::endl;
 	}
 
   jl_array_t* wrapped()
@@ -121,7 +118,7 @@ public:
 
 	typedef mapped_type<ValueT> julia_t;
 
-  typedef array_iterator_base<julia_t, ValueT> iterator;
+	typedef array_iterator_base<julia_t, ValueT> iterator;
   typedef array_iterator_base<julia_t const, ValueT const> const_iterator;
 
 	iterator begin()

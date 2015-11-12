@@ -64,7 +64,6 @@ test_half_function(half_loop_julia!)
 test_half_function(half_loop_c!)
 test_half_function(half_loop_d!)
 test_half_function(half_loop_lambda!)
-@show methods(half_loop_cpp!)
 test_half_function(half_loop_cpp!)
 
 # Run timing tests
@@ -72,15 +71,24 @@ println("---- Half test timings ----")
 println("Julia test:")
 @time half_loop_julia!(numbers, output)
 @time half_loop_julia!(numbers, output)
+@time half_loop_julia!(numbers, output)
 
 println("C test:")
+@time half_loop_c!(numbers, output)
 @time half_loop_c!(numbers, output)
 @time half_loop_c!(numbers, output)
 
 println("C++ test:")
 @time half_loop_d!(numbers, output)
 @time half_loop_d!(numbers, output)
+@time half_loop_d!(numbers, output)
 
 println("C++ lambda test:")
 @time half_loop_lambda!(numbers, output)
 @time half_loop_lambda!(numbers, output)
+@time half_loop_lambda!(numbers, output)
+
+println("C++ test, loop in the C++ code:")
+@time half_loop_cpp!(numbers, output)
+@time half_loop_cpp!(numbers, output)
+@time half_loop_cpp!(numbers, output)
