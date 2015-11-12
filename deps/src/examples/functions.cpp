@@ -1,5 +1,7 @@
 #include <cpp_wrapper.hpp>
 #include <array.hpp>
+
+#include <algorithm>
 #include <iostream>
 #include <sstream>
 
@@ -36,8 +38,8 @@ void init_half_module(cpp_wrapper::Module& mod)
   mod.def("half_lambda", std::function<double(double)>([](const double a) {return a*0.5;}));
 
   // Looping function
-  mod.def("half_loop_cpp!", std::function<void(cpp_wrapper::ArrayRef<double>)>([](cpp_wrapper::ArrayRef<double>) {
-    std::cout << "got an array ref" << std::endl;
+  mod.def("half_loop_cpp!", std::function<void(cpp_wrapper::ArrayRef<double>, cpp_wrapper::ArrayRef<double>)>([](cpp_wrapper::ArrayRef<double> in, cpp_wrapper::ArrayRef<double> out) {
+    std::transform(in.begin(), in.end(), out.begin(), [](double d) { std::cout << "halving " << d << std::endl; return 0.5*d; });
   }));
 }
 

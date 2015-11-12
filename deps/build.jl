@@ -11,6 +11,12 @@ cpp_wrapper_builddir = joinpath(BinDeps.depsdir(cpp_wrapper),"builds","cpp_wrapp
 lib_suffix = @windows? "dll" : (@osx? "dylib" : "so")
 julia_base_dir = splitdir(JULIA_HOME)[1]
 julia_lib = joinpath(julia_base_dir, "lib", "julia", "libjulia.$lib_suffix")
+if !isfile(julia_lib)
+	julia_lib = joinpath(julia_base_dir, "lib64", "julia", "libjulia.$lib_suffix")
+end
+if !isfile(julia_lib)
+	throw(ErrorException("Could not locate Julia library at $julia_lib"))
+end
 julia_include_dir = joinpath(julia_base_dir, "include", "julia")
 provides(BuildProcess,
 	(@build_steps begin
@@ -24,7 +30,7 @@ provides(BuildProcess,
 			end)
 		end
 	end),cpp_wrapper)
-	
+
 # Functions library for testing
 examples = library_dependency("functions", aliases=["libfunctions"])
 

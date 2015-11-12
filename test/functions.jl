@@ -14,9 +14,6 @@ CppWrapper.wrap_modules(functions_lib_path)
 @test CppHalfFunctions.half_u(3) == 1
 @test CppHalfFunctions.half_lambda(2.) == 1.
 
-@show methods(CppHalfFunctions.half_loop_cpp!)
-@show CppHalfFunctions.half_loop_cpp!([1.])
-
 # Test functions from the CppTestFunctions module
 @test CppTestFunctions.concatenate_numbers(4, 2.) == "42"
 @test length(methods(CppTestFunctions.concatenate_numbers)) == 4 # due to overloads
@@ -48,7 +45,7 @@ half_julia(d::Float64) = d*0.5
 half_c(d::Float64) = ccall((:half_c, functions_lib_path), Cdouble, (Cdouble,), d)
 
 # Bring C++ versions into scope
-using CppHalfFunctions.half_d, CppHalfFunctions.half_lambda
+using CppHalfFunctions.half_d, CppHalfFunctions.half_lambda, CppHalfFunctions.half_loop_cpp!
 
 # Make the looping functions
 make_loop_function(:julia)
@@ -67,6 +64,8 @@ test_half_function(half_loop_julia!)
 test_half_function(half_loop_c!)
 test_half_function(half_loop_d!)
 test_half_function(half_loop_lambda!)
+@show methods(half_loop_cpp!)
+test_half_function(half_loop_cpp!)
 
 # Run timing tests
 println("---- Half test timings ----")

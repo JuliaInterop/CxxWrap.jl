@@ -11,6 +11,10 @@ include(GenerateExportHeader)
 
 list(APPEND CMAKE_CXX_FLAGS "-std=c++11")
 
+# TODO Figure out why this doesn't work on OS X:
+#set(CMAKE_CXX_STANDARD 11)
+#set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 set(JULIA_INCLUDE_DIRECTORY "/usr/include/julia" CACHE PATH "Julia include directory")
 set(JULIA_LIBRARY "/usr/lib/julia/libjulia.so" CACHE FILEPATH "Julia library")
 
@@ -18,7 +22,7 @@ add_library(cpp_wrapper SHARED
 	array.hpp
 	c_interface.cpp
 	cpp_wrapper.cpp
-  type_conversion.cpp
+  type_conversion.hpp
 )
 target_include_directories(cpp_wrapper PUBLIC ${JULIA_INCLUDE_DIRECTORY})
 generate_export_header(cpp_wrapper)
@@ -40,7 +44,7 @@ install(TARGETS cpp_wrapper EXPORT CppWrapperTargets
 	INCLUDES DESTINATION include
 )
 install(
-	FILES
+  FILES
     array.hpp
 		cpp_wrapper.hpp
     type_conversion.hpp

@@ -54,9 +54,9 @@ mapped_type<remove_const_ref<R>> call_functor(const void* functor, mapped_type<r
 
 /// Make a vector with the types in the variadic template parameter pack
 template<typename... Args>
-std::vector<std::type_index> typeid_vector()
+std::vector<jl_datatype_t*> typeid_vector()
 {
-	return {typeid(Args)...};
+  return {static_type_mapping<remove_const_ref<Args>>::julia_type()...};
 }
 
 } // end namespace detail
@@ -72,10 +72,10 @@ public:
 	virtual void* thunk() = 0;
 
 	/// Types of the arguments
-	virtual std::vector<std::type_index> argument_types() const = 0;
+	virtual std::vector<jl_datatype_t*> argument_types() const = 0;
 
 	/// Return type
-	virtual std::type_index return_type() const = 0;
+	virtual jl_datatype_t* return_type() const = 0;
 
 	virtual ~FunctionWrapperBase() {}
 
@@ -114,14 +114,14 @@ public:
 		return reinterpret_cast<void*>(&m_function);
 	}
 
-	virtual std::vector<std::type_index> argument_types() const
+	virtual std::vector<jl_datatype_t*> argument_types() const
 	{
 		return detail::typeid_vector<Args...>();
 	}
 
-	virtual std::type_index return_type() const
+	virtual jl_datatype_t* return_type() const
 	{
-		return typeid(R);
+		return static_type_mapping<R>::julia_type();
 	}
 
 private:
@@ -149,14 +149,14 @@ public:
 		return nullptr;
 	}
 
-	virtual std::vector<std::type_index> argument_types() const
+	virtual std::vector<jl_datatype_t*> argument_types() const
 	{
 		return detail::typeid_vector<Args...>();
 	}
 
-	virtual std::type_index return_type() const
+	virtual jl_datatype_t* return_type() const
 	{
-		return typeid(R);
+		return static_type_mapping<R>::julia_type();
 	}
 
 private:

@@ -14,7 +14,7 @@ void* create_registry()
 
 jl_array_t* get_modules(void* void_registry)
 {
-	assert(registry != nullptr);
+  assert(void_registry != nullptr);
 	const ModuleRegistry& registry = *reinterpret_cast<ModuleRegistry*>(void_registry);
 	Array<void*> array;
 
@@ -48,34 +48,34 @@ jl_array_t* get_functions(void* void_module)
 
 jl_value_t* get_function_name(void* void_function)
 {
-	assert(function != nullptr);
+  assert(void_function != nullptr);
 	FunctionWrapperBase& function = *reinterpret_cast<FunctionWrapperBase*>(void_function);
 	return convert_to_julia(function.name());
 }
 
 void* get_function_pointer(void* void_function)
 {
-	assert(function != nullptr);
+  assert(void_function != nullptr);
 	FunctionWrapperBase& function = *reinterpret_cast<FunctionWrapperBase*>(void_function);
 	return function.pointer();
 }
 
 void* get_function_thunk(void* void_function)
 {
-	assert(function != nullptr);
+  assert(void_function != nullptr);
 	FunctionWrapperBase& function = *reinterpret_cast<FunctionWrapperBase*>(void_function);
 	return function.thunk();
 }
 
 jl_array_t* get_function_arguments(void* void_function)
 {
-	assert(function != nullptr);
+  assert(void_function != nullptr);
 	FunctionWrapperBase& function = *reinterpret_cast<FunctionWrapperBase*>(void_function);
-	const std::vector<std::type_index> types_vec = function.argument_types();
+	const std::vector<jl_datatype_t*> types_vec = function.argument_types();
 	Array<jl_datatype_t*> julia_array;
-	for(const auto& t_idx : types_vec)
+	for(const auto& t : types_vec)
 	{
-		julia_array.push_back(type(t_idx));
+		julia_array.push_back(t);
 	}
 
 	return julia_array.wrapped();
@@ -83,9 +83,9 @@ jl_array_t* get_function_arguments(void* void_function)
 
 jl_datatype_t* get_function_return_type(void* void_function)
 {
-	assert(function != nullptr);
+  assert(void_function != nullptr);
 	FunctionWrapperBase& function = *reinterpret_cast<FunctionWrapperBase*>(void_function);
-	return type(function.return_type());
+	return function.return_type();
 }
 
 }
