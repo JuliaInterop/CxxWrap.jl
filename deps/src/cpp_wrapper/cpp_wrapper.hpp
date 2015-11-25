@@ -24,22 +24,22 @@ namespace detail
 template<typename R, typename... Args>
 struct ReturnTypeAdapter
 {
-	inline mapped_type<remove_const_ref<R>> operator()(const void* functor, mapped_type<remove_const_ref<Args>>... args)
+	inline mapped_type<remove_const_ref<R>> operator()(const void* functor, mapped_type<mapped_reference_type<Args>>... args)
 	{
 		auto std_func = reinterpret_cast<const std::function<R(Args...)>*>(functor);
 		assert(std_func != nullptr);
-		return convert_to_julia((*std_func)(convert_to_cpp<remove_const_ref<Args>>(args)...));
+		return convert_to_julia((*std_func)(convert_to_cpp<mapped_reference_type<Args>>(args)...));
 	}
 };
 
 template<typename... Args>
 struct ReturnTypeAdapter<void, Args...>
 {
-	inline void operator()(const void* functor, mapped_type<remove_const_ref<Args>>... args)
+	inline void operator()(const void* functor, mapped_type<mapped_reference_type<Args>>... args)
 	{
 		auto std_func = reinterpret_cast<const std::function<void(Args...)>*>(functor);
 		assert(std_func != nullptr);
-		(*std_func)(convert_to_cpp<remove_const_ref<Args>>(args)...);
+		(*std_func)(convert_to_cpp<mapped_reference_type<Args>>(args)...);
 	}
 };
 
@@ -184,6 +184,17 @@ private:
 	R(*m_function)(Args...);
 };
 
+/// Base class for building a type
+class TypeBase
+{
+public:
+	virtual void bind_julia_type(jl_module_t* julia_module) const = 0;
+	virtual ~TypeBase() {}
+};
+
+template<typename T>
+class Type;
+
 /// Store all exposed C++ functions associated with a module
 class Module
 {
@@ -229,6 +240,17 @@ public:
 		}
 	}
 
+	template<typename T>
+	Type<T>& add_type(const std::string& name);
+
+	void bind_julia_types(jl_module_t* mod) const
+	{
+		for(const auto& tp : m_types)
+		{
+			tp->bind_julia_type(mod);
+		}
+	}
+
 	const std::string& name() const
 	{
 		return m_name;
@@ -238,7 +260,70 @@ private:
 
 	std::string m_name;
 	std::map<std::string, std::unique_ptr<FunctionWrapperBase>> m_functions;
+	std::vector<std::unique_ptr<TypeBase>> m_types;
 };
+
+/// Define a new type
+template<typename T>
+class Type : public TypeBase
+{
+public:
+	Type(const std::string& name, Module& mod) : m_name(name), m_module(mod)
+	{
+		jl_module_t* cpp_wrapper_module = (jl_module_t*)jl_get_global(jl_current_module, jl_symbol("CppWrapper"));
+		assert(cpp_wrapper_module != nullptr);
+		jl_datatype_t* cpp_super = (jl_datatype_t*)jl_get_global(cpp_wrapper_module, jl_symbol("CppType"));
+		assert(cpp_super != nullptr);
+
+		jl_datatype_t* dt = jl_new_datatype(jl_symbol(m_name.c_str()), cpp_super, jl_emptysvec, jl_svec2(jl_symbol("cpp_data"), jl_symbol("cpp_type")), jl_svec2(jl_voidpointer_type, jl_uint64_type), 0, 1, 0);
+		static_type_mapping<T>::set_julia_type(dt);
+		static_type_mapping<T*>::set_julia_type(dt);
+		if(std::is_default_constructible<T>::value) // Add default constructor if applicable
+		{
+			constructor<>();
+		}
+	}
+
+	virtual void bind_julia_type(jl_module_t* julia_module) const
+	{
+		jl_set_const(julia_module, jl_symbol(m_name.c_str()), (jl_value_t*)static_type_mapping<T>::julia_type());
+	}
+
+	template<typename... ArgsT>
+	Type<T>& constructor()
+	{
+		m_module.def("call", std::function<jl_value_t*(SingletonType<T>, ArgsT...)>( [this](SingletonType<T>, ArgsT... args) { return create(args...); }));
+		return *this;
+	}
+
+	template<typename R, typename... ArgsT>
+	Type<T>& def(const std::string& name, R(T::*f)(ArgsT...))
+	{
+		m_module.def(name, std::function<R(T&, ArgsT...)>([f](T& obj, ArgsT... args) { return (obj.*f)(args...); }) );
+		return *this;
+	}
+
+	/// Create a new julia object wrapping the C++ type
+	template<typename... ArgsT>
+	jl_value_t* create(ArgsT... args)
+	{
+		T* cpp_obj = new T(args...);
+		return jl_new_struct(static_type_mapping<T>::julia_type(), jl_box_voidpointer(static_cast<void*>(cpp_obj)), jl_box_uint64(typeid(T).hash_code()));
+	}
+
+private:
+	const std::string m_name;
+	Module& m_module;
+};
+
+template<typename T>
+Type<T>& Module::add_type(const std::string& name)
+{
+	m_types.resize(m_types.size()+1);
+	Type<T>* result = new Type<T>(name, *this);
+	m_types.back().reset(result);
+	return *result;
+}
 
 /// Registry containing different modules
 class ModuleRegistry

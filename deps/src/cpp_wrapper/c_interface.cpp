@@ -88,4 +88,13 @@ jl_datatype_t* get_function_return_type(void* void_function)
 	return function.return_type();
 }
 
+void create_types(jl_value_t* julia_module, void* void_module)
+{
+	assert(jl_is_module(julia_module));
+	assert(void_module != nullptr);
+	const Module& cpp_module = *reinterpret_cast<Module*>(void_module);
+	cpp_module.bind_julia_types((jl_module_t*)julia_module);
+}
+
+
 }

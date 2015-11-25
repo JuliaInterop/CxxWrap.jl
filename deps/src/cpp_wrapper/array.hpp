@@ -150,6 +150,7 @@ template<typename T> struct static_type_mapping<ArrayRef<T>>
 {
   typedef jl_array_t* type;
   static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_array_type(static_type_mapping<T>::julia_type(), 1); }
+  template<typename T2> using remove_const_ref = cpp_wrapper::remove_const_ref<T2>;
 };
 
 template<typename T>

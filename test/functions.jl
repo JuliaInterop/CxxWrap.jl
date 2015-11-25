@@ -10,6 +10,7 @@ wrap_modules(functions_lib_path)
 
 # Test functions from the CppHalfFunctions module
 @test CppHalfFunctions.half_d(3) == 1.5
+@show methods(CppHalfFunctions.half_d)
 @test CppHalfFunctions.half_i(-2) == -1
 @test CppHalfFunctions.half_u(3) == 1
 @test CppHalfFunctions.half_lambda(2.) == 1.

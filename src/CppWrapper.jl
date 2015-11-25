@@ -5,6 +5,9 @@ using BinDeps
 
 const cpp_wrapper_lib = Libdl.dlopen(joinpath(Pkg.dir("CppWrapper"),"deps","usr","lib","libcpp_wrapper"), Libdl.RTLD_GLOBAL)
 
+# Base type for wrapped C++ types
+abstract CppType
+
 # Load the modules in the shared library located at the given path
 function load_modules(path::AbstractString)
   module_lib = Libdl.dlopen(path, Libdl.RTLD_GLOBAL)
@@ -51,12 +54,22 @@ function build_function_expression(func)
   # Thunk
   thunk = ccall(Libdl.dlsym(cpp_wrapper_lib, "get_function_thunk"), Ptr{Void}, (Ptr{Void},), func)
 
+  # Build the types for the ccall argument list
+  c_arg_types = DataType[]
+  for argtype in argtypes
+    if argtype <: CppType
+      push!(c_arg_types, Any)
+    else
+      push!(c_arg_types, argtype)
+    end
+  end
+
   # Build the final call expression
   call_exp = nothing
   if thunk == C_NULL
-    call_exp = :(ccall($fpointer, $return_type, ($(argtypes...),), $(argsymbols...))) # Direct pointer call
+    call_exp = :(ccall($fpointer, $return_type, ($(c_arg_types...),), $(argsymbols...))) # Direct pointer call
   else
-    call_exp = :(ccall($fpointer, $return_type, (Ptr{Void}, $(argtypes...)), $thunk, $(argsymbols...))) # use thunk (= std::function)
+    call_exp = :(ccall($fpointer, $return_type, (Ptr{Void}, $(c_arg_types...)), $thunk, $(argsymbols...))) # use thunk (= std::function)
   end
   assert(call_exp != nothing)
 
@@ -97,6 +110,7 @@ function build_function_expression(func)
     push!(function_expressions.args, :($func_declaration = $call_exp))
   end
 
+  function_expressions
   return function_expressions
 end
 
@@ -113,12 +127,13 @@ function wrap_functions(cpp_mod)
   wrap_functions(cpp_mod, current_module())
 end
 
-# Create modules defined in the given library, wrapping all their functions
+# Create modules defined in the given library, wrapping all their functions and types
 function wrap_modules(so_path, parent_mod=Main)
   modules = CppWrapper.load_modules(eval(so_path))
   for cpp_mod in modules
     modsym = symbol(get_module_name(cpp_mod))
     jl_mod = parent_mod.eval(:(module $modsym end))
+    ccall(Libdl.dlsym(cpp_wrapper_lib, "create_types"), Void, (Any,Ptr{Void}), jl_mod, cpp_mod)
     wrap_functions(cpp_mod, jl_mod)
   end
 end
