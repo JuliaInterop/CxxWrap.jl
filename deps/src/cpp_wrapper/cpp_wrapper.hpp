@@ -208,7 +208,8 @@ public:
 	{
 		auto* new_wrapper = new FunctionWrapper<R, Args...>(f);
 		new_wrapper->set_name(name);
-		m_functions[name].reset(new_wrapper);
+		m_functions.resize(m_functions.size()+1);
+		m_functions.back().reset(new_wrapper);
 	}
 
 	/// Define a new function. Overload for pointers
@@ -227,7 +228,8 @@ public:
 		// No conversion needed -> call can be through a naked function pointer
 		auto* new_wrapper = new FunctionPtrWrapper<R, Args...>(f);
 		new_wrapper->set_name(name);
-		m_functions[name].reset(new_wrapper);
+		m_functions.resize(m_functions.size()+1);
+		m_functions.back().reset(new_wrapper);
 	}
 
 	/// Loop over the functions
@@ -236,7 +238,7 @@ public:
 	{
 		for(const auto& item : m_functions)
 		{
-			f(*item.second);
+			f(*item);
 		}
 	}
 
@@ -259,7 +261,7 @@ public:
 private:
 
 	std::string m_name;
-	std::map<std::string, std::unique_ptr<FunctionWrapperBase>> m_functions;
+	std::vector<std::unique_ptr<FunctionWrapperBase>> m_functions;
 	std::vector<std::unique_ptr<TypeBase>> m_types;
 };
 
@@ -307,8 +309,19 @@ public:
 	template<typename... ArgsT>
 	jl_value_t* create(ArgsT... args)
 	{
+		static jl_function_t* finalizer_func = jl_new_closure(finalizer, (jl_value_t*)jl_emptysvec, NULL);
+
 		T* cpp_obj = new T(args...);
-		return jl_new_struct(static_type_mapping<T>::julia_type(), jl_box_voidpointer(static_cast<void*>(cpp_obj)), jl_box_uint64(typeid(T).hash_code()));
+		jl_value_t* result = jl_new_struct(static_type_mapping<T>::julia_type(), jl_box_voidpointer(static_cast<void*>(cpp_obj)), jl_box_uint64(typeid(T).hash_code()));
+		jl_gc_add_finalizer(result, finalizer_func);
+
+		return result;
+	}
+
+	static jl_value_t* finalizer(jl_value_t *F, jl_value_t **args, uint32_t nargs)
+	{
+		T* stored_obj = convert_to_cpp<T*>(args[0]);
+		delete stored_obj;
 	}
 
 private:

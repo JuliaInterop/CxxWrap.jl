@@ -110,7 +110,6 @@ function build_function_expression(func)
     push!(function_expressions.args, :($func_declaration = $call_exp))
   end
 
-  function_expressions
   return function_expressions
 end
 
