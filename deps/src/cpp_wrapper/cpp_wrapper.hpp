@@ -277,7 +277,7 @@ public:
 		jl_datatype_t* cpp_super = (jl_datatype_t*)jl_get_global(cpp_wrapper_module, jl_symbol("CppType"));
 		assert(cpp_super != nullptr);
 
-		jl_datatype_t* dt = jl_new_datatype(jl_symbol(m_name.c_str()), cpp_super, jl_emptysvec, jl_svec2(jl_symbol("cpp_data"), jl_symbol("cpp_type")), jl_svec2(jl_voidpointer_type, jl_uint64_type), 0, 1, 0);
+		jl_datatype_t* dt = jl_new_datatype(jl_symbol(m_name.c_str()), cpp_super, jl_emptysvec, jl_svec2(jl_symbol("cpp_data"), jl_symbol("cpp_type")), jl_svec2(jl_any_type, jl_uint64_type), 0, 1, 0);
 		static_type_mapping<T>::set_julia_type(dt);
 		static_type_mapping<T*>::set_julia_type(dt);
 		if(std::is_default_constructible<T>::value) // Add default constructor if applicable
@@ -312,7 +312,7 @@ public:
 		static jl_function_t* finalizer_func = jl_new_closure(finalizer, (jl_value_t*)jl_emptysvec, NULL);
 
 		T* cpp_obj = new T(args...);
-		jl_value_t* result = jl_new_struct(static_type_mapping<T>::julia_type(), jl_box_voidpointer(static_cast<void*>(cpp_obj)), jl_box_uint64(typeid(T).hash_code()));
+		jl_value_t* result = jl_new_struct(static_type_mapping<T>::julia_type(), jl_box_uint64(detail::PointerMapping<T>::store(cpp_obj)), jl_box_uint64(typeid(T).hash_code()));
 		jl_gc_add_finalizer(result, finalizer_func);
 
 		return result;
@@ -320,8 +320,21 @@ public:
 
 	static jl_value_t* finalizer(jl_value_t *F, jl_value_t **args, uint32_t nargs)
 	{
-		T* stored_obj = convert_to_cpp<T*>(args[0]);
-		delete stored_obj;
+		delete_cpp(convert_to_cpp<T*>(args[0]));
+	}
+
+	static void delete_cpp(T* stored_obj)
+	{
+		if(stored_obj == nullptr)
+		{
+			std::cout << "skipping delete" << std::endl;
+			return;
+		}
+
+		if(detail::PointerMapping<T>::erase(stored_obj))
+		{
+			delete stored_obj;
+		}
 	}
 
 private:
