@@ -47,7 +47,15 @@ struct ReturnTypeAdapter<void, Args...>
 template<typename R, typename... Args>
 mapped_type<remove_const_ref<R>> call_functor(const void* functor, mapped_type<remove_const_ref<Args>>... args)
 {
-	return ReturnTypeAdapter<R, Args...>()(functor, args...);
+	try
+	{
+		return ReturnTypeAdapter<R, Args...>()(functor, args...);
+	}
+	catch(const std::runtime_error& err)
+	{
+		jl_error(err.what());
+		return mapped_type<remove_const_ref<R>>();
+	}
 }
 
 /// Make a vector with the types in the variadic template parameter pack
@@ -284,6 +292,8 @@ public:
 		{
 			constructor<>();
 		}
+		// Add a manual destructor
+		m_module.def("delete", delete_cpp);
 	}
 
 	virtual void bind_julia_type(jl_module_t* julia_module) const
@@ -327,7 +337,6 @@ public:
 	{
 		if(stored_obj == nullptr)
 		{
-			std::cout << "skipping delete" << std::endl;
 			return;
 		}
 

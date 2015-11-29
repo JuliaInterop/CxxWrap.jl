@@ -134,6 +134,9 @@ function wrap_modules(so_path, parent_mod=Main)
     jl_mod = parent_mod.eval(:(module $modsym end))
     ccall(Libdl.dlsym(cpp_wrapper_lib, "create_types"), Void, (Any,Ptr{Void}), jl_mod, cpp_mod)
     wrap_functions(cpp_mod, jl_mod)
+    if isdefined(jl_mod, :delete)
+      jl_mod.eval(:(export delete))
+    end
   end
 end
 

@@ -109,6 +109,7 @@ template<typename SourceT> struct static_type_mapping
 		}
 		m_type_pointer = dt;
 	}
+	
 private:
 	static jl_datatype_t* m_type_pointer;
 };
@@ -242,6 +243,9 @@ struct DoUnpack<std::true_type, std::false_type>
 	template<typename CppT>
 	CppT& operator()(CppT* ptr)
 	{
+		if(ptr == nullptr)
+			throw std::runtime_error("C++ object was deleted");
+
 		return *ptr;
 	}
 };
@@ -266,6 +270,7 @@ struct DoUnpack<std::false_type, std::false_type>
 	{
 		if(ptr == nullptr)
 			throw std::runtime_error("C++ object was deleted");
+
 		return *ptr;
 	}
 };

@@ -6,6 +6,7 @@ using Base.Test
 # Wrap the functions defined in C++
 wrap_modules(joinpath(Pkg.dir("CppWrapper"),"deps","usr","lib","libtypes"))
 
+using CppTypes
 using CppTypes.World
 
 # Default constructor
@@ -20,3 +21,5 @@ CppTypes.set(w, "hello")
 
 w = World("constructed")
 @test CppTypes.greet(w) == "constructed"
+delete(w)
+@test_throws ErrorException CppTypes.greet(w)
