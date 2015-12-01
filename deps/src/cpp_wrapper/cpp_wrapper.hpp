@@ -200,7 +200,7 @@ public:
 	virtual ~TypeBase() {}
 };
 
-template<typename T>
+template<typename T, typename IsAbstract=std::false_type>
 class Type;
 
 /// Store all exposed C++ functions associated with a module
@@ -253,6 +253,9 @@ public:
 	template<typename T>
 	Type<T>& add_type(const std::string& name);
 
+	template<typename T>
+	Type<T, std::true_type>& add_abstract(const std::string& name);
+
 	void bind_julia_types(jl_module_t* mod) const
 	{
 		for(const auto& tp : m_types)
@@ -274,7 +277,7 @@ private:
 };
 
 /// Define a new type
-template<typename T>
+template<typename T, typename IsAbstract>
 class Type : public TypeBase
 {
 public:
@@ -285,15 +288,38 @@ public:
 		jl_datatype_t* cpp_super = (jl_datatype_t*)jl_get_global(cpp_wrapper_module, jl_symbol("CppType"));
 		assert(cpp_super != nullptr);
 
-		jl_datatype_t* dt = jl_new_datatype(jl_symbol(m_name.c_str()), cpp_super, jl_emptysvec, jl_svec2(jl_symbol("cpp_data"), jl_symbol("cpp_type")), jl_svec2(jl_any_type, jl_uint64_type), 0, 1, 0);
+		static const bool abstract = IsAbstract::value;
+
+		jl_datatype_t* dt;
+		if(abstract)
+		{
+			//dt = jl_new_abstracttype((jl_value_t*)jl_symbol(m_name.c_str()), cpp_super, jl_emptysvec); // Not exported
+			dt = jl_new_datatype(jl_symbol(m_name.c_str()), cpp_super, jl_emptysvec, jl_emptysvec, jl_emptysvec, 1, 0, 0);
+	    dt->pointerfree = 0;
+		}
+		else
+		{
+			dt = jl_new_datatype(jl_symbol(m_name.c_str()), cpp_super, jl_emptysvec, jl_svec2(jl_symbol("cpp_data"), jl_symbol("cpp_type")), jl_svec2(jl_any_type, jl_uint64_type), 0, 1, 0);
+	 	}
+
 		static_type_mapping<T>::set_julia_type(dt);
 		static_type_mapping<T*>::set_julia_type(dt);
-		if(std::is_default_constructible<T>::value) // Add default constructor if applicable
-		{
-			constructor<>();
-		}
+
+		// Add default constructor if applicable
+		static_dispatch_default_constructor(std::integral_constant<bool, std::is_default_constructible<T>::value && !abstract>());
+
 		// Add a manual destructor
 		m_module.def("delete", delete_cpp);
+	}
+
+	// Static dispatch for default constructible classes
+	void static_dispatch_default_constructor(std::true_type)
+	{
+		constructor<>();
+	}
+
+	void static_dispatch_default_constructor(std::false_type)
+	{
 	}
 
 	virtual void bind_julia_type(jl_module_t* julia_module) const
@@ -302,14 +328,14 @@ public:
 	}
 
 	template<typename... ArgsT>
-	Type<T>& constructor()
+	Type<T, IsAbstract>& constructor()
 	{
 		m_module.def("call", std::function<jl_value_t*(SingletonType<T>, ArgsT...)>( [this](SingletonType<T>, ArgsT... args) { return create(args...); }));
 		return *this;
 	}
 
 	template<typename R, typename... ArgsT>
-	Type<T>& def(const std::string& name, R(T::*f)(ArgsT...))
+	Type<T, IsAbstract>& def(const std::string& name, R(T::*f)(ArgsT...))
 	{
 		m_module.def(name, std::function<R(T&, ArgsT...)>([f](T& obj, ArgsT... args) { return (obj.*f)(args...); }) );
 		return *this;
@@ -356,6 +382,15 @@ Type<T>& Module::add_type(const std::string& name)
 {
 	m_types.resize(m_types.size()+1);
 	Type<T>* result = new Type<T>(name, *this);
+	m_types.back().reset(result);
+	return *result;
+}
+
+template<typename T>
+Type<T, std::true_type>& Module::add_abstract(const std::string& name)
+{
+	m_types.resize(m_types.size()+1);
+	Type<T, std::true_type>* result = new Type<T, std::true_type>(name, *this);
 	m_types.back().reset(result);
 	return *result;
 }

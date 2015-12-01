@@ -18,6 +18,9 @@ target_link_libraries(hello CppWrapper::cpp_wrapper)
 add_library(types SHARED types.cpp)
 target_link_libraries(types CppWrapper::cpp_wrapper)
 
+add_library(inheritance SHARED inheritance.cpp)
+target_link_libraries(inheritance CppWrapper::cpp_wrapper)
+
 install(TARGETS
   functions
   hello

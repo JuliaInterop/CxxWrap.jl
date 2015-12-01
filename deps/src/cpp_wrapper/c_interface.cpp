@@ -38,9 +38,9 @@ jl_array_t* get_functions(void* void_module)
 	assert(void_module != nullptr);
 	const Module& module = *reinterpret_cast<Module*>(void_module);
 	Array<void*> array;
-	module.for_each_function([&](FunctionWrapperBase& mod)
+	module.for_each_function([&](FunctionWrapperBase& f)
 	{
-		array.push_back(static_cast<void*>(&mod));
+		array.push_back(static_cast<void*>(&f));
 	});
 
 	return array.wrapped();
