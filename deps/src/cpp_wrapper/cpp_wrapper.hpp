@@ -90,6 +90,10 @@ struct NeedConvertHelper<>
 
 } // end namespace detail
 
+// The CppWrapper Julia module
+extern jl_module_t* g_cpp_wrapper_module;
+extern jl_datatype_t* g_cppclassinfo_type;
+
 /// Abstract base class for storing any function
 class FunctionWrapperBase
 {
@@ -198,6 +202,8 @@ class TypeBase
 public:
 	virtual void bind_julia_type(jl_module_t* julia_module) const = 0;
 	virtual ~TypeBase() {}
+	/// Returns a Julia object of type CppClassInfo, providing all needed info to Julia to wrap the type
+	virtual jl_value_t* type_descriptor() const = 0;
 };
 
 template<typename T, typename IsAbstract=std::false_type>
@@ -256,12 +262,19 @@ public:
 	template<typename T>
 	Type<T, std::true_type>& add_abstract(const std::string& name);
 
-	void bind_julia_types(jl_module_t* mod) const
+	/// Loop over the types
+	template<typename F>
+	void for_each_type(const F f) const
 	{
-		for(const auto& tp : m_types)
+		for(const auto& item : m_types)
 		{
-			tp->bind_julia_type(mod);
+			f(*item);
 		}
+	}
+
+	unsigned int nb_types() const
+	{
+		return m_types.size();
 	}
 
 	const std::string& name() const
@@ -283,33 +296,22 @@ class Type : public TypeBase
 public:
 	Type(const std::string& name, Module& mod) : m_name(name), m_module(mod)
 	{
-		jl_module_t* cpp_wrapper_module = (jl_module_t*)jl_get_global(jl_current_module, jl_symbol("CppWrapper"));
-		assert(cpp_wrapper_module != nullptr);
-		jl_datatype_t* cpp_super = (jl_datatype_t*)jl_get_global(cpp_wrapper_module, jl_symbol("CppType"));
-		assert(cpp_super != nullptr);
-
-		static const bool abstract = IsAbstract::value;
-
-		jl_datatype_t* dt;
-		if(abstract)
-		{
-			//dt = jl_new_abstracttype((jl_value_t*)jl_symbol(m_name.c_str()), cpp_super, jl_emptysvec); // Not exported
-			dt = jl_new_datatype(jl_symbol(m_name.c_str()), cpp_super, jl_emptysvec, jl_emptysvec, jl_emptysvec, 1, 0, 0);
-	    dt->pointerfree = 0;
-		}
-		else
-		{
-			dt = jl_new_datatype(jl_symbol(m_name.c_str()), cpp_super, jl_emptysvec, jl_svec2(jl_symbol("cpp_data"), jl_symbol("cpp_type")), jl_svec2(jl_any_type, jl_uint64_type), 0, 1, 0);
-	 	}
-
-		static_type_mapping<T>::set_julia_type(dt);
-		static_type_mapping<T*>::set_julia_type(dt);
-
 		// Add default constructor if applicable
-		static_dispatch_default_constructor(std::integral_constant<bool, std::is_default_constructible<T>::value && !abstract>());
+		static_dispatch_default_constructor(std::integral_constant<bool, std::is_default_constructible<T>::value && !IsAbstract::value>());
 
 		// Add a manual destructor
 		m_module.def("delete", delete_cpp);
+
+		// Pointer field to the C++ type
+		static_dispatch_cpp_pointer_field(IsAbstract());
+	}
+
+	template<typename FieldT>
+	void add_field(const std::string& name)
+	{
+		static_assert(!IsAbstract::value, "Can't add fields to an abstract type");
+		if(!m_fields.insert(std::make_pair(name, static_type_mapping<FieldT>::julia_type)).second)
+			throw std::runtime_error("Field with name " + name + " already existed");
 	}
 
 	// Static dispatch for default constructible classes
@@ -320,6 +322,17 @@ public:
 
 	void static_dispatch_default_constructor(std::false_type)
 	{
+	}
+
+	// Static dispatch to add the cpp pointer field
+	void static_dispatch_cpp_pointer_field(std::true_type)
+	{
+		// Do nothing if the type is abstract
+	}
+
+	void static_dispatch_cpp_pointer_field(std::false_type)
+	{
+		add_field<jl_value_t*>("cpp_object"); // Can be a pointer or an integer index
 	}
 
 	virtual void bind_julia_type(jl_module_t* julia_module) const
@@ -354,6 +367,30 @@ public:
 		return result;
 	}
 
+	virtual jl_value_t* type_descriptor() const
+	{
+		Array<void*> field_types;
+		Array<std::string> field_names;
+		JL_GC_PUSH2(field_types.gc_pointer(), field_names.gc_pointer());
+		for(const auto& field : m_fields)
+		{
+			field_names.push_back(field.first);
+			field_types.push_back(reinterpret_cast<void*>(field.second));
+		}
+
+		jl_value_t* result =  jl_new_struct(g_cppclassinfo_type,
+			convert_to_julia(m_name),
+			jl_box_bool(IsAbstract::value),
+			jl_box_voidpointer(reinterpret_cast<void*>(get_super)),
+			jl_box_voidpointer(reinterpret_cast<void*>(register_datatype)),
+			field_types.wrapped(),
+			field_names.wrapped()
+		);
+
+		JL_GC_POP();
+		return result;
+	}
+
 	static jl_value_t* finalizer(jl_value_t *F, jl_value_t **args, uint32_t nargs)
 	{
 		delete_cpp(convert_to_cpp<T*>(args[0]));
@@ -372,9 +409,22 @@ public:
 		}
 	}
 
+	static void register_datatype(jl_datatype_t* dt)
+	{
+		static_type_mapping<T>::set_julia_type(dt);
+		static_type_mapping<T*>::set_julia_type(dt);
+	}
+
+	// TODO: Make this return the actual superclass
+	static jl_datatype_t* get_super()
+	{
+		return static_type_mapping<CppAny>::julia_type();
+	}
+
 private:
 	const std::string m_name;
 	Module& m_module;
+	std::map<std::string, jl_datatype_t*(*)()> m_fields;
 };
 
 template<typename T>

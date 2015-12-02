@@ -87,6 +87,11 @@ template<typename T> uint64_t PointerMapping<T>::m_idx = 0;
 /// Helper to easily remove a ref to a const
 template<typename T> using remove_const_ref = typename std::remove_const<typename std::remove_reference<T>::type>::type;
 
+/// Base type for all wrapped classes
+struct CppAny
+{
+};
+
 /// Static mapping base template
 template<typename SourceT> struct static_type_mapping
 {
@@ -109,7 +114,7 @@ template<typename SourceT> struct static_type_mapping
 		}
 		m_type_pointer = dt;
 	}
-	
+
 private:
 	static jl_datatype_t* m_type_pointer;
 };
@@ -160,6 +165,13 @@ template<> struct static_type_mapping<unsigned int>
 {
 	typedef unsigned int type;
 	static jl_datatype_t* julia_type() { return jl_uint32_type; }
+	template<typename T> using remove_const_ref = cpp_wrapper::remove_const_ref<T>;
+};
+
+template<> struct static_type_mapping<uint64_t>
+{
+	typedef uint64_t type;
+	static jl_datatype_t* julia_type() { return jl_uint64_type; }
 	template<typename T> using remove_const_ref = cpp_wrapper::remove_const_ref<T>;
 };
 
@@ -293,10 +305,10 @@ struct JuliaUnpacker
 		assert(julia_value != nullptr);
 
 		// Get the type id hash code and verify that it's correct
-		jl_value_t* type_hash = jl_fieldref(julia_value,1);
-		assert(jl_is_uint64(type_hash));
-		if(jl_unbox_uint64(type_hash) != typeid(stripped_cpp_t).hash_code())
-			throw std::runtime_error("Incorrect C++ type in value passed from Julia when attempting extract to " + std::string(typeid(stripped_cpp_t).name()));
+		// jl_value_t* type_hash = jl_fieldref(julia_value,1);
+		// assert(jl_is_uint64(type_hash));
+		// if(jl_unbox_uint64(type_hash) != typeid(stripped_cpp_t).hash_code())
+		// 	throw std::runtime_error("Incorrect C++ type in value passed from Julia when attempting extract to " + std::string(typeid(stripped_cpp_t).name()));
 
 		// Get the pointer to the C++ class
 		jl_value_t* cpp_ref = jl_fieldref(julia_value,0);
@@ -309,8 +321,6 @@ struct JuliaUnpacker
 			assert(jl_is_uint64(cpp_ref));
 			return detail::PointerMapping<stripped_cpp_t>::get(jl_unbox_uint64(cpp_ref));
 		}
-
-
 	}
 };
 

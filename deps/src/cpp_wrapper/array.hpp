@@ -75,10 +75,8 @@ class Array
 public:
 	Array(const size_t n = 0)
 	{
-		JL_GC_PUSH1(&m_array);
 		jl_value_t* array_type = jl_apply_array_type(static_type_mapping<ValueT>::julia_type(), 1);
 		m_array = jl_alloc_array_1d(array_type, n);
-		JL_GC_POP();
 	}
 
 	/// Overload for void pointer
@@ -96,6 +94,12 @@ public:
 	{
 		return m_array;
 	}
+
+  // access to the pointer for GC macros
+  jl_array_t** gc_pointer()
+  {
+    return &m_array;
+  }
 
 private:
 	jl_array_t* m_array;

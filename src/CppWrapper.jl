@@ -6,7 +6,21 @@ using BinDeps
 const cpp_wrapper_lib = Libdl.dlopen(joinpath(Pkg.dir("CppWrapper"),"deps","usr","lib","libcpp_wrapper"), Libdl.RTLD_GLOBAL)
 
 # Base type for wrapped C++ types
-abstract CppType
+abstract CppAny
+
+# Type for internal information about a CPP type
+type CppClassInfo
+  name::AbstractString # Name of the class
+  is_abstract::Bool # Should the Julia type be made abstract?
+  superclass::Ptr{Void} # Pointer to a C function that gets the superclass to inherit from. Must be a function since it's only created during the Julia wrapping phase
+  register_datatype::Ptr{Void} # Function to register the created type on the C++ side
+  field_types::Array{Ptr{Void},1} # Functions returning the datatypes of the fields to add
+  field_names::Array{AbstractString,1} # The field names
+end
+
+function __init__()
+  ccall(Libdl.dlsym(cpp_wrapper_lib, "initialize"), Void, (Any, Any, Any), CppWrapper, CppAny, CppClassInfo)
+end
 
 # Load the modules in the shared library located at the given path
 function load_modules(path::AbstractString)
@@ -57,7 +71,7 @@ function build_function_expression(func)
   # Build the types for the ccall argument list
   c_arg_types = DataType[]
   for argtype in argtypes
-    if argtype <: CppType
+    if argtype <: CppAny
       push!(c_arg_types, Any)
     else
       push!(c_arg_types, argtype)
@@ -126,13 +140,35 @@ function wrap_functions(cpp_mod)
   wrap_functions(cpp_mod, current_module())
 end
 
+# Wrap the types in the given array
+function wrap_types(types::Array{CppClassInfo,1}, target_module::Module)
+  for cpp_info in types
+    type_sym = Symbol(cpp_info.name)
+    superclass = ccall(cpp_info.superclass, Any, ())
+    if cpp_info.is_abstract
+      target_module.eval(:(abstract $type_sym <: $superclass))
+    else
+      new_type_expression = :(type $type_sym <: $superclass end)
+      for (field_type_fn, field_name) in zip(cpp_info.field_types, cpp_info.field_names)
+        field_dt = ccall(field_type_fn, Any, ())
+        push!(new_type_expression.args[3].args, :($(Symbol(field_name))::$field_dt))
+      end
+      target_module.eval(new_type_expression)
+    end
+    dt = target_module.eval(:($type_sym))
+    ccall(cpp_info.register_datatype, Void, (Any,), dt)
+  end
+end
+
 # Create modules defined in the given library, wrapping all their functions and types
 function wrap_modules(so_path, parent_mod=Main)
   modules = CppWrapper.load_modules(eval(so_path))
   for cpp_mod in modules
     modsym = symbol(get_module_name(cpp_mod))
     jl_mod = parent_mod.eval(:(module $modsym end))
-    ccall(Libdl.dlsym(cpp_wrapper_lib, "create_types"), Void, (Any,Ptr{Void}), jl_mod, cpp_mod)
+    class_info_arr = CppClassInfo[]
+    ccall(Libdl.dlsym(cpp_wrapper_lib, "get_class_info"), Void, (Ptr{Void}, Any), cpp_mod, class_info_arr)
+    wrap_types(class_info_arr, jl_mod)
     wrap_functions(cpp_mod, jl_mod)
     if isdefined(jl_mod, :delete)
       jl_mod.eval(:(export delete))

@@ -10,8 +10,8 @@ using CppTypes
 using CppTypes.World
 
 # Default constructor
-@test World <: CppWrapper.CppType
-@test super(World) == CppWrapper.CppType
+@test World <: CppWrapper.CppAny
+@test super(World) == CppWrapper.CppAny
 w = World()
 @test CppTypes.greet(w) == "default hello"
 

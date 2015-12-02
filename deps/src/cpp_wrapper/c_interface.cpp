@@ -6,6 +6,14 @@ extern "C"
 
 using namespace cpp_wrapper;
 
+/// Initialize the module
+void initialize(jl_value_t* julia_module, jl_value_t* cpp_any_type, jl_value_t* cppclassinfo_type)
+{
+	g_cpp_wrapper_module = (jl_module_t*)julia_module;
+	static_type_mapping<CppAny>::set_julia_type((jl_datatype_t*)cpp_any_type);
+	g_cppclassinfo_type = (jl_datatype_t*)cppclassinfo_type;
+}
+
 /// Create a new registry
 void* create_registry()
 {
@@ -88,13 +96,19 @@ jl_datatype_t* get_function_return_type(void* void_function)
 	return function.return_type();
 }
 
-void create_types(jl_value_t* julia_module, void* void_module)
+void get_class_info(void* void_module, jl_value_t* cpp_class_info_array)
 {
-	assert(jl_is_module(julia_module));
 	assert(void_module != nullptr);
 	const Module& cpp_module = *reinterpret_cast<Module*>(void_module);
-	cpp_module.bind_julia_types((jl_module_t*)julia_module);
+	assert(jl_is_array(cpp_class_info_array));
+	jl_array_t* arr = (jl_array_t*)cpp_class_info_array;
+	jl_array_grow_end(arr, cpp_module.nb_types());
+	ArrayRef<jl_value_t*> arr_ref(arr);
+	auto arr_elem = arr_ref.begin();
+	cpp_module.for_each_type([&](const TypeBase& type)
+	{
+		*arr_elem = type.type_descriptor();
+	});
 }
-
 
 }

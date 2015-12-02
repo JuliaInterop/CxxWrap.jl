@@ -5,6 +5,9 @@
 namespace cpp_wrapper
 {
 
+jl_module_t* g_cpp_wrapper_module;
+jl_datatype_t* g_cppclassinfo_type;
+
 Module::Module(const std::string& name) : m_name(name)
 {
 }
