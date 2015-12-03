@@ -79,6 +79,12 @@ public:
 		m_array = jl_alloc_array_1d(array_type, n);
 	}
 
+  Array(jl_datatype_t* applied_type, const size_t n = 0)
+	{
+		jl_value_t* array_type = jl_apply_array_type(applied_type, 1);
+		m_array = jl_alloc_array_1d(array_type, n);
+	}
+
 	/// Overload for void pointer
 	void push_back(const ValueT& val)
 	{

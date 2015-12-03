@@ -21,5 +21,6 @@ CppTypes.set(w, "hello")
 
 w = World("constructed")
 @test CppTypes.greet(w) == "constructed"
+
 delete(w)
 @test_throws ErrorException CppTypes.greet(w)

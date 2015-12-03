@@ -18,8 +18,17 @@ type CppClassInfo
   field_names::Array{AbstractString,1} # The field names
 end
 
+# Encapsulate information about a function
+type CppFunctionInfo
+  name::AbstractString
+  argument_types::Array{DataType,1}
+  return_type::DataType
+  function_pointer::Ptr{Void}
+  thunk_pointer::Ptr{Void}
+end
+
 function __init__()
-  ccall(Libdl.dlsym(cpp_wrapper_lib, "initialize"), Void, (Any, Any, Any), CppWrapper, CppAny, CppClassInfo)
+  ccall(Libdl.dlsym(cpp_wrapper_lib, "initialize"), Void, (Any, Any, Any, Any), CppWrapper, CppAny, CppClassInfo, CppFunctionInfo)
 end
 
 # Load the modules in the shared library located at the given path
@@ -27,46 +36,39 @@ function load_modules(path::AbstractString)
   module_lib = Libdl.dlopen(path, Libdl.RTLD_GLOBAL)
   registry = ccall(Libdl.dlsym(cpp_wrapper_lib, "create_registry"), Ptr{Void}, ())
   ccall(Libdl.dlsym(module_lib, "register_julia_modules"), Void, (Ptr{Void},), registry)
-  modules = ccall(Libdl.dlsym(cpp_wrapper_lib, "get_modules"), Array{Ptr{Void}}, (Ptr{Void},), registry)
+  return registry
 end
 
-get_module_name(mod) = ccall(Libdl.dlsym(cpp_wrapper_lib, "get_module_name"), Any, (Ptr{Void},), mod)
-
-# Given an array of modules, find the one with the passed name
-function get_module_by_name(modules, searched_name::AbstractString)
-  for mod in modules
-    name = get_module_name(mod)
-    if(name == searched_name)
-      return mod
-    end
-  end
-  throw(KeyError(searched_name))
+function get_module_names(registry::Ptr{Void})
+  ccall(Libdl.dlsym(cpp_wrapper_lib, "get_module_names"), Array{AbstractString}, (Ptr{Void},), registry)
 end
 
-# Get the functions of the given module
-get_functions(mod) = ccall(Libdl.dlsym(cpp_wrapper_lib, "get_functions"), Array{Ptr{Void}, 1}, (Ptr{Void},), mod)
+function get_module_types(registry::Ptr{Void})
+  ccall(Libdl.dlsym(cpp_wrapper_lib, "get_module_types"), Array{CppClassInfo}, (Ptr{Void},), registry)
+end
 
-# Get the function name for a given function
-get_function_name(func) = symbol(ccall(Libdl.dlsym(cpp_wrapper_lib, "get_function_name"), Any, (Ptr{Void},), func))
+function get_module_functions(registry::Ptr{Void})
+  ccall(Libdl.dlsym(cpp_wrapper_lib, "get_module_functions"), Array{CppFunctionInfo}, (Ptr{Void},), registry)
+end
 
 # Build the expression to wrap the given function
-function build_function_expression(func)
+function build_function_expression(func::CppFunctionInfo)
   # Name of the function
-  fname = get_function_name(func)
+  fname = symbol(func.name)
 
   # Arguments and types
-  argtypes = ccall(Libdl.dlsym(cpp_wrapper_lib, "get_function_arguments"), Array{DataType,1}, (Ptr{Void},), func)
+  argtypes = func.argument_types
   argsymbols = map((i) -> symbol(:arg,i[1]), enumerate(argtypes))
 
   # Return type
-  return_type = ccall(Libdl.dlsym(cpp_wrapper_lib, "get_function_return_type"), Any, (Ptr{Void},), func)
+  return_type = func.return_type
 
   # Function pointer
-  fpointer = ccall(Libdl.dlsym(cpp_wrapper_lib, "get_function_pointer"), Ptr{Void}, (Ptr{Void},), func)
+  fpointer = func.function_pointer
   assert(fpointer != C_NULL)
 
   # Thunk
-  thunk = ccall(Libdl.dlsym(cpp_wrapper_lib, "get_function_thunk"), Ptr{Void}, (Ptr{Void},), func)
+  thunk = func.thunk_pointer
 
   # Build the types for the ccall argument list
   c_arg_types = DataType[]
@@ -128,22 +130,24 @@ function build_function_expression(func)
 end
 
 # Wrap functions from the cpp module to the passed julia module
-function wrap_functions(cpp_mod, julia_mod)
-  functions = get_functions(cpp_mod)
+function wrap_functions(functions, julia_mod)
   for func in functions
     julia_mod.eval(build_function_expression(func))
+  end
+  if isdefined(julia_mod, :delete)
+    julia_mod.eval(:(export delete))
   end
 end
 
 # Wrap all functions, placing the wrapper in the current module
-function wrap_functions(cpp_mod)
-  wrap_functions(cpp_mod, current_module())
+function wrap_functions(functions)
+  wrap_functions(functions, current_module())
 end
 
 # Wrap the types in the given array
 function wrap_types(types::Array{CppClassInfo,1}, target_module::Module)
   for cpp_info in types
-    type_sym = Symbol(cpp_info.name)
+    type_sym = symbol(cpp_info.name)
     superclass = ccall(cpp_info.superclass, Any, ())
     if cpp_info.is_abstract
       target_module.eval(:(abstract $type_sym <: $superclass))
@@ -161,19 +165,27 @@ function wrap_types(types::Array{CppClassInfo,1}, target_module::Module)
 end
 
 # Create modules defined in the given library, wrapping all their functions and types
-function wrap_modules(so_path, parent_mod=Main)
-  modules = CppWrapper.load_modules(eval(so_path))
-  for cpp_mod in modules
-    modsym = symbol(get_module_name(cpp_mod))
+function wrap_modules(registry::Ptr{Void}, parent_mod=Main)
+  module_names = get_module_names(registry)
+  module_types = get_module_types(registry)
+  jl_modules = Module[]
+  for (mod_name, mod_types) in zip(module_names, module_types)
+    modsym = symbol(mod_name)
     jl_mod = parent_mod.eval(:(module $modsym end))
-    class_info_arr = CppClassInfo[]
-    ccall(Libdl.dlsym(cpp_wrapper_lib, "get_class_info"), Void, (Ptr{Void}, Any), cpp_mod, class_info_arr)
-    wrap_types(class_info_arr, jl_mod)
-    wrap_functions(cpp_mod, jl_mod)
-    if isdefined(jl_mod, :delete)
-      jl_mod.eval(:(export delete))
-    end
+    push!(jl_modules, jl_mod)
+    wrap_types(mod_types, jl_mod)
   end
+
+  module_functions = get_module_functions(registry)
+  for (jl_mod, mod_functions) in zip(jl_modules, module_functions)
+    wrap_functions(mod_functions, jl_mod)
+  end
+end
+
+# Wrap modules in the given path
+function wrap_modules(so_path::AbstractString, parent_mod=Main)
+  registry = CppWrapper.load_modules(so_path)
+  wrap_modules(registry, parent_mod)
 end
 
 export wrap_modules

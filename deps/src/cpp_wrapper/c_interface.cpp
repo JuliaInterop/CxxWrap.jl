@@ -7,11 +7,12 @@ extern "C"
 using namespace cpp_wrapper;
 
 /// Initialize the module
-void initialize(jl_value_t* julia_module, jl_value_t* cpp_any_type, jl_value_t* cppclassinfo_type)
+void initialize(jl_value_t* julia_module, jl_value_t* cpp_any_type, jl_value_t* cppclassinfo_type, jl_value_t* cppfunctioninfo_type)
 {
 	g_cpp_wrapper_module = (jl_module_t*)julia_module;
 	static_type_mapping<CppAny>::set_julia_type((jl_datatype_t*)cpp_any_type);
 	g_cppclassinfo_type = (jl_datatype_t*)cppclassinfo_type;
+	g_cppfunctioninfo_type = (jl_datatype_t*)cppfunctioninfo_type;
 }
 
 /// Create a new registry
@@ -20,95 +21,86 @@ void* create_registry()
 	return static_cast<void*>(new ModuleRegistry());
 }
 
-jl_array_t* get_modules(void* void_registry)
+/// Get the names of all modules in the registry
+jl_array_t* get_module_names(void* void_registry)
 {
-  assert(void_registry != nullptr);
+	assert(void_registry != nullptr);
 	const ModuleRegistry& registry = *reinterpret_cast<ModuleRegistry*>(void_registry);
-	Array<void*> array;
-
-	registry.for_each_module([&](Module& mod)
+	Array<std::string> names_array;
+	JL_GC_PUSH1(names_array.gc_pointer());
+	registry.for_each_module([&](Module& module)
 	{
-		array.push_back(static_cast<void*>(&mod));
+		names_array.push_back(module.name());
 	});
-
-	return array.wrapped();
+	JL_GC_POP();
+	return names_array.wrapped();
 }
 
-jl_value_t* get_module_name(void* void_module)
+/// Get the types per module defined in the registry. Must be processed beore getting the functions
+jl_array_t* get_module_types(void* void_registry)
 {
-	assert(void_module != nullptr);
-	const Module& module = *reinterpret_cast<Module*>(void_module);
-	return convert_to_julia(module.name());
-}
-
-jl_array_t* get_functions(void* void_module)
-{
-	assert(void_module != nullptr);
-	const Module& module = *reinterpret_cast<Module*>(void_module);
-	Array<void*> array;
-	module.for_each_function([&](FunctionWrapperBase& f)
+	assert(void_registry != nullptr);
+	const ModuleRegistry& registry = *reinterpret_cast<ModuleRegistry*>(void_registry);
+	Array<jl_value_t*> module_array((jl_datatype_t*)jl_apply_array_type(g_cppclassinfo_type,1));
+	JL_GC_PUSH1(module_array.gc_pointer());
+	registry.for_each_module([&](Module& module)
 	{
-		array.push_back(static_cast<void*>(&f));
+		Array<jl_value_t*> type_array(g_cppclassinfo_type);
+		JL_GC_PUSH1(type_array.gc_pointer());
+
+		module.for_each_type([&](const TypeBase& type)
+		{
+			type_array.push_back(type.type_descriptor());
+		});
+
+		module_array.push_back((jl_value_t*)type_array.wrapped());
+
+		JL_GC_POP();
 	});
-
-	return array.wrapped();
+	JL_GC_POP();
+	return module_array.wrapped();
 }
 
-jl_value_t* get_function_name(void* void_function)
+/// Get the functions defined in the modules. Any classes used by these functions must be defined on the Julia side first
+jl_array_t* get_module_functions(void* void_registry)
 {
-  assert(void_function != nullptr);
-	FunctionWrapperBase& function = *reinterpret_cast<FunctionWrapperBase*>(void_function);
-	return convert_to_julia(function.name());
-}
-
-void* get_function_pointer(void* void_function)
-{
-  assert(void_function != nullptr);
-	FunctionWrapperBase& function = *reinterpret_cast<FunctionWrapperBase*>(void_function);
-	return function.pointer();
-}
-
-void* get_function_thunk(void* void_function)
-{
-  assert(void_function != nullptr);
-	FunctionWrapperBase& function = *reinterpret_cast<FunctionWrapperBase*>(void_function);
-	return function.thunk();
-}
-
-jl_array_t* get_function_arguments(void* void_function)
-{
-  assert(void_function != nullptr);
-	FunctionWrapperBase& function = *reinterpret_cast<FunctionWrapperBase*>(void_function);
-	const std::vector<jl_datatype_t*> types_vec = function.argument_types();
-	Array<jl_datatype_t*> julia_array;
-	for(const auto& t : types_vec)
+	assert(void_registry != nullptr);
+	const ModuleRegistry& registry = *reinterpret_cast<ModuleRegistry*>(void_registry);
+	Array<jl_value_t*> module_array((jl_datatype_t*)jl_apply_array_type(g_cppfunctioninfo_type,1));
+	JL_GC_PUSH1(module_array.gc_pointer());
+	registry.for_each_module([&](Module& module)
 	{
-		julia_array.push_back(t);
-	}
+		Array<jl_value_t*> function_array(g_cppfunctioninfo_type);
+		JL_GC_PUSH1(function_array.gc_pointer());
 
-	return julia_array.wrapped();
-}
+		module.for_each_function([&](FunctionWrapperBase& f)
+		{
+			const std::vector<jl_datatype_t*> types_vec = f.argument_types();
+			Array<jl_datatype_t*> arg_types_array;
+			JL_GC_PUSH1(arg_types_array.gc_pointer());
 
-jl_datatype_t* get_function_return_type(void* void_function)
-{
-  assert(void_function != nullptr);
-	FunctionWrapperBase& function = *reinterpret_cast<FunctionWrapperBase*>(void_function);
-	return function.return_type();
-}
+			for(const auto& t : types_vec)
+			{
+				arg_types_array.push_back(t);
+			}
 
-void get_class_info(void* void_module, jl_value_t* cpp_class_info_array)
-{
-	assert(void_module != nullptr);
-	const Module& cpp_module = *reinterpret_cast<Module*>(void_module);
-	assert(jl_is_array(cpp_class_info_array));
-	jl_array_t* arr = (jl_array_t*)cpp_class_info_array;
-	jl_array_grow_end(arr, cpp_module.nb_types());
-	ArrayRef<jl_value_t*> arr_ref(arr);
-	auto arr_elem = arr_ref.begin();
-	cpp_module.for_each_type([&](const TypeBase& type)
-	{
-		*arr_elem = type.type_descriptor();
+			function_array.push_back(jl_new_struct(g_cppfunctioninfo_type,
+				convert_to_julia(f.name()),
+				arg_types_array.wrapped(),
+				f.return_type(),
+				jl_box_voidpointer(f.pointer()),
+				jl_box_voidpointer(f.thunk())
+			));
+
+			JL_GC_POP();
+		});
+
+		module_array.push_back((jl_value_t*)function_array.wrapped());
+
+		JL_GC_POP();
 	});
+	JL_GC_POP();
+	return module_array.wrapped();
 }
 
 }

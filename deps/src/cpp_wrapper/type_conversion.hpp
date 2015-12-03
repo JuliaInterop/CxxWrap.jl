@@ -287,6 +287,15 @@ struct DoUnpack<std::false_type, std::false_type>
 	}
 };
 
+inline std::string julia_type_name(jl_datatype_t* dt)
+{
+#if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 5
+	return std::string(dt->name->name->name);
+#else
+	return std::string(jl_symbol_name(dt->name->name));
+#endif
+}
+
 /// Helper class to unpack a julia type
 template<typename CppT>
 struct JuliaUnpacker
@@ -304,11 +313,10 @@ struct JuliaUnpacker
 	{
 		assert(julia_value != nullptr);
 
-		// Get the type id hash code and verify that it's correct
-		// jl_value_t* type_hash = jl_fieldref(julia_value,1);
-		// assert(jl_is_uint64(type_hash));
-		// if(jl_unbox_uint64(type_hash) != typeid(stripped_cpp_t).hash_code())
-		// 	throw std::runtime_error("Incorrect C++ type in value passed from Julia when attempting extract to " + std::string(typeid(stripped_cpp_t).name()));
+		jl_datatype_t* passed_type = (jl_datatype_t*)(jl_typeof(julia_value));
+		jl_datatype_t* expected_type = (jl_datatype_t*)(jl_typeof(static_type_mapping<stripped_cpp_t>::julia_type()));
+		if(!jl_typeis(passed_type, expected_type))
+			throw std::runtime_error("Invalid type " + julia_type_name(passed_type) + " passed to C++ function expecting type " + julia_type_name(expected_type));
 
 		// Get the pointer to the C++ class
 		jl_value_t* cpp_ref = jl_fieldref(julia_value,0);

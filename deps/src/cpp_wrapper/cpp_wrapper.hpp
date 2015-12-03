@@ -93,6 +93,7 @@ struct NeedConvertHelper<>
 // The CppWrapper Julia module
 extern jl_module_t* g_cpp_wrapper_module;
 extern jl_datatype_t* g_cppclassinfo_type;
+extern jl_datatype_t* g_cppfunctioninfo_type;
 
 /// Abstract base class for storing any function
 class FunctionWrapperBase
