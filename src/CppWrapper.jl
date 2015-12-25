@@ -132,10 +132,11 @@ end
 # Wrap functions from the cpp module to the passed julia module
 function wrap_functions(functions, julia_mod)
   for func in functions
-    julia_mod.eval(build_function_expression(func))
-  end
-  if isdefined(julia_mod, :delete)
-    julia_mod.eval(:(export delete))
+    if(func.name == "deepcopy_internal")
+      Base.eval(build_function_expression(func))
+    else
+      julia_mod.eval(build_function_expression(func))
+    end
   end
 end
 

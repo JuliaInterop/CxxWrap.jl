@@ -15,75 +15,6 @@
 namespace cpp_wrapper
 {
 
-namespace detail
-{
-
-// Maps pointers to indices and vice versa
-template<typename T>
-class PointerMapping
-{
-	typedef std::map<T*, uint64_t> ptr_map_t;
-	typedef std::map<uint64_t, T*> idx_map_t;
-
-	// Keep track of created objects using two maps
-	static ptr_map_t& pointer_to_index_map()
-	{
-		static ptr_map_t pointer_map;
-		return pointer_map;
-	}
-
-	static idx_map_t& index_to_pointer_map()
-	{
-		static idx_map_t index_map;
-		return index_map;
-	}
-
-	static uint64_t m_idx;
-
-public:
-	// Erase a pointer. Returns true if really erased, false if it didnt't exist
-	static bool erase(T* ptr)
-	{
-		if(ptr == nullptr)
-		{
-			return false;
-		}
-
-		typename ptr_map_t::iterator it = pointer_to_index_map().find(ptr);
-		if(it == pointer_to_index_map().end()) // Already deleted
-		{
-			return false;
-		}
-
-		index_to_pointer_map().erase(it->second);
-		pointer_to_index_map().erase(it);
-
-		return true;
-	}
-
-	static uint64_t store(T* ptr)
-	{
-		pointer_to_index_map()[ptr] = m_idx;
-		index_to_pointer_map()[m_idx] = ptr;
-		return m_idx++;
-	}
-
-	static T* get(const uint64_t idx)
-	{
-		typename idx_map_t::iterator it = index_to_pointer_map().find(idx);
-		if(it != index_to_pointer_map().end())
-		{
-			return it->second;
-		}
-
-		return nullptr;
-	}
-};
-
-template<typename T> uint64_t PointerMapping<T>::m_idx = 0;
-
-}
-
 /// Helper to easily remove a ref to a const
 template<typename T> using remove_const_ref = typename std::remove_const<typename std::remove_reference<T>::type>::type;
 
@@ -203,6 +134,16 @@ template<> struct static_type_mapping<jl_value_t*>
 	template<typename T> using remove_const_ref = cpp_wrapper::remove_const_ref<T>;
 };
 
+// Helper for ObjectIdDict
+struct ObjectIdDict {};
+
+template<> struct static_type_mapping<ObjectIdDict>
+{
+	typedef jl_value_t* type;
+	static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_get_global(jl_base_module, jl_symbol("ObjectIdDict")); }
+	template<typename T> using remove_const_ref = cpp_wrapper::remove_const_ref<T>;
+};
+
 /// Auto-conversion to the statically mapped target type.
 template<typename T>
 inline mapped_type<T> convert_to_julia(const T& cpp_val)
@@ -312,23 +253,12 @@ struct JuliaUnpacker
 	static stripped_cpp_t* extract_cpp_pointer(jl_value_t* julia_value)
 	{
 		assert(julia_value != nullptr);
-
-		jl_datatype_t* passed_type = (jl_datatype_t*)(jl_typeof(julia_value));
-		jl_datatype_t* expected_type = (jl_datatype_t*)(jl_typeof(static_type_mapping<stripped_cpp_t>::julia_type()));
-		if(!jl_typeis(passed_type, expected_type))
-			throw std::runtime_error("Invalid type " + julia_type_name(passed_type) + " passed to C++ function expecting type " + julia_type_name(expected_type));
+		assert(jl_type_morespecific(jl_typeof(julia_value), (jl_value_t*)static_type_mapping<stripped_cpp_t>::julia_type()));
 
 		// Get the pointer to the C++ class
 		jl_value_t* cpp_ref = jl_fieldref(julia_value,0);
-		if(jl_is_pointer(cpp_ref))
-		{
-			return reinterpret_cast<stripped_cpp_t*>(jl_unbox_voidpointer(cpp_ref));
-		}
-		else
-		{
-			assert(jl_is_uint64(cpp_ref));
-			return detail::PointerMapping<stripped_cpp_t>::get(jl_unbox_uint64(cpp_ref));
-		}
+		assert(jl_is_pointer(cpp_ref));
+		return reinterpret_cast<stripped_cpp_t*>(jl_unbox_voidpointer(cpp_ref));
 	}
 };
 
@@ -367,6 +297,12 @@ template<>
 inline jl_value_t* convert_to_cpp(jl_value_t* const& julia_value)
 {
 	return julia_value;
+}
+
+template<>
+inline ObjectIdDict convert_to_cpp(jl_value_t* const&)
+{
+	return ObjectIdDict();
 }
 
 }

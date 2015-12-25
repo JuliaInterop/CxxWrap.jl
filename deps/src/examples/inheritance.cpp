@@ -19,5 +19,5 @@ JULIA_CPP_MODULE_BEGIN(registry)
   cpp_wrapper::Module& types = registry.create_module("CppInheritance");
   types.add_abstract<A>("A")
     .def("message", &A::message);
-  types.add_type<B>("B");
+  types.add_type<B,A>("B");
 JULIA_CPP_MODULE_END

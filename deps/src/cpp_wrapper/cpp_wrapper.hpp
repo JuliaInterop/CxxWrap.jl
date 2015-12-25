@@ -207,7 +207,7 @@ public:
 	virtual jl_value_t* type_descriptor() const = 0;
 };
 
-template<typename T, typename IsAbstract=std::false_type>
+template<typename T, typename BaseT, typename IsAbstract>
 class Type;
 
 /// Store all exposed C++ functions associated with a module
@@ -257,11 +257,11 @@ public:
 		}
 	}
 
-	template<typename T>
-	Type<T>& add_type(const std::string& name);
+	template<typename T, typename BaseT=CppAny>
+	Type<T,BaseT,std::false_type>& add_type(const std::string& name);
 
-	template<typename T>
-	Type<T, std::true_type>& add_abstract(const std::string& name);
+	template<typename T, typename BaseT=CppAny>
+	Type<T, BaseT, std::true_type>& add_abstract(const std::string& name);
 
 	/// Loop over the types
 	template<typename F>
@@ -291,7 +291,7 @@ private:
 };
 
 /// Define a new type
-template<typename T, typename IsAbstract>
+template<typename T, typename BaseT, typename IsAbstract>
 class Type : public TypeBase
 {
 public:
@@ -299,9 +299,8 @@ public:
 	{
 		// Add default constructor if applicable
 		static_dispatch_default_constructor(std::integral_constant<bool, std::is_default_constructible<T>::value && !IsAbstract::value>());
-
-		// Add a manual destructor
-		m_module.def("delete", delete_cpp);
+		// Add copy constructor if applicable
+		static_dispatch_copy_constructor(std::integral_constant<bool, std::is_copy_constructible<T>::value && !IsAbstract::value>());
 
 		// Pointer field to the C++ type
 		static_dispatch_cpp_pointer_field(IsAbstract());
@@ -320,8 +319,16 @@ public:
 	{
 		constructor<>();
 	}
-
 	void static_dispatch_default_constructor(std::false_type)
+	{
+	}
+
+	// Static dispatch to add copy constructor as a deep_copy specialization
+	void static_dispatch_copy_constructor(std::true_type)
+	{
+		m_module.def("deepcopy_internal", std::function<jl_value_t*(const T&, ObjectIdDict)>( [this](const T& other, ObjectIdDict) { return create(other); }));
+	}
+	void static_dispatch_copy_constructor(std::false_type)
 	{
 	}
 
@@ -342,14 +349,14 @@ public:
 	}
 
 	template<typename... ArgsT>
-	Type<T, IsAbstract>& constructor()
+	Type<T, BaseT, IsAbstract>& constructor()
 	{
 		m_module.def("call", std::function<jl_value_t*(SingletonType<T>, ArgsT...)>( [this](SingletonType<T>, ArgsT... args) { return create(args...); }));
 		return *this;
 	}
 
 	template<typename R, typename... ArgsT>
-	Type<T, IsAbstract>& def(const std::string& name, R(T::*f)(ArgsT...))
+	Type<T, BaseT, IsAbstract>& def(const std::string& name, R(T::*f)(ArgsT...))
 	{
 		m_module.def(name, std::function<R(T&, ArgsT...)>([f](T& obj, ArgsT... args) { return (obj.*f)(args...); }) );
 		return *this;
@@ -362,7 +369,7 @@ public:
 		static jl_function_t* finalizer_func = jl_new_closure(finalizer, (jl_value_t*)jl_emptysvec, NULL);
 
 		T* cpp_obj = new T(args...);
-		jl_value_t* result = jl_new_struct(static_type_mapping<T>::julia_type(), jl_box_uint64(detail::PointerMapping<T>::store(cpp_obj)), jl_box_uint64(typeid(T).hash_code()));
+		jl_value_t* result = jl_new_struct(static_type_mapping<T>::julia_type(), jl_box_voidpointer(static_cast<void*>(cpp_obj)));
 		jl_gc_add_finalizer(result, finalizer_func);
 
 		return result;
@@ -382,7 +389,7 @@ public:
 		jl_value_t* result =  jl_new_struct(g_cppclassinfo_type,
 			convert_to_julia(m_name),
 			jl_box_bool(IsAbstract::value),
-			jl_box_voidpointer(reinterpret_cast<void*>(get_super)),
+			jl_box_voidpointer(reinterpret_cast<void*>(get_base)),
 			jl_box_voidpointer(reinterpret_cast<void*>(register_datatype)),
 			field_types.wrapped(),
 			field_names.wrapped()
@@ -394,7 +401,9 @@ public:
 
 	static jl_value_t* finalizer(jl_value_t *F, jl_value_t **args, uint32_t nargs)
 	{
-		delete_cpp(convert_to_cpp<T*>(args[0]));
+		jl_value_t* to_delete = args[0];
+		delete_cpp(convert_to_cpp<T*>(to_delete));
+		jl_set_nth_field(to_delete, 0, jl_box_voidpointer(nullptr));
 	}
 
 	static void delete_cpp(T* stored_obj)
@@ -404,10 +413,7 @@ public:
 			return;
 		}
 
-		if(detail::PointerMapping<T>::erase(stored_obj))
-		{
-			delete stored_obj;
-		}
+		delete stored_obj;
 	}
 
 	static void register_datatype(jl_datatype_t* dt)
@@ -416,10 +422,9 @@ public:
 		static_type_mapping<T*>::set_julia_type(dt);
 	}
 
-	// TODO: Make this return the actual superclass
-	static jl_datatype_t* get_super()
+	static jl_datatype_t* get_base()
 	{
-		return static_type_mapping<CppAny>::julia_type();
+		return static_type_mapping<BaseT>::julia_type();
 	}
 
 private:
@@ -428,20 +433,20 @@ private:
 	std::map<std::string, jl_datatype_t*(*)()> m_fields;
 };
 
-template<typename T>
-Type<T>& Module::add_type(const std::string& name)
+template<typename T, typename BaseT>
+Type<T,BaseT,std::false_type>& Module::add_type(const std::string& name)
 {
 	m_types.resize(m_types.size()+1);
-	Type<T>* result = new Type<T>(name, *this);
+	auto* result = new Type<T,BaseT,std::false_type>(name, *this);
 	m_types.back().reset(result);
 	return *result;
 }
 
-template<typename T>
-Type<T, std::true_type>& Module::add_abstract(const std::string& name)
+template<typename T, typename BaseT>
+Type<T,BaseT,std::true_type>& Module::add_abstract(const std::string& name)
 {
 	m_types.resize(m_types.size()+1);
-	Type<T, std::true_type>* result = new Type<T, std::true_type>(name, *this);
+	auto* result = new Type<T,BaseT,std::true_type>(name, *this);
 	m_types.back().reset(result);
 	return *result;
 }

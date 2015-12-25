@@ -24,5 +24,6 @@ target_link_libraries(inheritance CppWrapper::cpp_wrapper)
 install(TARGETS
   functions
   hello
+  inheritance
   types
 LIBRARY DESTINATION lib)

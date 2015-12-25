@@ -22,5 +22,14 @@ CppTypes.set(w, "hello")
 w = World("constructed")
 @test CppTypes.greet(w) == "constructed"
 
-delete(w)
+w_assigned = w
+w_deep = deepcopy(w)
+
+@test w_assigned == w
+@test w_deep != w
+
+finalize(w)
+
 @test_throws ErrorException CppTypes.greet(w)
+@test_throws ErrorException CppTypes.greet(w_assigned)
+@test CppTypes.greet(w_deep) == "constructed"
