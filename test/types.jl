@@ -33,3 +33,6 @@ finalize(w)
 @test_throws ErrorException CppTypes.greet(w)
 @test_throws ErrorException CppTypes.greet(w_assigned)
 @test CppTypes.greet(w_deep) == "constructed"
+
+noncopyable = CppTypes.NonCopyable()
+@test_throws ErrorException other_noncopyable = deepcopy(noncopyable)

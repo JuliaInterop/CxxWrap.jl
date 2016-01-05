@@ -326,10 +326,18 @@ public:
 	// Static dispatch to add copy constructor as a deep_copy specialization
 	void static_dispatch_copy_constructor(std::true_type)
 	{
-		m_module.def("deepcopy_internal", std::function<jl_value_t*(const T&, ObjectIdDict)>( [this](const T& other, ObjectIdDict) { return create(other); }));
+		m_module.def("deepcopy_internal", std::function<jl_value_t*(const T&, ObjectIdDict)>( [this](const T& other, ObjectIdDict)
+		{
+			return create(other);
+		}));
 	}
 	void static_dispatch_copy_constructor(std::false_type)
 	{
+		m_module.def("deepcopy_internal", std::function<jl_value_t*(const T&, ObjectIdDict)>( [this](const T& other, ObjectIdDict)
+		{
+			throw std::runtime_error("Copy construction not supported for C++ type ");
+			return nullptr;
+		}));
 	}
 
 	// Static dispatch to add the cpp pointer field
