@@ -205,9 +205,18 @@ public:
 	virtual ~TypeBase() {}
 	/// Returns a Julia object of type CppClassInfo, providing all needed info to Julia to wrap the type
 	virtual jl_value_t* type_descriptor() const = 0;
+
+	/// Set the name of the base class to be assiciated with the Julia type. It defaults to CppAny if this is never called
+	void set_base(const std::string& name)
+	{
+		m_base_name = name;
+	}
+
+protected:
+	std::string m_base_name = "CppAny";
 };
 
-template<typename T, typename BaseT, typename IsAbstract>
+template<typename T, typename IsAbstract>
 class Type;
 
 /// Store all exposed C++ functions associated with a module
@@ -257,11 +266,14 @@ public:
 		}
 	}
 
-	template<typename T, typename BaseT=CppAny>
-	Type<T,BaseT,std::false_type>& add_type(const std::string& name);
+	template<typename T, typename WrapperT>
+	Type<T, std::false_type>& add_type(const std::string& name, WrapperT&& wrapper);
 
-	template<typename T, typename BaseT=CppAny>
-	Type<T, BaseT, std::true_type>& add_abstract(const std::string& name);
+	template<typename T, typename WrapperT>
+	Type<T, std::true_type>& add_abstract(const std::string& name, WrapperT&& wrapper);
+
+	template<typename T, typename WrapperT>
+	void add_parametric(const std::string& name, WrapperT&& wrapper);
 
 	/// Loop over the types
 	template<typename F>
@@ -290,8 +302,13 @@ private:
 	std::vector<std::unique_ptr<TypeBase>> m_types;
 };
 
+template<typename... ParamsT>
+struct TypeParameters
+{
+};
+
 /// Define a new type
-template<typename T, typename BaseT, typename IsAbstract>
+template<typename T, typename IsAbstract>
 class Type : public TypeBase
 {
 public:
@@ -357,14 +374,14 @@ public:
 	}
 
 	template<typename... ArgsT>
-	Type<T, BaseT, IsAbstract>& constructor()
+	Type<T, IsAbstract>& constructor()
 	{
 		m_module.def("call", std::function<jl_value_t*(SingletonType<T>, ArgsT...)>( [this](SingletonType<T>, ArgsT... args) { return create(args...); }));
 		return *this;
 	}
 
 	template<typename R, typename... ArgsT>
-	Type<T, BaseT, IsAbstract>& def(const std::string& name, R(T::*f)(ArgsT...))
+	Type<T, IsAbstract>& def(const std::string& name, R(T::*f)(ArgsT...))
 	{
 		m_module.def(name, std::function<R(T&, ArgsT...)>([f](T& obj, ArgsT... args) { return (obj.*f)(args...); }) );
 		return *this;
@@ -397,7 +414,7 @@ public:
 		jl_value_t* result =  jl_new_struct(g_cppclassinfo_type,
 			convert_to_julia(m_name),
 			jl_box_bool(IsAbstract::value),
-			jl_box_voidpointer(reinterpret_cast<void*>(get_base)),
+			convert_to_julia(m_base_name),
 			jl_box_voidpointer(reinterpret_cast<void*>(register_datatype)),
 			field_types.wrapped(),
 			field_names.wrapped()
@@ -430,34 +447,164 @@ public:
 		static_type_mapping<T*>::set_julia_type(dt);
 	}
 
-	static jl_datatype_t* get_base()
-	{
-		return static_type_mapping<BaseT>::julia_type();
-	}
-
 private:
 	const std::string m_name;
 	Module& m_module;
 	std::map<std::string, jl_datatype_t*(*)()> m_fields;
 };
 
-template<typename T, typename BaseT>
-Type<T,BaseT,std::false_type>& Module::add_type(const std::string& name)
+template<typename T, typename WrapperT>
+Type<T, std::false_type>& Module::add_type(const std::string& name, WrapperT&& wrapper)
 {
 	m_types.resize(m_types.size()+1);
-	auto* result = new Type<T,BaseT,std::false_type>(name, *this);
+	auto* result = new Type<T,std::false_type>(name, *this);
 	m_types.back().reset(result);
+	wrapper(*result);
+	return(*result);
+}
+
+template<typename T, typename WrapperT>
+Type<T, std::true_type>& Module::add_abstract(const std::string& name, WrapperT&& wrapper)
+{
+	m_types.resize(m_types.size()+1);
+	auto* result = new Type<T,std::true_type>(name, *this);
+	m_types.back().reset(result);
+	wrapper(*result);
 	return *result;
 }
 
-template<typename T, typename BaseT>
-Type<T,BaseT,std::true_type>& Module::add_abstract(const std::string& name)
+namespace detail
 {
-	m_types.resize(m_types.size()+1);
-	auto* result = new Type<T,BaseT,std::true_type>(name, *this);
-	m_types.back().reset(result);
-	return *result;
+
+struct ParametersEnd
+{
+};
+
+template<typename T, typename... OtherTs>
+struct AtParametersEnd
+{
+	static constexpr bool value = AtParametersEnd<OtherTs...>::value;
+};
+
+template<typename... OtherTs>
+struct AtParametersEnd<ParametersEnd, OtherTs...>
+{
+	static constexpr bool value = true;
+};
+
+template<typename T>
+struct AtParametersEnd<T>
+{
+	static constexpr bool value = false;
+};
+
+template<>
+struct AtParametersEnd<ParametersEnd>
+{
+	static constexpr bool value = true;
+};
+
+template<typename T>
+struct NextParameter
+{
+};
+
+template<typename NextT, typename... OtherTypesT>
+struct NextParameter<TypeParameters<NextT, OtherTypesT...>>
+{
+	typedef NextT type;
+	typedef TypeParameters<OtherTypesT...> remaining_types;
+};
+
+template<typename NextT>
+struct NextParameter<TypeParameters<NextT>>
+{
+	typedef NextT type;
+	typedef ParametersEnd remaining_types;
+};
+
+template<typename T>
+struct UnpackParameters
+{
+};
+
+template<typename T1, typename... T2>
+struct AssertEnd
+{
+	static constexpr bool value = std::is_same<T1, ParametersEnd>::value;
+	static_assert(value, "Type parameter lists don't all have the same length");
+	static_assert(AssertEnd<T2...>::value, "Type parameter lists don't all have the same length");
+};
+
+template<typename T>
+struct AssertEnd<T>
+{
+	static constexpr bool value = std::is_same<T, ParametersEnd>::value;
+	static_assert(value, "Type parameter lists don't all have the same length");
+};
+
+template<template<typename...> class WrappedT, typename... ParameterPacksT>
+struct UnpackParameters<WrappedT<ParameterPacksT...>>
+{
+	typedef WrappedT<typename NextParameter<ParameterPacksT>::type...> type;
+	typedef WrappedT<typename NextParameter<ParameterPacksT>::remaining_types...> remaining_types;
+
+	// Wrap the actual type to create in a default-constructible wrapper, to pass more easily to the callback
+	template<typename T>
+	struct StoredType
+	{
+		typedef T type;
+	};
+
+	template<typename CallBackT>
+	void operator()(CallBackT&& wrap_type)
+	{
+		wrap_type(StoredType<type>());
+		dispatch(std::integral_constant<bool, AtParametersEnd<typename NextParameter<ParameterPacksT>::remaining_types...>::value>(), wrap_type);
+	}
+
+	template<typename CallBackT>
+	void dispatch(std::true_type, CallBackT&& wrap_type)
+	{
+		detail::AssertEnd<typename NextParameter<ParameterPacksT>::remaining_types...>();
+	}
+
+	template<typename CallBackT>
+	void dispatch(std::false_type, CallBackT&& wrap_type)
+	{
+		UnpackParameters<remaining_types>()(wrap_type);
+	}
+};
+
+} // namespace detail
+
+template<typename T, typename WrapperT>
+void Module::add_parametric(const std::string& name, WrapperT&& wrapper)
+{
+	std::cout << "adding parametric type " << name << std::endl;
+	detail::UnpackParameters<T>()([](auto stored_type)
+	{
+		typedef typename decltype(stored_type)::type concrete_type;
+		std::cout << "got type " << typeid(concrete_type).name() << std::endl;
+	});
+	//m_types.resize(m_types.size()+1);
+	//auto* result = new Type<T,std::true_type>(name, *this);
+	//m_types.back().reset(result);
+	//wrapper(*result);
 }
+
+template<typename T>
+struct GetWrappedType
+{
+};
+
+template<typename WrappedT, typename... OtherTs>
+struct GetWrappedType<Type<WrappedT, OtherTs...>>
+{
+	typedef WrappedT type;
+};
+
+template<typename T> using get_wrappped_type = typename GetWrappedType<remove_const_ref<T>>::type;
 
 /// Registry containing different modules
 class ModuleRegistry

@@ -12,10 +12,17 @@ abstract CppAny
 type CppClassInfo
   name::AbstractString # Name of the class
   is_abstract::Bool # Should the Julia type be made abstract?
-  superclass::Ptr{Void} # Pointer to a C function that gets the superclass to inherit from. Must be a function since it's only created during the Julia wrapping phase
+  superclass::AbstractString # Name of the base class
   register_datatype::Ptr{Void} # Function to register the created type on the C++ side
   field_types::Array{Ptr{Void},1} # Functions returning the datatypes of the fields to add
   field_names::Array{AbstractString,1} # The field names
+end
+
+# Info about a parametric type
+type CppTemplateClassInfo
+  name::AbstractString # Name of the class
+  nb_parameters::Int32 # The number of parameters
+  concrete_types::Array{CppClassInfo, 1} # Concrete types, i.e. all parameter combinations that have been compiled in C++
 end
 
 # Encapsulate information about a function
@@ -28,7 +35,7 @@ type CppFunctionInfo
 end
 
 function __init__()
-  ccall(Libdl.dlsym(cpp_wrapper_lib, "initialize"), Void, (Any, Any, Any, Any), CppWrapper, CppAny, CppClassInfo, CppFunctionInfo)
+  ccall(Libdl.dlsym(cpp_wrapper_lib, "initialize"), Void, (Any, Any, Any, Any, Any), CppWrapper, CppAny, CppClassInfo, CppFunctionInfo, CppTemplateClassInfo)
 end
 
 # Load the modules in the shared library located at the given path
@@ -149,7 +156,7 @@ end
 function wrap_types(types::Array{CppClassInfo,1}, target_module::Module)
   for cpp_info in types
     type_sym = symbol(cpp_info.name)
-    superclass = ccall(cpp_info.superclass, Any, ())
+    superclass = cpp_info.superclass == "CppAny" ? CppAny : target_module.eval(Symbol(cpp_info.superclass))
     if cpp_info.is_abstract
       target_module.eval(:(abstract $type_sym <: $superclass))
     else
