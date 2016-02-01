@@ -8,24 +8,6 @@ const cpp_wrapper_lib = Libdl.dlopen(joinpath(Pkg.dir("CppWrapper"),"deps","usr"
 # Base type for wrapped C++ types
 abstract CppAny
 
-# Type for internal information about a CPP type
-type CppClassInfo
-  name::AbstractString # Name of the class
-  is_abstract::Bool # Should the Julia type be made abstract?
-  superclass::AbstractString # Name of the base class
-  register_datatype::Ptr{Void} # Function to register the created type on the C++ side
-  field_types::Array{Ptr{Void},1} # Functions returning the datatypes of the fields to add
-  field_names::Array{AbstractString,1} # The field names
-end
-
-# Info about a parametric type
-type CppTemplateClassInfo
-  name::AbstractString # Name of the class
-  superclass::AbstractString # Name of the base class
-  nb_parameters::Int32 # The number of parameters
-  concrete_types::Array{Any, 1} # Concrete types, i.e. all parameter combinations that have been compiled in C++
-end
-
 # Encapsulate information about a function
 type CppFunctionInfo
   name::AbstractString
@@ -36,7 +18,7 @@ type CppFunctionInfo
 end
 
 function __init__()
-  ccall(Libdl.dlsym(cpp_wrapper_lib, "initialize"), Void, (Any, Any, Any, Any, Any), CppWrapper, CppAny, CppClassInfo, CppFunctionInfo, CppTemplateClassInfo)
+  ccall(Libdl.dlsym(cpp_wrapper_lib, "initialize"), Void, (Any, Any, Any), CppWrapper, CppAny, CppFunctionInfo)
 end
 
 # Load the modules in the shared library located at the given path
@@ -49,10 +31,6 @@ end
 
 function get_module_names(registry::Ptr{Void})
   ccall(Libdl.dlsym(cpp_wrapper_lib, "get_module_names"), Array{AbstractString}, (Ptr{Void},), registry)
-end
-
-function get_module_types(registry::Ptr{Void})
-  ccall(Libdl.dlsym(cpp_wrapper_lib, "get_module_types"), Array{Any}, (Ptr{Void},), registry)
 end
 
 function get_module_functions(registry::Ptr{Void})
@@ -157,58 +135,6 @@ function wrap_functions(functions)
   wrap_functions(functions, current_module())
 end
 
-# Wrap a type
-function wrap_type(cpp_info::CppClassInfo, target_module::Module)
-  type_sym = symbol(cpp_info.name)
-  superclass = cpp_info.superclass == "CppAny" ? CppAny : target_module.eval(Symbol(cpp_info.superclass))
-  if cpp_info.is_abstract
-    target_module.eval(:(abstract $type_sym <: $superclass))
-  else
-    new_type_expression = :(type $type_sym <: $superclass end)
-    for (field_type_fn, field_name) in zip(cpp_info.field_types, cpp_info.field_names)
-      field_dt = ccall(field_type_fn, Any, ())
-      push!(new_type_expression.args[3].args, :($(Symbol(field_name))::$field_dt))
-    end
-    target_module.eval(new_type_expression)
-  end
-  dt = target_module.eval(:($type_sym))
-  ccall(cpp_info.register_datatype, Void, (Any,), dt)
-end
-
-# Wrap a C++ template type to a Julia parametric type
-function wrap_type(cpp_info::CppTemplateClassInfo, target_module::Module)
-  type_sym = symbol(cpp_info.name)
-  if length(cpp_info.concrete_types) < 1
-    throw(ErrorException("Parametric types need at least one concrete instance"))
-  end
-
-  first_concrete = cpp_info.concrete_types[1]
-  superclass = first_concrete.superclass == "CppAny" ? CppAny : target_module.eval(Symbol(cpp_info.superclass))
-  new_type_expression = :(type $type_sym{} <: $superclass end)
-  for i in 1:cpp_info.nb_parameters
-    push!(new_type_expression.args[2].args[1].args, symbol("T$i"));
-  end
-  for (field_type_fn, field_name) in zip(first_concrete.field_types, first_concrete.field_names)
-    field_dt = ccall(field_type_fn, Any, ())
-    push!(new_type_expression.args[3].args, :($(Symbol(field_name))::$field_dt))
-  end
-
-  target_module.eval(new_type_expression)
-  parametric_dt = target_module.eval(:($type_sym))
-  for concrete in cpp_info.concrete_types
-
-    ccall(cpp_info.register_datatype, Void, (Any,), dt)
-  end
-
-end
-
-# Wrap the types in the given array
-function wrap_types(types::Array{Any,1}, target_module::Module)
-  for cpp_info in types
-    wrap_type(cpp_info, target_module)
-  end
-end
-
 # Create modules defined in the given library, wrapping all their functions and types
 function wrap_modules(registry::Ptr{Void}, parent_mod=Main)
   module_names = get_module_names(registry)
@@ -218,7 +144,6 @@ function wrap_modules(registry::Ptr{Void}, parent_mod=Main)
     modsym = symbol(mod_name)
     jl_mod = parent_mod.eval(:(module $modsym end))
     push!(jl_modules, jl_mod)
-    wrap_types(mod_types, jl_mod)
     bind_types(registry, jl_mod)
   end
 

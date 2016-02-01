@@ -120,8 +120,6 @@ jl_value_t* create(ArgsT... args)
 
 // The CppWrapper Julia module
 extern jl_module_t* g_cpp_wrapper_module;
-extern jl_datatype_t* g_cppclassinfo_type;
-extern jl_datatype_t* g_cpptemplateclassinfo_type;
 extern jl_datatype_t* g_cppfunctioninfo_type;
 
 /// Abstract base class for storing any function
@@ -226,27 +224,42 @@ private:
 	R(*m_function)(Args...);
 };
 
-/// Base class for building a type
-class TypeBase
+/// Encapsulate a list of types, for the field list of a Julia composite type
+template<typename... TypesT>
+struct TypeList
 {
-public:
-	virtual ~TypeBase() {}
-
-	/// Returns a Julia object of type CppClassInfo, providing all needed info to Julia to wrap the type
-	virtual jl_value_t* type_descriptor() const = 0;
-
-	/// Set the name of the base class to be assiciated with the Julia type. It defaults to CppAny if this is never called
-	void set_base(const std::string& name)
+	template<typename... StringT>
+	TypeList(StringT... names)
 	{
-		m_base_name = name;
+		static_assert(sizeof...(TypesT) == sizeof...(StringT), "Number of types must be equal to number of field names");
+		field_names = {names...};
 	}
 
-protected:
-	std::string m_base_name = "CppAny";
+	std::vector<std::string> field_names;
 };
 
-template<typename T, typename IsAbstract>
-class Type;
+/// Wrap the base type
+template<typename SuperT>
+struct Super
+{
+	typedef SuperT type;
+};
+
+/// Represent a Julia TypeVar in the template parameter list
+template<int I>
+struct TypeVar
+{
+	static constexpr int value = I;
+
+	static jl_tvar_t* tvar()
+	{
+		static jl_tvar_t* this_tvar = jl_new_typevar(jl_symbol((std::string("T") + std::to_string(I)).c_str()), (jl_value_t*)jl_bottom_type, (jl_value_t*)jl_any_type);
+		return this_tvar;
+	}
+};
+
+template<typename T>
+class TypeWrapper;
 
 /// Store all exposed C++ functions associated with a module
 class Module
@@ -295,41 +308,19 @@ public:
 		}
 	}
 
-	template<typename T, typename WrapperT>
-	Type<T, std::false_type>& add_type(const std::string& name, WrapperT&& wrapper);
+	/// Add a composite type
+	template<typename T, typename... ArgsT>
+	TypeWrapper<T> add_type(const std::string& name, ArgsT... args);
 
-	template<typename T, typename WrapperT>
-	Type<T, std::true_type>& add_abstract(const std::string& name, WrapperT&& wrapper);
+	/// Add an abstract type
+	template<typename T, typename... ArgsT>
+	TypeWrapper<T> add_abstract(const std::string& name, ArgsT... args);
 
 	template<typename T, typename... ArgsT>
 	void add_parametric(const std::string& name, ArgsT... args);
 
-	template<typename T, typename... ArgsT>
-	void add_constructor()
-	{
-		def("call", std::function<jl_value_t*(SingletonType<T>, ArgsT...)>( [](SingletonType<T>, ArgsT... args) { return detail::create<T>(args...); }));
-	}
-
 	template<typename T>
-	void apply();
-
-	template<typename T, typename FunctorT>
-	void apply(FunctorT&& f);
-
-	/// Loop over the types
-	template<typename F>
-	void for_each_type(const F f) const
-	{
-		for(const auto& item : m_types)
-		{
-			f(*item);
-		}
-	}
-
-	unsigned int nb_types() const
-	{
-		return m_types.size();
-	}
+	TypeWrapper<T> apply();
 
 	const std::string& name() const
 	{
@@ -347,11 +338,7 @@ public:
 private:
 
 	template<typename T>
-	void add_default_constructor(std::true_type)
-	{
-		std::cout << "adding default constructor for type " << typeid(T).name() << std::endl;
-		add_constructor<T>();
-	}
+	void add_default_constructor(std::true_type);
 
 	template<typename T>
 	void add_default_constructor(std::false_type)
@@ -379,210 +366,42 @@ private:
 
 	std::string m_name;
 	std::vector<std::unique_ptr<FunctionWrapperBase>> m_functions;
-	std::vector<std::unique_ptr<TypeBase>> m_types;
 	std::map<std::string, jl_datatype_t*> m_jl_datatypes;
 };
 
-template<typename... ParamsT>
-struct TypeParameters
-{
-};
-
-/// Define a new type
-template<typename T, typename IsAbstract>
-class Type : public TypeBase
+/// Helper class to wrap type methods
+template<typename T>
+class TypeWrapper
 {
 public:
-	Type(const std::string& name, Module& mod) : m_name(name), m_module(mod)
-	{
-		// Add default constructor if applicable
-		static_dispatch_default_constructor(std::integral_constant<bool, std::is_default_constructible<T>::value && !IsAbstract::value>());
-		// Add copy constructor if applicable
-		static_dispatch_copy_constructor(std::integral_constant<bool, std::is_copy_constructible<T>::value && !IsAbstract::value>());
-
-		// Pointer field to the C++ type
-		static_dispatch_cpp_pointer_field(IsAbstract());
-	}
-
-	template<typename FieldT>
-	void add_field(const std::string& name)
-	{
-		static_assert(!IsAbstract::value, "Can't add fields to an abstract type");
-		if(!m_fields.insert(std::make_pair(name, static_type_mapping<FieldT>::julia_type)).second)
-			throw std::runtime_error("Field with name " + name + " already existed");
-	}
-
-	// Static dispatch for default constructible classes
-	void static_dispatch_default_constructor(std::true_type)
-	{
-		constructor<>();
-	}
-	void static_dispatch_default_constructor(std::false_type)
+	TypeWrapper(Module& mod) : m_module(mod)
 	{
 	}
 
-	// Static dispatch to add copy constructor as a deep_copy specialization
-	void static_dispatch_copy_constructor(std::true_type)
-	{
-		m_module.def("deepcopy_internal", std::function<jl_value_t*(const T&, ObjectIdDict)>( [this](const T& other, ObjectIdDict)
-		{
-			return create(other);
-		}));
-	}
-	void static_dispatch_copy_constructor(std::false_type)
-	{
-		m_module.def("deepcopy_internal", std::function<jl_value_t*(const T&, ObjectIdDict)>( [this](const T& other, ObjectIdDict)
-		{
-			throw std::runtime_error("Copy construction not supported for C++ type ");
-			return nullptr;
-		}));
-	}
-
-	// Static dispatch to add the cpp pointer field
-	void static_dispatch_cpp_pointer_field(std::true_type)
-	{
-		// Do nothing if the type is abstract
-	}
-
-	void static_dispatch_cpp_pointer_field(std::false_type)
-	{
-		add_field<jl_value_t*>("cpp_object"); // Can be a pointer or an integer index
-	}
-
+	/// Add a constructor with the given argument types
 	template<typename... ArgsT>
-	Type<T, IsAbstract>& constructor()
+	void constructor()
 	{
-		m_module.def("call", std::function<jl_value_t*(SingletonType<T>, ArgsT...)>( [this](SingletonType<T>, ArgsT... args) { return create(args...); }));
-		return *this;
+		m_module.def("call", std::function<jl_value_t*(SingletonType<T>, ArgsT...)>( [](SingletonType<T>, ArgsT... args) { return detail::create<T>(args...); }));
 	}
 
+	/// Define a member function
 	template<typename R, typename... ArgsT>
-	Type<T, IsAbstract>& def(const std::string& name, R(T::*f)(ArgsT...))
+	void def(const std::string& name, R(T::*f)(ArgsT...))
 	{
 		m_module.def(name, std::function<R(T&, ArgsT...)>([f](T& obj, ArgsT... args) { return (obj.*f)(args...); }) );
 		return *this;
 	}
 
-	/// Create a new julia object wrapping the C++ type
-	template<typename... ArgsT>
-	jl_value_t* create(ArgsT... args)
-	{
-		static jl_function_t* finalizer_func = jl_new_closure(finalizer, (jl_value_t*)jl_emptysvec, NULL);
-
-		T* cpp_obj = new T(args...);
-		jl_value_t* result = jl_new_struct(static_type_mapping<T>::julia_type(), jl_box_voidpointer(static_cast<void*>(cpp_obj)));
-		jl_gc_add_finalizer(result, finalizer_func);
-
-		return result;
-	}
-
-	virtual jl_value_t* type_descriptor() const
-	{
-		Array<void*> field_types;
-		Array<std::string> field_names;
-		JL_GC_PUSH2(field_types.gc_pointer(), field_names.gc_pointer());
-		for(const auto& field : m_fields)
-		{
-			field_names.push_back(field.first);
-			field_types.push_back(reinterpret_cast<void*>(field.second));
-		}
-
-		jl_value_t* result =  jl_new_struct(g_cppclassinfo_type,
-			convert_to_julia(m_name),
-			jl_box_bool(IsAbstract::value),
-			convert_to_julia(m_base_name),
-			jl_box_voidpointer(reinterpret_cast<void*>(register_datatype)),
-			field_types.wrapped(),
-			field_names.wrapped()
-		);
-
-		JL_GC_POP();
-		return result;
-	}
-
-	static jl_value_t* finalizer(jl_value_t *F, jl_value_t **args, uint32_t nargs)
-	{
-		jl_value_t* to_delete = args[0];
-		delete_cpp(convert_to_cpp<T*>(to_delete));
-		jl_set_nth_field(to_delete, 0, jl_box_voidpointer(nullptr));
-	}
-
-	static void delete_cpp(T* stored_obj)
-	{
-		if(stored_obj == nullptr)
-		{
-			return;
-		}
-
-		delete stored_obj;
-	}
-
-	static void register_datatype(jl_datatype_t* dt)
-	{
-		static_type_mapping<T>::set_julia_type(dt);
-		static_type_mapping<T*>::set_julia_type(dt);
-	}
-
 private:
-	const std::string m_name;
 	Module& m_module;
-	std::map<std::string, jl_datatype_t*(*)()> m_fields;
 };
 
-template<typename T, typename WrapperT>
-Type<T, std::false_type>& Module::add_type(const std::string& name, WrapperT&& wrapper)
+template<typename T>
+void Module::add_default_constructor(std::true_type)
 {
-	m_types.resize(m_types.size()+1);
-	auto* result = new Type<T,std::false_type>(name, *this);
-	m_types.back().reset(result);
-	wrapper(*result);
-	return(*result);
+	TypeWrapper<T>(*this).template constructor<>();
 }
-
-template<typename T, typename WrapperT>
-Type<T, std::true_type>& Module::add_abstract(const std::string& name, WrapperT&& wrapper)
-{
-	m_types.resize(m_types.size()+1);
-	auto* result = new Type<T,std::true_type>(name, *this);
-	m_types.back().reset(result);
-	wrapper(*result);
-	return *result;
-}
-
-/// Encapsulate a list of types, for the field list of a Julia composite type
-template<typename... TypesT>
-struct TypeList
-{
-	template<typename... StringT>
-	TypeList(StringT... names)
-	{
-		static_assert(sizeof...(TypesT) == sizeof...(StringT), "Number of types must be equal to number of field names");
-		field_names = {names...};
-	}
-
-	std::vector<std::string> field_names;
-};
-
-/// Wrap the base type
-template<typename SuperT>
-struct Super
-{
-	typedef SuperT type;
-};
-
-/// Represent a Julia TypeVar in the template parameter list
-template<int I>
-struct TypeVar
-{
-	static constexpr int value = I;
-
-	static jl_tvar_t* tvar()
-	{
-		static jl_tvar_t* this_tvar = jl_new_typevar(jl_symbol((std::string("T") + std::to_string(I)).c_str()), (jl_value_t*)jl_bottom_type, (jl_value_t*)jl_any_type);
-		return this_tvar;
-	}
-
-};
 
 namespace detail
 {
@@ -612,19 +431,52 @@ void process_arguments(FunctorT&& f, ArgT arg, OtherArgsT... other_args)
 }
 
 template<typename T>
-struct GetJlTypes
+struct GetJlType
 {
-	static jl_datatype_t* julia_type()
+	jl_datatype_t* operator()() const
 	{
-		return jl_any_type;
+		return static_type_mapping<T>::julia_type();
 	}
 };
+
+template<int I>
+struct GetJlType<TypeVar<I>>
+{
+	jl_datatype_t* operator()() const
+	{
+		return TypeVar<I>::tvar();
+	}
+};
+
+template<template<typename...> class T, typename... ParametersT>
+struct GetJlType<T<ParametersT...>>
+{
+	jl_datatype_t* operator()() const;
+};
+
+template<typename T>
+struct GetParameters;
+
+template<template<typename...> class T, typename... ParametersT>
+struct GetParameters<T<ParametersT...>>
+{
+	jl_svec_t* operator()()
+	{
+		return jl_svec(sizeof...(ParametersT), GetJlType<ParametersT>()()...);
+	}
+};
+
+template<template<typename...> class T, typename... ParametersT>
+jl_datatype_t* GetJlType<T<ParametersT...>>::operator()() const
+{
+	return (jl_datatype_t*)jl_apply_type((jl_value_t*)parametric_type_mapping<T>::julia_type(), GetParameters<T<ParametersT...>>()());
+}
 
 template<typename... TypesT>
 void build_type_vectors(const TypeList<TypesT...>& typelist, jl_svec_t*& fnames, jl_svec_t*& ftypes, int& ninitialized)
 {
 	static constexpr int nb_types = sizeof...(TypesT);
-	ftypes = jl_svec(nb_types+1, jl_voidpointer_type, GetJlTypes<TypesT>::julia_type()...);
+	ftypes = jl_svec(nb_types+1, jl_voidpointer_type, GetJlType<TypesT>::julia_type()...);
 	fnames = jl_alloc_svec_uninit(nb_types+1);
 	jl_svecset(fnames, 0, jl_symbol("cpp_object"));
 	for(int i = 0; i != nb_types; ++i)
@@ -651,31 +503,103 @@ struct ParametricTypeMapping<TemplateT<TypesT...>>
 	}
 };
 
-template<typename T>
-struct SetParameters;
-
-template<template<typename...> class T, typename... ParametersT>
-struct SetParameters<T<ParametersT...>>
+template<typename... ArgsT>
+void build_type_data(jl_datatype_t*& super, jl_svec_t*& fnames, jl_svec_t*& ftypes, int& ninitialized, ArgsT... args)
 {
-	void operator()(jl_svec_t*& parameters) const
+	// Fill fnames and ftypes
+	process_arguments<TypeList>([&](auto typelist)
 	{
-		parameters = jl_svec(sizeof...(ParametersT), ParametersT::tvar()...);
-	}
-};
+		detail::build_type_vectors(typelist, fnames, ftypes, ninitialized);
+	}, args...);
 
-template<typename T>
-struct GetParameters;
-
-template<template<typename...> class T, typename... ParametersT>
-struct GetParameters<T<ParametersT...>>
-{
-	jl_svec_t* operator()()
+	if(fnames == nullptr)
 	{
-		return jl_svec(sizeof...(ParametersT), static_type_mapping<ParametersT>::julia_type()...);
+		assert(ftypes == nullptr);
+		detail::build_type_vectors(TypeList<>(), fnames, ftypes, ninitialized);
 	}
-};
+
+	process_arguments<Super>([&](auto super_t) { super = GetJlType<decltype(super_t)>()(); }, args...);
+	if(super == nullptr)
+	{
+		super = static_type_mapping<CppAny>::julia_type();
+	}
+}
 
 } // namespace detail
+
+template<typename T, typename... ArgsT>
+TypeWrapper<T> Module::add_type(const std::string& name, ArgsT... args)
+{
+	if(m_jl_datatypes.count(name) > 0)
+	{
+		throw std::runtime_error("Duplicate registration of type " + name);
+	}
+
+	jl_datatype_t* super = nullptr;
+	jl_svec_t* parameters = jl_emptysvec;
+	jl_svec_t* fnames = nullptr;
+	jl_svec_t* ftypes = nullptr;
+	int abstract = 0;
+	int mutabl = 1;
+	int ninitialized = 0;
+
+	JL_GC_PUSH4(super, parameters, fnames, ftypes);
+
+	// Fill fnames and ftypes
+	detail::build_type_data(super, fnames, ftypes, ninitialized, args...);
+
+	// Create the datatype
+	jl_datatype_t* dt = jl_new_datatype(jl_symbol(name.c_str()), super, parameters, fnames, ftypes, abstract, mutabl, ninitialized);
+
+	// Register the type
+	static_type_mapping<T>::set_julia_type(dt);
+	static_type_mapping<T*>::set_julia_type(dt);
+	m_jl_datatypes[name] = dt;
+	JL_GC_POP();
+
+	// Add constructors
+	add_default_constructor<T>(std::is_default_constructible<T>());
+	add_copy_constructor<T>(std::is_copy_constructible<T>());
+
+	return TypeWrapper<T>(*this);
+}
+
+template<typename T, typename... ArgsT>
+TypeWrapper<T> Module::add_abstract(const std::string& name, ArgsT... args)
+{
+	if(m_jl_datatypes.count(name) > 0)
+	{
+		throw std::runtime_error("Duplicate registration of type " + name);
+	}
+
+	jl_datatype_t* super = nullptr;
+	jl_svec_t* parameters = jl_emptysvec;
+	jl_svec_t* fnames = jl_emptysvec;
+	jl_svec_t* ftypes = jl_emptysvec;
+	int abstract = 1;
+	int mutabl = 0;
+	int ninitialized = 0;
+
+	JL_GC_PUSH4(super, parameters, fnames, ftypes);
+
+	// Get superclass, if defined
+	detail::process_arguments<Super>([&](auto super_t) { super = detail::GetJlType<decltype(super_t)>()(); }, args...);
+	if(super == nullptr)
+	{
+		super = static_type_mapping<CppAny>::julia_type();
+	}
+
+	// Create the datatype
+	jl_datatype_t* dt = jl_new_datatype(jl_symbol(name.c_str()), super, parameters, fnames, ftypes, abstract, mutabl, ninitialized);
+
+	// Register the type
+	static_type_mapping<T>::set_julia_type(dt);
+	static_type_mapping<T*>::set_julia_type(dt);
+	m_jl_datatypes[name] = dt;
+	JL_GC_POP();
+
+	return TypeWrapper<T>(*this);
+}
 
 template<typename T, typename... ArgsT>
 void Module::add_parametric(const std::string& name, ArgsT... args)
@@ -696,61 +620,30 @@ void Module::add_parametric(const std::string& name, ArgsT... args)
 	JL_GC_PUSH4(super, parameters, fnames, ftypes);
 
 	// Set the parameters
-	detail::SetParameters<T>()(parameters);
+	parameters = detail::GetParameters<T>()();
 
 	// Fill fnames and ftypes
-	detail::process_arguments<TypeList>([&](auto typelist)
-	{
-		detail::build_type_vectors(typelist, fnames, ftypes, ninitialized);
-	}, args...);
-
-	if(fnames == nullptr)
-	{
-		assert(ftypes == nullptr);
-		detail::build_type_vectors(TypeList<>(), fnames, ftypes, ninitialized);
-	}
-
-	detail::process_arguments<Super>([&](auto super_t) { super = static_type_mapping<decltype(super_t)>::julia_type(); });
-	if(super == nullptr)
-	{
-		super = jl_any_type;
-	}
+	detail::build_type_data(super, fnames, ftypes, ninitialized, args...);
 
 	// Create the datatype associated with the parametric type
 	jl_datatype_t* dt = jl_new_datatype(jl_symbol(name.c_str()), super, parameters, fnames, ftypes, abstract, mutabl, ninitialized);
 	detail::ParametricTypeMapping<T>::set_julia_type(dt);
 
 	m_jl_datatypes[name] = dt;
+	JL_GC_POP();
 }
 
 template<typename T>
-void Module::apply()
+TypeWrapper<T> Module::apply()
 {
 	add_default_constructor<T>(std::is_default_constructible<T>());
 	add_copy_constructor<T>(std::is_copy_constructible<T>());
 	jl_datatype_t* app_dt = (jl_datatype_t*)jl_apply_type((jl_value_t*)detail::ParametricTypeMapping<T>::julia_type(), detail::GetParameters<T>()());
 	static_type_mapping<T>::set_julia_type(app_dt);
+	static_type_mapping<T*>::set_julia_type(app_dt);
+	return TypeWrapper<T>(*this);
 }
 
-template<typename T, typename FunctorT>
-void Module::apply(FunctorT&& f)
-{
-	this->apply<T>();
-	f(*this);
-}
-
-template<typename T>
-struct GetWrappedType
-{
-};
-
-template<typename WrappedT, typename... OtherTs>
-struct GetWrappedType<Type<WrappedT, OtherTs...>>
-{
-	typedef WrappedT type;
-};
-
-template<typename T> using get_wrappped_type = typename GetWrappedType<remove_const_ref<T>>::type;
 
 /// Registry containing different modules
 class ModuleRegistry

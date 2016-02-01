@@ -7,13 +7,11 @@ extern "C"
 using namespace cpp_wrapper;
 
 /// Initialize the module
-void initialize(jl_value_t* julia_module, jl_value_t* cpp_any_type, jl_value_t* cppclassinfo_type, jl_value_t* cppfunctioninfo_type, jl_value_t* cpptemplateclassinfo_type)
+void initialize(jl_value_t* julia_module, jl_value_t* cpp_any_type, jl_value_t* cppfunctioninfo_type)
 {
 	g_cpp_wrapper_module = (jl_module_t*)julia_module;
 	static_type_mapping<CppAny>::set_julia_type((jl_datatype_t*)cpp_any_type);
-	g_cppclassinfo_type = (jl_datatype_t*)cppclassinfo_type;
 	g_cppfunctioninfo_type = (jl_datatype_t*)cppfunctioninfo_type;
-	g_cpptemplateclassinfo_type = (jl_datatype_t*)cpptemplateclassinfo_type;
 }
 
 /// Create a new registry
@@ -37,31 +35,7 @@ jl_array_t* get_module_names(void* void_registry)
 	return names_array.wrapped();
 }
 
-/// Get the types per module defined in the registry. Must be processed beore getting the functions
-jl_array_t* get_module_types(void* void_registry)
-{
-	assert(void_registry != nullptr);
-	const ModuleRegistry& registry = *reinterpret_cast<ModuleRegistry*>(void_registry);
-	Array<jl_value_t*> module_array((jl_datatype_t*)jl_apply_array_type(jl_any_type,1));
-	JL_GC_PUSH1(module_array.gc_pointer());
-	registry.for_each_module([&](Module& module)
-	{
-		Array<jl_value_t*> type_array(jl_any_type);
-		JL_GC_PUSH1(type_array.gc_pointer());
-
-		module.for_each_type([&](const TypeBase& type)
-		{
-			type_array.push_back(type.type_descriptor());
-		});
-
-		module_array.push_back((jl_value_t*)type_array.wrapped());
-
-		JL_GC_POP();
-	});
-	JL_GC_POP();
-	return module_array.wrapped();
-}
-
+/// Bind jl_datatype_t structures to corresponding Julia symbols in the given module
 void bind_module_types(void* void_registry, jl_value_t* module_any)
 {
 	assert(void_registry != nullptr);

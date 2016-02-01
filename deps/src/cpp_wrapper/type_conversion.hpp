@@ -56,6 +56,11 @@ template<typename SourceT> struct static_type_mapping
 		m_type_pointer = dt;
 	}
 
+	static bool has_julia_type()
+	{
+		return m_type_pointer != nullptr;
+	}
+
 private:
 	static jl_datatype_t* m_type_pointer;
 };
@@ -83,6 +88,11 @@ template<template<typename...> class SourceT> struct parametric_type_mapping
 			throw std::runtime_error("Template type was already registered as " + std::string(jl_typename_str((jl_value_t*)m_type_pointer)));
 		}
 		m_type_pointer = dt;
+	}
+
+	static bool has_julia_type()
+	{
+		return m_type_pointer != nullptr;
 	}
 
 private:
