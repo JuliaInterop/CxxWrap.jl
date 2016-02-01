@@ -15,6 +15,16 @@
 namespace cpp_wrapper
 {
 
+/// Get the symbol name correctly depending on Julia version
+inline std::string symbol_name(jl_sym_t* symbol)
+{
+#if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 5
+	return std::string(symbol->name);
+#else
+	return std::string(jl_symbol_name(symbol));
+#endif
+}
+
 /// Helper to easily remove a ref to a const
 template<typename T> using remove_const_ref = typename std::remove_const<typename std::remove_reference<T>::type>::type;
 
@@ -51,6 +61,35 @@ private:
 };
 
 template<typename SourceT> jl_datatype_t* static_type_mapping<SourceT>::m_type_pointer = nullptr;
+
+/// Type mapping for templates translated to parametric types
+template<template<typename...> class SourceT> struct parametric_type_mapping
+{
+	typedef jl_value_t* type;
+
+	static jl_datatype_t* julia_type()
+	{
+		if(m_type_pointer == nullptr)
+		{
+			throw std::runtime_error("No Julia type for requested template type");
+		}
+		return m_type_pointer;
+	}
+
+	static void set_julia_type(jl_datatype_t* dt)
+	{
+		if(m_type_pointer != nullptr)
+		{
+			throw std::runtime_error("Template type was already registered as " + std::string(jl_typename_str((jl_value_t*)m_type_pointer)));
+		}
+		m_type_pointer = dt;
+	}
+
+private:
+	static jl_datatype_t* m_type_pointer;
+};
+
+template<template<typename...> class SourceT> jl_datatype_t* parametric_type_mapping<SourceT>::m_type_pointer = nullptr;
 
 /// Helper for Singleton types (Type{T} in Julia)
 template<typename T>
@@ -230,11 +269,7 @@ struct DoUnpack<std::false_type, std::false_type>
 
 inline std::string julia_type_name(jl_datatype_t* dt)
 {
-#if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 5
-	return std::string(dt->name->name->name);
-#else
-	return std::string(jl_symbol_name(dt->name->name));
-#endif
+	return symbol_name(dt->name->name);
 }
 
 /// Helper class to unpack a julia type

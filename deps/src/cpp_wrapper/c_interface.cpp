@@ -7,12 +7,13 @@ extern "C"
 using namespace cpp_wrapper;
 
 /// Initialize the module
-void initialize(jl_value_t* julia_module, jl_value_t* cpp_any_type, jl_value_t* cppclassinfo_type, jl_value_t* cppfunctioninfo_type)
+void initialize(jl_value_t* julia_module, jl_value_t* cpp_any_type, jl_value_t* cppclassinfo_type, jl_value_t* cppfunctioninfo_type, jl_value_t* cpptemplateclassinfo_type)
 {
 	g_cpp_wrapper_module = (jl_module_t*)julia_module;
 	static_type_mapping<CppAny>::set_julia_type((jl_datatype_t*)cpp_any_type);
 	g_cppclassinfo_type = (jl_datatype_t*)cppclassinfo_type;
 	g_cppfunctioninfo_type = (jl_datatype_t*)cppfunctioninfo_type;
+	g_cpptemplateclassinfo_type = (jl_datatype_t*)cpptemplateclassinfo_type;
 }
 
 /// Create a new registry
@@ -41,11 +42,11 @@ jl_array_t* get_module_types(void* void_registry)
 {
 	assert(void_registry != nullptr);
 	const ModuleRegistry& registry = *reinterpret_cast<ModuleRegistry*>(void_registry);
-	Array<jl_value_t*> module_array((jl_datatype_t*)jl_apply_array_type(g_cppclassinfo_type,1));
+	Array<jl_value_t*> module_array((jl_datatype_t*)jl_apply_array_type(jl_any_type,1));
 	JL_GC_PUSH1(module_array.gc_pointer());
 	registry.for_each_module([&](Module& module)
 	{
-		Array<jl_value_t*> type_array(g_cppclassinfo_type);
+		Array<jl_value_t*> type_array(jl_any_type);
 		JL_GC_PUSH1(type_array.gc_pointer());
 
 		module.for_each_type([&](const TypeBase& type)
@@ -59,6 +60,15 @@ jl_array_t* get_module_types(void* void_registry)
 	});
 	JL_GC_POP();
 	return module_array.wrapped();
+}
+
+void bind_module_types(void* void_registry, jl_value_t* module_any)
+{
+	assert(void_registry != nullptr);
+	ModuleRegistry& registry = *reinterpret_cast<ModuleRegistry*>(void_registry);
+	jl_module_t* mod = (jl_module_t*)module_any;
+	const std::string mod_name = symbol_name(mod->name);
+	registry.get_module(mod_name).bind_types(mod);
 }
 
 /// Get the functions defined in the modules. Any classes used by these functions must be defined on the Julia side first

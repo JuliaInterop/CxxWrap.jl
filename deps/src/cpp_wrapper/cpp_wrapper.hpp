@@ -88,11 +88,40 @@ struct NeedConvertHelper<>
 	}
 };
 
+/// Finalizer function for type T
+template<typename T>
+jl_value_t* finalizer(jl_value_t *F, jl_value_t **args, uint32_t nargs)
+{
+	jl_value_t* to_delete = args[0];
+
+	T* stored_obj = convert_to_cpp<T*>(to_delete);
+	if(stored_obj != nullptr)
+	{
+		delete stored_obj;
+	}
+
+	jl_set_nth_field(to_delete, 0, jl_box_voidpointer(nullptr));
+}
+
+/// Create a new julia object wrapping the C++ type
+template<typename T, typename... ArgsT>
+jl_value_t* create(ArgsT... args)
+{
+	static jl_function_t* finalizer_func = jl_new_closure(finalizer<T>, (jl_value_t*)jl_emptysvec, NULL);
+
+	T* cpp_obj = new T(args...);
+	jl_value_t* result = jl_new_struct(static_type_mapping<T>::julia_type(), jl_box_voidpointer(static_cast<void*>(cpp_obj)));
+	jl_gc_add_finalizer(result, finalizer_func);
+
+	return result;
+}
+
 } // end namespace detail
 
 // The CppWrapper Julia module
 extern jl_module_t* g_cpp_wrapper_module;
 extern jl_datatype_t* g_cppclassinfo_type;
+extern jl_datatype_t* g_cpptemplateclassinfo_type;
 extern jl_datatype_t* g_cppfunctioninfo_type;
 
 /// Abstract base class for storing any function
@@ -201,8 +230,8 @@ private:
 class TypeBase
 {
 public:
-	virtual void bind_julia_type(jl_module_t* julia_module) const = 0;
 	virtual ~TypeBase() {}
+
 	/// Returns a Julia object of type CppClassInfo, providing all needed info to Julia to wrap the type
 	virtual jl_value_t* type_descriptor() const = 0;
 
@@ -272,8 +301,20 @@ public:
 	template<typename T, typename WrapperT>
 	Type<T, std::true_type>& add_abstract(const std::string& name, WrapperT&& wrapper);
 
-	template<typename T, typename WrapperT>
-	void add_parametric(const std::string& name, WrapperT&& wrapper);
+	template<typename T, typename... ArgsT>
+	void add_parametric(const std::string& name, ArgsT... args);
+
+	template<typename T, typename... ArgsT>
+	void add_constructor()
+	{
+		def("call", std::function<jl_value_t*(SingletonType<T>, ArgsT...)>( [](SingletonType<T>, ArgsT... args) { return detail::create<T>(args...); }));
+	}
+
+	template<typename T>
+	void apply();
+
+	template<typename T, typename FunctorT>
+	void apply(FunctorT&& f);
 
 	/// Loop over the types
 	template<typename F>
@@ -295,11 +336,51 @@ public:
 		return m_name;
 	}
 
+	void bind_types(jl_module_t* mod)
+	{
+		for(auto& dt_pair : m_jl_datatypes)
+		{
+			jl_set_const(mod, jl_symbol(dt_pair.first.c_str()), (jl_value_t*)dt_pair.second);
+		}
+	}
+
 private:
+
+	template<typename T>
+	void add_default_constructor(std::true_type)
+	{
+		std::cout << "adding default constructor for type " << typeid(T).name() << std::endl;
+		add_constructor<T>();
+	}
+
+	template<typename T>
+	void add_default_constructor(std::false_type)
+	{
+	}
+
+	template<typename T>
+	void add_copy_constructor(std::true_type)
+	{
+		def("deepcopy_internal", std::function<jl_value_t*(const T&, ObjectIdDict)>( [this](const T& other, ObjectIdDict)
+		{
+			return detail::create<T>(other);
+		}));
+	}
+
+	template<typename T>
+	void add_copy_constructor(std::false_type)
+	{
+		def("deepcopy_internal", std::function<jl_value_t*(const T&, ObjectIdDict)>( [this](const T& other, ObjectIdDict)
+		{
+			throw std::runtime_error("Copy construction not supported for C++ type ");
+			return nullptr;
+		}));
+	}
 
 	std::string m_name;
 	std::vector<std::unique_ptr<FunctionWrapperBase>> m_functions;
 	std::vector<std::unique_ptr<TypeBase>> m_types;
+	std::map<std::string, jl_datatype_t*> m_jl_datatypes;
 };
 
 template<typename... ParamsT>
@@ -366,11 +447,6 @@ public:
 	void static_dispatch_cpp_pointer_field(std::false_type)
 	{
 		add_field<jl_value_t*>("cpp_object"); // Can be a pointer or an integer index
-	}
-
-	virtual void bind_julia_type(jl_module_t* julia_module) const
-	{
-		jl_set_const(julia_module, jl_symbol(m_name.c_str()), (jl_value_t*)static_type_mapping<T>::julia_type());
 	}
 
 	template<typename... ArgsT>
@@ -473,124 +549,194 @@ Type<T, std::true_type>& Module::add_abstract(const std::string& name, WrapperT&
 	return *result;
 }
 
+/// Encapsulate a list of types, for the field list of a Julia composite type
+template<typename... TypesT>
+struct TypeList
+{
+	template<typename... StringT>
+	TypeList(StringT... names)
+	{
+		static_assert(sizeof...(TypesT) == sizeof...(StringT), "Number of types must be equal to number of field names");
+		field_names = {names...};
+	}
+
+	std::vector<std::string> field_names;
+};
+
+/// Wrap the base type
+template<typename SuperT>
+struct Super
+{
+	typedef SuperT type;
+};
+
+/// Represent a Julia TypeVar in the template parameter list
+template<int I>
+struct TypeVar
+{
+	static constexpr int value = I;
+
+	static jl_tvar_t* tvar()
+	{
+		static jl_tvar_t* this_tvar = jl_new_typevar(jl_symbol((std::string("T") + std::to_string(I)).c_str()), (jl_value_t*)jl_bottom_type, (jl_value_t*)jl_any_type);
+		return this_tvar;
+	}
+
+};
+
 namespace detail
 {
 
-struct ParametersEnd
+template<typename T, typename FunctorT>
+void process_argument(FunctorT&&, T)
 {
-};
+}
 
-template<typename T, typename... OtherTs>
-struct AtParametersEnd
+template<template<typename...> class ParameterT, typename FunctorT, typename... ParameterArgsT>
+void process_argument(FunctorT&& f, ParameterT<ParameterArgsT...> arg)
 {
-	static constexpr bool value = AtParametersEnd<OtherTs...>::value;
-};
+	f(arg);
+}
 
-template<typename... OtherTs>
-struct AtParametersEnd<ParametersEnd, OtherTs...>
+template<template<typename...> class ParameterT, typename FunctorT>
+void process_arguments(FunctorT&&)
 {
-	static constexpr bool value = true;
-};
+}
 
-template<typename T>
-struct AtParametersEnd<T>
+/// Look for a template ParameterT in the argument list
+template<template<typename...> class ParameterT, typename FunctorT, typename ArgT, typename... OtherArgsT>
+void process_arguments(FunctorT&& f, ArgT arg, OtherArgsT... other_args)
 {
-	static constexpr bool value = false;
-};
-
-template<>
-struct AtParametersEnd<ParametersEnd>
-{
-	static constexpr bool value = true;
-};
+	process_argument<ParameterT>(f, arg);
+	process_arguments<ParameterT>(f, other_args...);
+}
 
 template<typename T>
-struct NextParameter
+struct GetJlTypes
 {
-};
-
-template<typename NextT, typename... OtherTypesT>
-struct NextParameter<TypeParameters<NextT, OtherTypesT...>>
-{
-	typedef NextT type;
-	typedef TypeParameters<OtherTypesT...> remaining_types;
-};
-
-template<typename NextT>
-struct NextParameter<TypeParameters<NextT>>
-{
-	typedef NextT type;
-	typedef ParametersEnd remaining_types;
-};
-
-template<typename T>
-struct UnpackParameters
-{
-};
-
-template<typename T1, typename... T2>
-struct AssertEnd
-{
-	static constexpr bool value = std::is_same<T1, ParametersEnd>::value;
-	static_assert(value, "Type parameter lists don't all have the same length");
-	static_assert(AssertEnd<T2...>::value, "Type parameter lists don't all have the same length");
-};
-
-template<typename T>
-struct AssertEnd<T>
-{
-	static constexpr bool value = std::is_same<T, ParametersEnd>::value;
-	static_assert(value, "Type parameter lists don't all have the same length");
-};
-
-template<template<typename...> class WrappedT, typename... ParameterPacksT>
-struct UnpackParameters<WrappedT<ParameterPacksT...>>
-{
-	typedef WrappedT<typename NextParameter<ParameterPacksT>::type...> type;
-	typedef WrappedT<typename NextParameter<ParameterPacksT>::remaining_types...> remaining_types;
-
-	// Wrap the actual type to create in a default-constructible wrapper, to pass more easily to the callback
-	template<typename T>
-	struct StoredType
+	static jl_datatype_t* julia_type()
 	{
-		typedef T type;
-	};
+		return jl_any_type;
+	}
+};
 
-	template<typename CallBackT>
-	void operator()(CallBackT&& wrap_type)
+template<typename... TypesT>
+void build_type_vectors(const TypeList<TypesT...>& typelist, jl_svec_t*& fnames, jl_svec_t*& ftypes, int& ninitialized)
+{
+	static constexpr int nb_types = sizeof...(TypesT);
+	ftypes = jl_svec(nb_types+1, jl_voidpointer_type, GetJlTypes<TypesT>::julia_type()...);
+	fnames = jl_alloc_svec_uninit(nb_types+1);
+	jl_svecset(fnames, 0, jl_symbol("cpp_object"));
+	for(int i = 0; i != nb_types; ++i)
 	{
-		wrap_type(StoredType<type>());
-		dispatch(std::integral_constant<bool, AtParametersEnd<typename NextParameter<ParameterPacksT>::remaining_types...>::value>(), wrap_type);
+		jl_svecset(fnames, i+1, jl_symbol(typelist.field_names[i].c_str()));
+	}
+	ninitialized = nb_types+1;
+}
+
+template<typename T>
+struct ParametricTypeMapping;
+
+template<template<typename...> class TemplateT, typename... TypesT>
+struct ParametricTypeMapping<TemplateT<TypesT...>>
+{
+	static jl_datatype_t* julia_type()
+	{
+		return parametric_type_mapping<TemplateT>::julia_type();
 	}
 
-	template<typename CallBackT>
-	void dispatch(std::true_type, CallBackT&& wrap_type)
+	static void set_julia_type(jl_datatype_t* dt)
 	{
-		detail::AssertEnd<typename NextParameter<ParameterPacksT>::remaining_types...>();
+		parametric_type_mapping<TemplateT>::set_julia_type(dt);
 	}
+};
 
-	template<typename CallBackT>
-	void dispatch(std::false_type, CallBackT&& wrap_type)
+template<typename T>
+struct SetParameters;
+
+template<template<typename...> class T, typename... ParametersT>
+struct SetParameters<T<ParametersT...>>
+{
+	void operator()(jl_svec_t*& parameters) const
 	{
-		UnpackParameters<remaining_types>()(wrap_type);
+		parameters = jl_svec(sizeof...(ParametersT), ParametersT::tvar()...);
+	}
+};
+
+template<typename T>
+struct GetParameters;
+
+template<template<typename...> class T, typename... ParametersT>
+struct GetParameters<T<ParametersT...>>
+{
+	jl_svec_t* operator()()
+	{
+		return jl_svec(sizeof...(ParametersT), static_type_mapping<ParametersT>::julia_type()...);
 	}
 };
 
 } // namespace detail
 
-template<typename T, typename WrapperT>
-void Module::add_parametric(const std::string& name, WrapperT&& wrapper)
+template<typename T, typename... ArgsT>
+void Module::add_parametric(const std::string& name, ArgsT... args)
 {
-	std::cout << "adding parametric type " << name << std::endl;
-	detail::UnpackParameters<T>()([](auto stored_type)
+	if(m_jl_datatypes.count(name) > 0)
 	{
-		typedef typename decltype(stored_type)::type concrete_type;
-		std::cout << "got type " << typeid(concrete_type).name() << std::endl;
-	});
-	//m_types.resize(m_types.size()+1);
-	//auto* result = new Type<T,std::true_type>(name, *this);
-	//m_types.back().reset(result);
-	//wrapper(*result);
+		throw std::runtime_error("Duplicate registration of type " + name);
+	}
+
+	jl_datatype_t* super = nullptr;
+	jl_svec_t* parameters = nullptr;
+	jl_svec_t* fnames = nullptr;
+	jl_svec_t* ftypes = nullptr;
+	int abstract = 0;
+	int mutabl = 1;
+	int ninitialized = 0;
+
+	JL_GC_PUSH4(super, parameters, fnames, ftypes);
+
+	// Set the parameters
+	detail::SetParameters<T>()(parameters);
+
+	// Fill fnames and ftypes
+	detail::process_arguments<TypeList>([&](auto typelist)
+	{
+		detail::build_type_vectors(typelist, fnames, ftypes, ninitialized);
+	}, args...);
+
+	if(fnames == nullptr)
+	{
+		assert(ftypes == nullptr);
+		detail::build_type_vectors(TypeList<>(), fnames, ftypes, ninitialized);
+	}
+
+	detail::process_arguments<Super>([&](auto super_t) { super = static_type_mapping<decltype(super_t)>::julia_type(); });
+	if(super == nullptr)
+	{
+		super = jl_any_type;
+	}
+
+	// Create the datatype associated with the parametric type
+	jl_datatype_t* dt = jl_new_datatype(jl_symbol(name.c_str()), super, parameters, fnames, ftypes, abstract, mutabl, ninitialized);
+	detail::ParametricTypeMapping<T>::set_julia_type(dt);
+
+	m_jl_datatypes[name] = dt;
+}
+
+template<typename T>
+void Module::apply()
+{
+	add_default_constructor<T>(std::is_default_constructible<T>());
+	add_copy_constructor<T>(std::is_copy_constructible<T>());
+	jl_datatype_t* app_dt = (jl_datatype_t*)jl_apply_type((jl_value_t*)detail::ParametricTypeMapping<T>::julia_type(), detail::GetParameters<T>()());
+	static_type_mapping<T>::set_julia_type(app_dt);
+}
+
+template<typename T, typename FunctorT>
+void Module::apply(FunctorT&& f)
+{
+	this->apply<T>();
+	f(*this);
 }
 
 template<typename T>
@@ -621,6 +767,17 @@ public:
 		{
 			f(*item.second);
 		}
+	}
+
+	Module& get_module(const std::string& name)
+	{
+		const auto iter = m_modules.find(name);
+		if(iter == m_modules.end())
+		{
+			throw std::runtime_error("Module with name " + name + " was not found in registry");
+		}
+
+		return *(iter->second);
 	}
 
 private:

@@ -8,7 +8,7 @@ namespace parametric
 struct P1
 {
   typedef int val_type;
-  val_type value() const
+  static val_type value()
   {
     return 1;
   }
@@ -17,7 +17,7 @@ struct P1
 struct P2
 {
   typedef double val_type;
-  val_type value() const
+  static val_type value()
   {
     return 10.;
   }
@@ -40,18 +40,27 @@ struct Parametric
   }
 };
 
+template<typename T>
+struct SimpleParametric
+{
+  SimpleParametric()
+  {
+    std::cout << "Created SimpleParametric";
+  }
+
+  T value;
+};
+
 } // namespace parametric
 
 JULIA_CPP_MODULE_BEGIN(registry)
   using namespace parametric;
   cpp_wrapper::Module& types = registry.create_module("ParametricTypes");
 
-  types.add_parametric<Parametric<cpp_wrapper::TypeParameters<P1, P2>, cpp_wrapper::TypeParameters<P2, P1>>>("Parametric", [](auto& wrapped)
-  {
-    // WrappedT is the concrete Parametric with the template parameters defined, i.e. Parametric<P1,P2> or Parametric<P2,P1> in this case
-    typedef cpp_wrapper::get_wrappped_type<decltype(wrapped)> WrappedT;
-    wrapped.def("get_first", &WrappedT::get_first);
-    wrapped.def("get_second", &WrappedT::get_second);
-  });
+
+  types.add_parametric<SimpleParametric<cpp_wrapper::TypeVar<1>>>("SimpleParametric");
+  types.apply<SimpleParametric<int>>();
+
+  types.add_parametric<Parametric<cpp_wrapper::TypeVar<1>, cpp_wrapper::TypeVar<2>>>("Parametric", cpp_wrapper::TypeList<int, double>("a", "b"));
 
 JULIA_CPP_MODULE_END

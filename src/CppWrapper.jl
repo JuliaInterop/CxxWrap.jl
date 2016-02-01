@@ -21,8 +21,9 @@ end
 # Info about a parametric type
 type CppTemplateClassInfo
   name::AbstractString # Name of the class
+  superclass::AbstractString # Name of the base class
   nb_parameters::Int32 # The number of parameters
-  concrete_types::Array{CppClassInfo, 1} # Concrete types, i.e. all parameter combinations that have been compiled in C++
+  concrete_types::Array{Any, 1} # Concrete types, i.e. all parameter combinations that have been compiled in C++
 end
 
 # Encapsulate information about a function
@@ -51,11 +52,15 @@ function get_module_names(registry::Ptr{Void})
 end
 
 function get_module_types(registry::Ptr{Void})
-  ccall(Libdl.dlsym(cpp_wrapper_lib, "get_module_types"), Array{CppClassInfo}, (Ptr{Void},), registry)
+  ccall(Libdl.dlsym(cpp_wrapper_lib, "get_module_types"), Array{Any}, (Ptr{Void},), registry)
 end
 
 function get_module_functions(registry::Ptr{Void})
   ccall(Libdl.dlsym(cpp_wrapper_lib, "get_module_functions"), Array{CppFunctionInfo}, (Ptr{Void},), registry)
+end
+
+function bind_types(registry::Ptr{Void}, m::Module)
+  ccall(Libdl.dlsym(cpp_wrapper_lib, "bind_module_types"), Void, (Ptr{Void},Any), registry, m)
 end
 
 # Build the expression to wrap the given function
@@ -152,23 +157,55 @@ function wrap_functions(functions)
   wrap_functions(functions, current_module())
 end
 
-# Wrap the types in the given array
-function wrap_types(types::Array{CppClassInfo,1}, target_module::Module)
-  for cpp_info in types
-    type_sym = symbol(cpp_info.name)
-    superclass = cpp_info.superclass == "CppAny" ? CppAny : target_module.eval(Symbol(cpp_info.superclass))
-    if cpp_info.is_abstract
-      target_module.eval(:(abstract $type_sym <: $superclass))
-    else
-      new_type_expression = :(type $type_sym <: $superclass end)
-      for (field_type_fn, field_name) in zip(cpp_info.field_types, cpp_info.field_names)
-        field_dt = ccall(field_type_fn, Any, ())
-        push!(new_type_expression.args[3].args, :($(Symbol(field_name))::$field_dt))
-      end
-      target_module.eval(new_type_expression)
+# Wrap a type
+function wrap_type(cpp_info::CppClassInfo, target_module::Module)
+  type_sym = symbol(cpp_info.name)
+  superclass = cpp_info.superclass == "CppAny" ? CppAny : target_module.eval(Symbol(cpp_info.superclass))
+  if cpp_info.is_abstract
+    target_module.eval(:(abstract $type_sym <: $superclass))
+  else
+    new_type_expression = :(type $type_sym <: $superclass end)
+    for (field_type_fn, field_name) in zip(cpp_info.field_types, cpp_info.field_names)
+      field_dt = ccall(field_type_fn, Any, ())
+      push!(new_type_expression.args[3].args, :($(Symbol(field_name))::$field_dt))
     end
-    dt = target_module.eval(:($type_sym))
+    target_module.eval(new_type_expression)
+  end
+  dt = target_module.eval(:($type_sym))
+  ccall(cpp_info.register_datatype, Void, (Any,), dt)
+end
+
+# Wrap a C++ template type to a Julia parametric type
+function wrap_type(cpp_info::CppTemplateClassInfo, target_module::Module)
+  type_sym = symbol(cpp_info.name)
+  if length(cpp_info.concrete_types) < 1
+    throw(ErrorException("Parametric types need at least one concrete instance"))
+  end
+
+  first_concrete = cpp_info.concrete_types[1]
+  superclass = first_concrete.superclass == "CppAny" ? CppAny : target_module.eval(Symbol(cpp_info.superclass))
+  new_type_expression = :(type $type_sym{} <: $superclass end)
+  for i in 1:cpp_info.nb_parameters
+    push!(new_type_expression.args[2].args[1].args, symbol("T$i"));
+  end
+  for (field_type_fn, field_name) in zip(first_concrete.field_types, first_concrete.field_names)
+    field_dt = ccall(field_type_fn, Any, ())
+    push!(new_type_expression.args[3].args, :($(Symbol(field_name))::$field_dt))
+  end
+
+  target_module.eval(new_type_expression)
+  parametric_dt = target_module.eval(:($type_sym))
+  for concrete in cpp_info.concrete_types
+
     ccall(cpp_info.register_datatype, Void, (Any,), dt)
+  end
+
+end
+
+# Wrap the types in the given array
+function wrap_types(types::Array{Any,1}, target_module::Module)
+  for cpp_info in types
+    wrap_type(cpp_info, target_module)
   end
 end
 
@@ -182,6 +219,7 @@ function wrap_modules(registry::Ptr{Void}, parent_mod=Main)
     jl_mod = parent_mod.eval(:(module $modsym end))
     push!(jl_modules, jl_mod)
     wrap_types(mod_types, jl_mod)
+    bind_types(registry, jl_mod)
   end
 
   module_functions = get_module_functions(registry)
