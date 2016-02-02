@@ -27,17 +27,17 @@ T half_template (const T x)
 void init_half_module(cpp_wrapper::Module& mod)
 {
 	// register a standard C++ function
-	mod.def("half_d", &half_function);
+	mod.method("half_d", &half_function);
 
 	// register some template instantiations
-	mod.def("half_i", &half_template<int>);
-	mod.def("half_u", &half_template<unsigned int>);
+	mod.method("half_i", &half_template<int>);
+	mod.method("half_u", &half_template<unsigned int>);
 
 	// Register a lambda
-  mod.def("half_lambda", std::function<double(double)>([](const double a) {return a*0.5;}));
+  mod.method("half_lambda", std::function<double(double)>([](const double a) {return a*0.5;}));
 
   // Looping function
-  mod.def("half_loop_cpp!", std::function<void(cpp_wrapper::ArrayRef<double>, cpp_wrapper::ArrayRef<double>)>
+  mod.method("half_loop_cpp!", std::function<void(cpp_wrapper::ArrayRef<double>, cpp_wrapper::ArrayRef<double>)>
   ([](cpp_wrapper::ArrayRef<double> in, cpp_wrapper::ArrayRef<double> out)
   {
     std::transform(in.begin(), in.end(), out.begin(), [](const double d) { return 0.5*d; });
@@ -64,8 +64,8 @@ std::string concatenate_strings(const int n, std::string s, const std::string& s
 
 void init_test_module(cpp_wrapper::Module& mod)
 {
-  mod.def("concatenate_numbers", &concatenate_numbers);
-  mod.def("concatenate_strings", &concatenate_strings);
+  mod.method("concatenate_numbers", &concatenate_numbers);
+  mod.method("concatenate_strings", &concatenate_strings);
 }
 
 }

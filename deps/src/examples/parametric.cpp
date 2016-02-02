@@ -40,16 +40,13 @@ struct Parametric
   }
 };
 
-template<typename T>
-struct SimpleParametric
+template<typename A, typename B>
+void apply_parametric(cpp_wrapper::Module& types)
 {
-  SimpleParametric()
-  {
-    std::cout << "Created SimpleParametric";
-  }
-
-  T value;
-};
+  types.apply<Parametric<A,B>>()
+    .method("get_first", &Parametric<A,B>::get_first)
+    .method("get_second", &Parametric<A,B>::get_second);
+}
 
 } // namespace parametric
 
@@ -57,10 +54,12 @@ JULIA_CPP_MODULE_BEGIN(registry)
   using namespace parametric;
   cpp_wrapper::Module& types = registry.create_module("ParametricTypes");
 
+  types.add_type<P1>("P1");
+  types.add_type<P2>("P2");
 
-  types.add_parametric<SimpleParametric<cpp_wrapper::TypeVar<1>>>("SimpleParametric");
-  types.apply<SimpleParametric<int>>();
+  types.add_parametric<Parametric<cpp_wrapper::TypeVar<1>, cpp_wrapper::TypeVar<2>>>("Parametric");
+  apply_parametric<P1,P2>(types);
+  apply_parametric<P2,P1>(types);
 
-  types.add_parametric<Parametric<cpp_wrapper::TypeVar<1>, cpp_wrapper::TypeVar<2>>>("Parametric", cpp_wrapper::TypeList<int, double>("a", "b"));
 
 JULIA_CPP_MODULE_END

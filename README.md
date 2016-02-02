@@ -16,7 +16,7 @@ Using the C++ side of `CppWrapper`, this can be exposed as follows:
 
 JULIA_CPP_MODULE_BEGIN(registry)
   cpp_wrapper::Module& hello = registry.create_module("CppHello");
-  hello.def("greet", &greet);
+  hello.method("greet", &greet);
 JULIA_CPP_MODULE_END
 ```
 

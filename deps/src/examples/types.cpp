@@ -21,10 +21,10 @@ struct NonCopyable
 JULIA_CPP_MODULE_BEGIN(registry)
   cpp_wrapper::Module& types = registry.create_module("CppTypes");
 
-  auto wrapped = types.add_type<World>("World");
-  wrapped.constructor<const std::string&>();
-  wrapped.def("set", &World::set);
-  wrapped.def("greet", &World::greet);
+  types.add_type<World>("World")
+    .constructor<const std::string&>()
+    .method("set", &World::set)
+    .method("greet", &World::greet);
 
   types.add_type<NonCopyable>("NonCopyable");
 JULIA_CPP_MODULE_END

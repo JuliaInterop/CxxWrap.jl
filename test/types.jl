@@ -1,5 +1,7 @@
 # Hello world example, similar to the Boost.Python hello world
 
+println("Running types.jl...")
+
 using CppWrapper
 using Base.Test
 

@@ -138,9 +138,8 @@ end
 # Create modules defined in the given library, wrapping all their functions and types
 function wrap_modules(registry::Ptr{Void}, parent_mod=Main)
   module_names = get_module_names(registry)
-  module_types = get_module_types(registry)
   jl_modules = Module[]
-  for (mod_name, mod_types) in zip(module_names, module_types)
+  for mod_name in module_names
     modsym = symbol(mod_name)
     jl_mod = parent_mod.eval(:(module $modsym end))
     push!(jl_modules, jl_mod)

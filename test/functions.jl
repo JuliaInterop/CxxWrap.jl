@@ -1,5 +1,7 @@
 # Tests for the functions library in deps/examples
 
+println("Running functions.jl...")
+
 using CppWrapper
 using Base.Test
 

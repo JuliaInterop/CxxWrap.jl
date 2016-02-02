@@ -270,7 +270,7 @@ public:
 
 	/// Define a new function
 	template<typename R, typename... Args>
-	void def(const std::string& name,  std::function<R(Args...)> f)
+	void method(const std::string& name,  std::function<R(Args...)> f)
 	{
 		auto* new_wrapper = new FunctionWrapper<R, Args...>(f);
 		new_wrapper->set_name(name);
@@ -280,14 +280,14 @@ public:
 
 	/// Define a new function. Overload for pointers
 	template<typename R, typename... Args>
-	void def(const std::string& name,  R(*f)(Args...))
+	void method(const std::string& name,  R(*f)(Args...))
 	{
 		bool need_convert = !std::is_same<mapped_type<remove_const_ref<R>>,remove_const_ref<R>>::value || detail::NeedConvertHelper<Args...>()();
 
 		// Conversion is automatic when using the std::function calling method, so if we need conversion we use that
 		if(need_convert)
 		{
-			def(name, std::function<R(Args...)>(f));
+			method(name, std::function<R(Args...)>(f));
 			return;
 		}
 
@@ -348,7 +348,7 @@ private:
 	template<typename T>
 	void add_copy_constructor(std::true_type)
 	{
-		def("deepcopy_internal", std::function<jl_value_t*(const T&, ObjectIdDict)>( [this](const T& other, ObjectIdDict)
+		method("deepcopy_internal", std::function<jl_value_t*(const T&, ObjectIdDict)>( [this](const T& other, ObjectIdDict)
 		{
 			return detail::create<T>(other);
 		}));
@@ -357,7 +357,7 @@ private:
 	template<typename T>
 	void add_copy_constructor(std::false_type)
 	{
-		def("deepcopy_internal", std::function<jl_value_t*(const T&, ObjectIdDict)>( [this](const T& other, ObjectIdDict)
+		method("deepcopy_internal", std::function<jl_value_t*(const T&, ObjectIdDict)>( [this](const T& other, ObjectIdDict)
 		{
 			throw std::runtime_error("Copy construction not supported for C++ type ");
 			return nullptr;
@@ -380,16 +380,17 @@ public:
 
 	/// Add a constructor with the given argument types
 	template<typename... ArgsT>
-	void constructor()
+	TypeWrapper<T>& constructor()
 	{
-		m_module.def("call", std::function<jl_value_t*(SingletonType<T>, ArgsT...)>( [](SingletonType<T>, ArgsT... args) { return detail::create<T>(args...); }));
+		m_module.method("call", std::function<jl_value_t*(SingletonType<T>, ArgsT...)>( [](SingletonType<T>, ArgsT... args) { return detail::create<T>(args...); }));
+		return *this;
 	}
 
 	/// Define a member function
 	template<typename R, typename... ArgsT>
-	void def(const std::string& name, R(T::*f)(ArgsT...))
+	TypeWrapper<T>& method(const std::string& name, R(T::*f)(ArgsT...))
 	{
-		m_module.def(name, std::function<R(T&, ArgsT...)>([f](T& obj, ArgsT... args) { return (obj.*f)(args...); }) );
+		m_module.method(name, std::function<R(T&, ArgsT...)>([f](T& obj, ArgsT... args) { return (obj.*f)(args...); }) );
 		return *this;
 	}
 
@@ -406,7 +407,7 @@ void Module::add_default_constructor(std::true_type)
 namespace detail
 {
 
-template<typename T, typename FunctorT>
+template<template<typename...> class ParameterT, typename T, typename FunctorT>
 void process_argument(FunctorT&&, T)
 {
 }
@@ -442,7 +443,7 @@ struct GetJlType
 template<int I>
 struct GetJlType<TypeVar<I>>
 {
-	jl_datatype_t* operator()() const
+	jl_tvar_t* operator()() const
 	{
 		return TypeVar<I>::tvar();
 	}
@@ -476,7 +477,7 @@ template<typename... TypesT>
 void build_type_vectors(const TypeList<TypesT...>& typelist, jl_svec_t*& fnames, jl_svec_t*& ftypes, int& ninitialized)
 {
 	static constexpr int nb_types = sizeof...(TypesT);
-	ftypes = jl_svec(nb_types+1, jl_voidpointer_type, GetJlType<TypesT>::julia_type()...);
+	ftypes = jl_svec(nb_types+1, jl_voidpointer_type, GetJlType<TypesT>()()...);
 	fnames = jl_alloc_svec_uninit(nb_types+1);
 	jl_svecset(fnames, 0, jl_symbol("cpp_object"));
 	for(int i = 0; i != nb_types; ++i)
@@ -518,7 +519,7 @@ void build_type_data(jl_datatype_t*& super, jl_svec_t*& fnames, jl_svec_t*& ftyp
 		detail::build_type_vectors(TypeList<>(), fnames, ftypes, ninitialized);
 	}
 
-	process_arguments<Super>([&](auto super_t) { super = GetJlType<decltype(super_t)>()(); }, args...);
+	process_arguments<Super>([&](auto super_t) { super = GetJlType<typename decltype(super_t)::type>()(); }, args...);
 	if(super == nullptr)
 	{
 		super = static_type_mapping<CppAny>::julia_type();
