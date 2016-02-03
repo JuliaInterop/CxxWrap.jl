@@ -110,7 +110,8 @@ jl_value_t* create(ArgsT... args)
 	static jl_function_t* finalizer_func = jl_new_closure(finalizer<T>, (jl_value_t*)jl_emptysvec, NULL);
 
 	T* cpp_obj = new T(args...);
-	jl_value_t* result = jl_new_struct(static_type_mapping<T>::julia_type(), jl_box_voidpointer(static_cast<void*>(cpp_obj)));
+	jl_datatype_t* dt = (jl_datatype_t*)jl_apply_type((jl_value_t*)static_type_mapping<T>::julia_type(), jl_svec1(jl_box_voidpointer(cpp_obj)));
+	jl_value_t* result = jl_new_struct(dt, jl_box_voidpointer(static_cast<void*>(cpp_obj)));
 	jl_gc_add_finalizer(result, finalizer_func);
 
 	return result;
@@ -461,9 +462,17 @@ struct GetParameters;
 template<template<typename...> class T, typename... ParametersT>
 struct GetParameters<T<ParametersT...>>
 {
-	jl_svec_t* operator()()
+	jl_svec_t* operator()(bool add_pointer_parameter = false)
 	{
-		return jl_svec(sizeof...(ParametersT), GetJlType<ParametersT>()()...);
+		static jl_tvar_t* ptr_tvar = jl_new_typevar(jl_symbol("CppPtr"), (jl_value_t*)jl_bottom_type, (jl_value_t*)jl_any_type);
+		if(add_pointer_parameter)
+		{
+			return jl_svec(sizeof...(ParametersT)+1, GetJlType<ParametersT>()()..., ptr_tvar);
+		}
+		else
+		{
+			return jl_svec(sizeof...(ParametersT), GetJlType<ParametersT>()()...);
+		}
 	}
 };
 
@@ -531,13 +540,16 @@ void build_type_data(jl_datatype_t*& super, jl_svec_t*& fnames, jl_svec_t*& ftyp
 template<typename T, typename... ArgsT>
 TypeWrapper<T> Module::add_type(const std::string& name, ArgsT... args)
 {
+
+	static jl_tvar_t* ptr_tvar = jl_new_typevar(jl_symbol("CppPtr"), (jl_value_t*)jl_bottom_type, (jl_value_t*)jl_any_type);
+
 	if(m_jl_datatypes.count(name) > 0)
 	{
 		throw std::runtime_error("Duplicate registration of type " + name);
 	}
 
 	jl_datatype_t* super = nullptr;
-	jl_svec_t* parameters = jl_emptysvec;
+	jl_svec_t* parameters = jl_svec1(ptr_tvar);
 	jl_svec_t* fnames = nullptr;
 	jl_svec_t* ftypes = nullptr;
 	int abstract = 0;
@@ -621,7 +633,7 @@ void Module::add_parametric(const std::string& name, ArgsT... args)
 	JL_GC_PUSH4(super, parameters, fnames, ftypes);
 
 	// Set the parameters
-	parameters = detail::GetParameters<T>()();
+	parameters = detail::GetParameters<T>()(true);
 
 	// Fill fnames and ftypes
 	detail::build_type_data(super, fnames, ftypes, ninitialized, args...);

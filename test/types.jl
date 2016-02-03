@@ -16,6 +16,7 @@ using CppTypes.World
 @test super(World) == CppWrapper.CppAny
 w = World()
 @test CppTypes.greet(w) == "default hello"
+xdump(w)
 
 CppTypes.set(w, "hello")
 @show CppTypes.greet(w)

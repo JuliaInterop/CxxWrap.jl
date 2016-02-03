@@ -11,6 +11,9 @@ wrap_modules(joinpath(Pkg.dir("CppWrapper"),"deps","usr","lib","libparametric"))
 p1 = ParametricTypes.Parametric{ParametricTypes.P1, ParametricTypes.P2}()
 p2 = ParametricTypes.Parametric{ParametricTypes.P2, ParametricTypes.P1}()
 
+println("Dumping object p1:")
+xdump(p1)
+
 @test ParametricTypes.get_first(p1) == 1
 @test ParametricTypes.get_second(p2) == 1
 @test typeof(ParametricTypes.get_first(p1)) == Int32
