@@ -48,6 +48,34 @@ void apply_parametric(cpp_wrapper::Module& types)
     .method("get_second", &Parametric<A,B>::get_second);
 }
 
+// Template containing a non-type parameter
+template<typename T, T I>
+struct NonTypeParam
+{
+  NonTypeParam(T v = I) : i(v)
+  {
+  }
+
+  T i = I;
+};
+
+// Wrap it, so we only have type parameters
+template<typename T1, typename T2>
+struct NonTypeParam_ : NonTypeParam<T1, T2::value>
+{
+  using NonTypeParam<T1, T2::value>::NonTypeParam;
+};
+
+// Add methods
+template<typename T, T I>
+void apply_nontype(cpp_wrapper::Module& types)
+{
+  typedef NonTypeParam_<T, std::integral_constant<T, I>> WrappedT;
+  types.apply<WrappedT>()
+    .template constructor<T>();
+  types.method("get_nontype", [](const WrappedT& w) { return w.i; });
+}
+
 } // namespace parametric
 
 JULIA_CPP_MODULE_BEGIN(registry)
@@ -61,5 +89,8 @@ JULIA_CPP_MODULE_BEGIN(registry)
   apply_parametric<P1,P2>(types);
   apply_parametric<P2,P1>(types);
 
-
+  types.add_parametric<NonTypeParam_<cpp_wrapper::TypeVar<1>, cpp_wrapper::TypeVar<2>>>("NonTypeParam");
+  apply_nontype<int, 1>(types);
+  apply_nontype<unsigned int, 2>(types);
+  apply_nontype<int64_t, 64>(types);
 JULIA_CPP_MODULE_END

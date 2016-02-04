@@ -148,6 +148,13 @@ template<> struct static_type_mapping<unsigned int>
 	template<typename T> using remove_const_ref = cpp_wrapper::remove_const_ref<T>;
 };
 
+template<> struct static_type_mapping<int64_t>
+{
+	typedef int64_t type;
+	static jl_datatype_t* julia_type() { return jl_int64_type; }
+	template<typename T> using remove_const_ref = cpp_wrapper::remove_const_ref<T>;
+};
+
 template<> struct static_type_mapping<uint64_t>
 {
 	typedef uint64_t type;
@@ -280,6 +287,21 @@ struct DoUnpack<std::false_type, std::false_type>
 inline std::string julia_type_name(jl_datatype_t* dt)
 {
 	return symbol_name(dt->name->name);
+}
+
+inline jl_value_t* box(const int i)
+{
+	return jl_box_int32(i);
+}
+
+inline jl_value_t* box(const unsigned int i)
+{
+	return jl_box_uint32(i);
+}
+
+inline jl_value_t* box(const int64_t i)
+{
+	return jl_box_int64(i);
 }
 
 /// Helper class to unpack a julia type

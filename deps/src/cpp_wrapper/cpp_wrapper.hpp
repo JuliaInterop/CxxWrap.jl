@@ -110,7 +110,7 @@ jl_value_t* create(ArgsT... args)
 	static jl_function_t* finalizer_func = jl_new_closure(finalizer<T>, (jl_value_t*)jl_emptysvec, NULL);
 
 	T* cpp_obj = new T(args...);
-	jl_datatype_t* dt = (jl_datatype_t*)jl_apply_type((jl_value_t*)static_type_mapping<T>::julia_type(), jl_svec1(jl_box_voidpointer(cpp_obj)));
+	jl_datatype_t* dt = static_type_mapping<T>::julia_type();
 	jl_value_t* result = jl_new_struct(dt, jl_box_voidpointer(static_cast<void*>(cpp_obj)));
 	jl_gc_add_finalizer(result, finalizer_func);
 
@@ -477,23 +477,24 @@ struct GetJlType<T<ParametersT...>>
 	jl_datatype_t* operator()() const;
 };
 
+template<typename T, T Val>
+struct GetJlType<std::integral_constant<T, Val>>
+{
+	jl_value_t* operator()() const
+	{
+		return box(convert_to_julia(Val));
+	}
+};
+
 template<typename T>
 struct GetParameters;
 
 template<template<typename...> class T, typename... ParametersT>
 struct GetParameters<T<ParametersT...>>
 {
-	jl_svec_t* operator()(bool add_pointer_parameter = false)
+	jl_svec_t* operator()()
 	{
-		static jl_tvar_t* ptr_tvar = jl_new_typevar(jl_symbol("CppPtr"), (jl_value_t*)jl_bottom_type, (jl_value_t*)jl_any_type);
-		if(add_pointer_parameter)
-		{
-			return jl_svec(sizeof...(ParametersT)+1, GetJlType<ParametersT>()()..., ptr_tvar);
-		}
-		else
-		{
-			return jl_svec(sizeof...(ParametersT), GetJlType<ParametersT>()()...);
-		}
+		return jl_svec(sizeof...(ParametersT), GetJlType<ParametersT>()()...);
 	}
 };
 
@@ -521,18 +522,7 @@ template<typename T>
 struct ParametricTypeMapping;
 
 template<template<typename...> class TemplateT, typename... TypesT>
-struct ParametricTypeMapping<TemplateT<TypesT...>>
-{
-	static jl_datatype_t* julia_type()
-	{
-		return parametric_type_mapping<TemplateT>::julia_type();
-	}
-
-	static void set_julia_type(jl_datatype_t* dt)
-	{
-		parametric_type_mapping<TemplateT>::set_julia_type(dt);
-	}
-};
+struct ParametricTypeMapping<TemplateT<TypesT...>> : parametric_type_mapping<TemplateT> {};
 
 template<typename... ArgsT>
 void build_type_data(jl_datatype_t*& super, jl_svec_t*& fnames, jl_svec_t*& ftypes, int& ninitialized, ArgsT... args)
@@ -561,16 +551,13 @@ void build_type_data(jl_datatype_t*& super, jl_svec_t*& fnames, jl_svec_t*& ftyp
 template<typename T, typename... ArgsT>
 TypeWrapper<T> Module::add_type(const std::string& name, ArgsT... args)
 {
-
-	static jl_tvar_t* ptr_tvar = jl_new_typevar(jl_symbol("CppPtr"), (jl_value_t*)jl_bottom_type, (jl_value_t*)jl_any_type);
-
 	if(m_jl_datatypes.count(name) > 0)
 	{
 		throw std::runtime_error("Duplicate registration of type " + name);
 	}
 
 	jl_datatype_t* super = nullptr;
-	jl_svec_t* parameters = jl_svec1(ptr_tvar);
+	jl_svec_t* parameters = jl_emptysvec;
 	jl_svec_t* fnames = nullptr;
 	jl_svec_t* ftypes = nullptr;
 	int abstract = 0;
@@ -654,7 +641,7 @@ void Module::add_parametric(const std::string& name, ArgsT... args)
 	JL_GC_PUSH4(super, parameters, fnames, ftypes);
 
 	// Set the parameters
-	parameters = detail::GetParameters<T>()(true);
+	parameters = detail::GetParameters<T>()();
 
 	// Fill fnames and ftypes
 	detail::build_type_data(super, fnames, ftypes, ninitialized, args...);
