@@ -34,14 +34,14 @@ void init_half_module(cpp_wrapper::Module& mod)
 	mod.method("half_u", &half_template<unsigned int>);
 
 	// Register a lambda
-  mod.method("half_lambda", std::function<double(double)>([](const double a) {return a*0.5;}));
+  mod.method("half_lambda", [](const double a) {return a*0.5;});
 
   // Looping function
-  mod.method("half_loop_cpp!", std::function<void(cpp_wrapper::ArrayRef<double>, cpp_wrapper::ArrayRef<double>)>
-  ([](cpp_wrapper::ArrayRef<double> in, cpp_wrapper::ArrayRef<double> out)
+  mod.method("half_loop_cpp!",
+  [](cpp_wrapper::ArrayRef<double> in, cpp_wrapper::ArrayRef<double> out)
   {
     std::transform(in.begin(), in.end(), out.begin(), [](const double d) { return 0.5*d; });
-  }));
+  });
 }
 
 // Test for string conversion. Pointer to this function is passed to Julia as-is.

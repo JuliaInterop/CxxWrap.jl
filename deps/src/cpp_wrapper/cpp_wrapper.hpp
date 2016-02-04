@@ -299,6 +299,13 @@ public:
 		m_functions.back().reset(new_wrapper);
 	}
 
+	/// Define a new function. Overload for lambda
+	template<typename LambdaT>
+	void method(const std::string& name,  LambdaT&& lambda)
+	{
+		add_lambda(name, lambda, &LambdaT::operator());
+	}
+
 	/// Loop over the functions
 	template<typename F>
 	void for_each_function(const F f) const
@@ -344,6 +351,12 @@ private:
 	template<typename T>
 	void add_default_constructor(std::false_type)
 	{
+	}
+
+	template<typename R, typename LambdaRefT, typename LambdaT, typename... ArgsT>
+	void add_lambda(const std::string& name, LambdaRefT&& lambda, R(LambdaT::*f)(ArgsT...) const)
+	{
+		method(name, std::function<R(ArgsT...)>(lambda));
 	}
 
 	template<typename T>
