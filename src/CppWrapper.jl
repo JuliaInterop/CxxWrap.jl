@@ -115,14 +115,13 @@ function build_function_expression(func::CppFunctionInfo)
     func_declaration = :($fname($(argmap...)))
     push!(function_expressions.args, :($func_declaration = $call_exp))
   end
-
   return function_expressions
 end
 
 # Wrap functions from the cpp module to the passed julia module
 function wrap_functions(functions, julia_mod)
   for func in functions
-    if(func.name == "deepcopy_internal")
+    if(func.name == "deepcopy_internal" || func.name == "convert")
       Base.eval(build_function_expression(func))
     else
       julia_mod.eval(build_function_expression(func))

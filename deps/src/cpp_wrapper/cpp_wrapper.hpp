@@ -408,6 +408,14 @@ public:
 		return *this;
 	}
 
+	/// Define a member function, const version
+	template<typename R, typename... ArgsT>
+	TypeWrapper<T>& method(const std::string& name, R(T::*f)(ArgsT...) const)
+	{
+		m_module.method(name, std::function<R(T&, ArgsT...)>([f](T& obj, ArgsT... args) { return (obj.*f)(args...); }) );
+		return *this;
+	}
+
 private:
 	Module& m_module;
 };

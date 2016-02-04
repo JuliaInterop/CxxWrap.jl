@@ -39,3 +39,10 @@ finalize(w)
 
 noncopyable = CppTypes.NonCopyable()
 @test_throws ErrorException other_noncopyable = deepcopy(noncopyable)
+
+bdbl = CppTypes.BoxedDouble()
+@test CppTypes.get_value(bdbl) == 0.
+CppTypes.set_value(bdbl, 1.)
+@test CppTypes.get_value(bdbl) == 1.
+
+dbl_val = Float64(bdbl)
