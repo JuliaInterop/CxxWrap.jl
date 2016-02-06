@@ -24,7 +24,7 @@ namespace detail
 template<typename R, typename... Args>
 struct ReturnTypeAdapter
 {
-	inline mapped_type<remove_const_ref<R>> operator()(const void* functor, mapped_type<mapped_reference_type<Args>>... args)
+	inline mapped_julia_type<remove_const_ref<R>> operator()(const void* functor, mapped_julia_type<mapped_reference_type<Args>>... args)
 	{
 		auto std_func = reinterpret_cast<const std::function<R(Args...)>*>(functor);
 		assert(std_func != nullptr);
@@ -35,7 +35,7 @@ struct ReturnTypeAdapter
 template<typename... Args>
 struct ReturnTypeAdapter<void, Args...>
 {
-	inline void operator()(const void* functor, mapped_type<mapped_reference_type<Args>>... args)
+	inline void operator()(const void* functor, mapped_julia_type<mapped_reference_type<Args>>... args)
 	{
 		auto std_func = reinterpret_cast<const std::function<void(Args...)>*>(functor);
 		assert(std_func != nullptr);
@@ -45,7 +45,7 @@ struct ReturnTypeAdapter<void, Args...>
 
 /// Call a C++ std::function, passed as a void pointer since it comes from Julia
 template<typename R, typename... Args>
-mapped_type<remove_const_ref<R>> call_functor(const void* functor, mapped_type<remove_const_ref<Args>>... args)
+mapped_julia_type<remove_const_ref<R>> call_functor(const void* functor, mapped_julia_type<remove_const_ref<Args>>... args)
 {
 	try
 	{
@@ -54,7 +54,7 @@ mapped_type<remove_const_ref<R>> call_functor(const void* functor, mapped_type<r
 	catch(const std::runtime_error& err)
 	{
 		jl_error(err.what());
-		return mapped_type<remove_const_ref<R>>();
+		return mapped_julia_type<remove_const_ref<R>>();
 	}
 }
 
@@ -70,7 +70,7 @@ struct NeedConvertHelper
 {
 	bool operator()()
 	{
-		for(const bool b : {std::is_same<mapped_type<remove_const_ref<Args>>,remove_const_ref<Args>>::value...})
+		for(const bool b : {std::is_same<mapped_julia_type<remove_const_ref<Args>>,remove_const_ref<Args>>::value...})
 		{
 			if(!b)
 				return true;
@@ -105,16 +105,26 @@ jl_value_t* finalizer(jl_value_t *F, jl_value_t **args, uint32_t nargs)
 
 /// Create a new julia object wrapping the C++ type
 template<typename T, typename... ArgsT>
-jl_value_t* create(ArgsT... args)
+typename std::enable_if<!IsBits<T>::value, jl_value_t*>::type create(ArgsT... args)
 {
-	static jl_function_t* finalizer_func = jl_new_closure(finalizer<T>, (jl_value_t*)jl_emptysvec, NULL);
+	jl_datatype_t* dt = static_type_mapping<T>::julia_type();
+	assert(!jl_isbits(dt));
 
 	T* cpp_obj = new T(args...);
-	jl_datatype_t* dt = static_type_mapping<T>::julia_type();
+
 	jl_value_t* result = jl_new_struct(dt, jl_box_voidpointer(static_cast<void*>(cpp_obj)));
+	static jl_function_t* finalizer_func = jl_new_closure(finalizer<T>, (jl_value_t*)jl_emptysvec, NULL);
 	jl_gc_add_finalizer(result, finalizer_func);
 
 	return result;
+}
+
+template<typename T, typename... ArgsT>
+typename std::enable_if<IsBits<T>::value, T>::type create(ArgsT... args)
+{
+	jl_datatype_t* dt = static_type_mapping<T>::julia_type();
+	assert(jl_isbits(dt));
+	return T(args...);
 }
 
 } // end namespace detail
@@ -283,7 +293,7 @@ public:
 	template<typename R, typename... Args>
 	void method(const std::string& name,  R(*f)(Args...))
 	{
-		bool need_convert = !std::is_same<mapped_type<remove_const_ref<R>>,remove_const_ref<R>>::value || detail::NeedConvertHelper<Args...>()();
+		bool need_convert = !std::is_same<mapped_julia_type<R>,remove_const_ref<R>>::value || detail::NeedConvertHelper<Args...>()();
 
 		// Conversion is automatic when using the std::function calling method, so if we need conversion we use that
 		if(need_convert)
@@ -329,6 +339,10 @@ public:
 
 	template<typename T>
 	TypeWrapper<T> apply();
+
+	/// Add a bits type
+	template<typename T, typename... ArgsT>
+	TypeWrapper<T> add_bits(const std::string& name, ArgsT... args);
 
 	const std::string& name() const
 	{
@@ -396,7 +410,7 @@ public:
 	template<typename... ArgsT>
 	TypeWrapper<T>& constructor()
 	{
-		m_module.method("call", std::function<jl_value_t*(SingletonType<T>, ArgsT...)>( [](SingletonType<T>, ArgsT... args) { return detail::create<T>(args...); }));
+		m_module.method("call", std::function<mapped_julia_type<T>(SingletonType<T>, ArgsT...)>( [](SingletonType<T>, ArgsT... args) { return detail::create<T>(args...); }));
 		return *this;
 	}
 
@@ -404,7 +418,7 @@ public:
 	template<typename R, typename... ArgsT>
 	TypeWrapper<T>& method(const std::string& name, R(T::*f)(ArgsT...))
 	{
-		m_module.method(name, std::function<R(T&, ArgsT...)>([f](T& obj, ArgsT... args) { return (obj.*f)(args...); }) );
+		m_module.method(name, [f](T& obj, ArgsT... args) { return (obj.*f)(args...); } );
 		return *this;
 	}
 
@@ -412,11 +426,11 @@ public:
 	template<typename R, typename... ArgsT>
 	TypeWrapper<T>& method(const std::string& name, R(T::*f)(ArgsT...) const)
 	{
-		m_module.method(name, std::function<R(T&, ArgsT...)>([f](T& obj, ArgsT... args) { return (obj.*f)(args...); }) );
+		m_module.method(name, [f](const T& obj, ArgsT... args) { return (obj.*f)(args...); } );
 		return *this;
 	}
 
-private:
+protected:
 	Module& m_module;
 };
 
@@ -551,6 +565,7 @@ void build_type_data(jl_datatype_t*& super, jl_svec_t*& fnames, jl_svec_t*& ftyp
 template<typename T, typename... ArgsT>
 TypeWrapper<T> Module::add_type(const std::string& name, ArgsT... args)
 {
+	static_assert(!IsBits<T>::value, "Bits types (marked with IsBits) can't be added using add_type, use add_bits instead");
 	if(m_jl_datatypes.count(name) > 0)
 	{
 		throw std::runtime_error("Duplicate registration of type " + name);
@@ -652,6 +667,39 @@ void Module::add_parametric(const std::string& name, ArgsT... args)
 
 	m_jl_datatypes[name] = dt;
 	JL_GC_POP();
+}
+
+/// Add a bits type
+template<typename T, typename... ArgsT>
+TypeWrapper<T> Module::add_bits(const std::string& name, ArgsT... args)
+{
+	static_assert(IsBits<T>::value, "Bits types must be marked as such by specializing the IsBits template");
+
+	if(m_jl_datatypes.count(name) > 0)
+	{
+		throw std::runtime_error("Duplicate registration of type " + name);
+	}
+
+	jl_datatype_t* super = nullptr;
+	JL_GC_PUSH1(super);
+	// Get superclass, if defined
+	detail::process_arguments<Super>([&](auto super_t) { super = detail::GetJlType<decltype(super_t)>()(); }, args...);
+	if(super == nullptr)
+	{
+		super = static_type_mapping<CppAny>::julia_type();
+	}
+
+	// Create the datatype
+	jl_datatype_t* dt = jl_new_bitstype((jl_value_t*)jl_symbol(name.c_str()), super, jl_emptysvec, 8*sizeof(T));
+
+	// Register the type
+	static_type_mapping<T>::set_julia_type(dt);
+	m_jl_datatypes[name] = dt;
+	JL_GC_POP();
+
+	add_default_constructor<T>(std::is_default_constructible<T>());
+
+	return TypeWrapper<T>(*this);
 }
 
 template<typename T>

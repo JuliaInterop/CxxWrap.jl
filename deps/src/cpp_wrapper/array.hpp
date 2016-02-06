@@ -126,7 +126,7 @@ public:
 		return m_array;
 	}
 
-	typedef mapped_type<ValueT> julia_t;
+	typedef mapped_julia_type<ValueT> julia_t;
 
 	typedef array_iterator_base<julia_t, ValueT> iterator;
   typedef array_iterator_base<julia_t const, ValueT const> const_iterator;
@@ -164,7 +164,7 @@ template<typename T> struct static_type_mapping<ArrayRef<T>>
 };
 
 template<typename T>
-inline mapped_type<ArrayRef<T>> convert_to_julia(const ArrayRef<T>& arr)
+inline mapped_julia_type<ArrayRef<T>> convert_to_julia(const ArrayRef<T>& arr)
 {
 	return arr.wrapped();
 }

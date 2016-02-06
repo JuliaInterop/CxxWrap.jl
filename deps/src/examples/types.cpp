@@ -2,6 +2,9 @@
 
 #include <cpp_wrapper.hpp>
 
+namespace cpp_types
+{
+
 struct World
 {
   World(const std::string& message = "default hello") : msg(message){}
@@ -21,20 +24,36 @@ struct NonCopyable
 class BoxedDouble
 {
 public:
-  void set_value(double v)
+  BoxedDouble(const double value = 0.) : m_value(value)
   {
-    m_value = v;
   }
 
-  double get_value() const
+  const double get_value() const
   {
     return m_value;
   }
 
-  double m_value = 0.;
+  void print() const
+  {
+    std::cout << "boxed double has value " << m_value << std::endl;
+  }
+
+  ~BoxedDouble()
+  {
+    std::cout << "Deleting BoxedDouble with value " << m_value << std::endl;
+  }
+
+private:
+  const double m_value;
 };
 
+} // namespace cpp_types
+
+namespace cpp_wrapper { template<> struct IsBits<cpp_types::BoxedDouble> : std::true_type {}; }
+
 JULIA_CPP_MODULE_BEGIN(registry)
+  using namespace cpp_types;
+
   cpp_wrapper::Module& types = registry.create_module("CppTypes");
 
   types.add_type<World>("World")
@@ -44,8 +63,14 @@ JULIA_CPP_MODULE_BEGIN(registry)
 
   types.add_type<NonCopyable>("NonCopyable");
 
-  types.add_type<BoxedDouble>("BoxedDouble")
-    .method("set_value", &BoxedDouble::set_value)
-    .method("get_value", &BoxedDouble::get_value);
+  types.add_bits<BoxedDouble>("BoxedDouble")
+    .constructor<const double>()
+    .method("print", &BoxedDouble::print);
   types.method("convert", [](cpp_wrapper::SingletonType<double>, const BoxedDouble& d) { return d.get_value(); });
+  // types.method("+", [](const BoxedDouble& a, const BoxedDouble& b)
+  // {
+  //   return BoxedDouble(a.get_value() + b.get_value());
+  // });
+  // types.method("==", [](const BoxedDouble& a, const double b) { return a.get_value() == b; });
+  // types.method("==", [](const double b, const BoxedDouble& a) { return a.get_value() == b; });
 JULIA_CPP_MODULE_END

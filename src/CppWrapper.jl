@@ -120,8 +120,14 @@ end
 
 # Wrap functions from the cpp module to the passed julia module
 function wrap_functions(functions, julia_mod)
+  basenames = Set([
+    "deepcopy_internal",
+    "convert",
+    "+",
+    "=="
+  ])
   for func in functions
-    if(func.name == "deepcopy_internal" || func.name == "convert")
+    if(in(func.name, basenames))
       Base.eval(build_function_expression(func))
     else
       julia_mod.eval(build_function_expression(func))

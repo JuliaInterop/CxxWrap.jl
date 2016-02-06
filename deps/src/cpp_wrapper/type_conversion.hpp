@@ -25,6 +25,11 @@ inline std::string symbol_name(jl_sym_t* symbol)
 #endif
 }
 
+inline std::string julia_type_name(jl_datatype_t* dt)
+{
+	return symbol_name(dt->name->name);
+}
+
 /// Helper to easily remove a ref to a const
 template<typename T> using remove_const_ref = typename std::remove_const<typename std::remove_reference<T>::type>::type;
 
@@ -33,11 +38,35 @@ struct CppAny
 {
 };
 
+/// Trait to determine if a type is to be treated as a Julia bits type
+template<typename T> struct IsBits : std::false_type {};
+
+namespace detail
+{
+	template<bool, typename T1, typename T2>
+	struct DispatchBits;
+
+	// non-bits
+	template<typename T1, typename T2>
+	struct DispatchBits<false, T1, T2>
+	{
+		typedef T2 type;
+	};
+
+	// bits type
+	template<typename T1, typename T2>
+	struct DispatchBits<true, T1, T2>
+	{
+		typedef T1 type;
+	};
+}
+
 /// Static mapping base template
 template<typename SourceT> struct static_type_mapping
 {
-	typedef jl_value_t* type;
-	template<typename T> using remove_const_ref = T;
+	typedef typename detail::DispatchBits<IsBits<SourceT>::value, SourceT, jl_value_t*>::type type;
+
+	template<typename T> using remove_const_ref = typename detail::DispatchBits<IsBits<cpp_wrapper::remove_const_ref<T>>::value, cpp_wrapper::remove_const_ref<T>, T>::type;
 	static jl_datatype_t* julia_type()
 	{
 		if(m_type_pointer == nullptr)
@@ -116,7 +145,7 @@ struct static_type_mapping<SingletonType<T>>
 };
 
 /// Using declarations to avoid having to write typename all the time
-template<typename SourceT> using mapped_type = typename static_type_mapping<SourceT>::type;
+template<typename SourceT> using mapped_julia_type = typename static_type_mapping<SourceT>::type;
 template<typename T> using mapped_reference_type = typename static_type_mapping<remove_const_ref<T>>::template remove_const_ref<T>;
 
 /// Specializations
@@ -124,6 +153,13 @@ template<> struct static_type_mapping<void>
 {
 	typedef void type;
 	static jl_datatype_t* julia_type() { return jl_void_type; }
+	template<typename T> using remove_const_ref = cpp_wrapper::remove_const_ref<T>;
+};
+
+template<> struct static_type_mapping<bool>
+{
+	typedef bool type;
+	static jl_datatype_t* julia_type() { return jl_bool_type; }
 	template<typename T> using remove_const_ref = cpp_wrapper::remove_const_ref<T>;
 };
 
@@ -185,7 +221,7 @@ template<> struct static_type_mapping<jl_datatype_t*>
 
 template<> struct static_type_mapping<jl_value_t*>
 {
-	typedef jl_value_t* type; // Debatable if this should be jl_value_t*
+	typedef jl_value_t* type;
 	static jl_datatype_t* julia_type() { return jl_any_type; }
 	template<typename T> using remove_const_ref = cpp_wrapper::remove_const_ref<T>;
 };
@@ -201,33 +237,33 @@ template<> struct static_type_mapping<ObjectIdDict>
 };
 
 /// Auto-conversion to the statically mapped target type.
-template<typename T>
-inline mapped_type<T> convert_to_julia(const T& cpp_val)
+template<typename T, typename std::enable_if<std::is_fundamental<T>::value || IsBits<T>::value>::type* = nullptr>
+inline T convert_to_julia(T&& cpp_val)
 {
-	static_assert(std::is_fundamental<T>::value, "Unimplemented convert_to_julia");
 	return cpp_val;
 }
 
-template<>
-inline mapped_type<std::string> convert_to_julia(const std::string& str)
+inline jl_value_t* convert_to_julia(const std::string& str)
 {
 	return jl_cstr_to_string(str.c_str());
 }
 
-template<>
-inline mapped_type<void*> convert_to_julia(void* const& p)
+inline jl_value_t* convert_to_julia(std::string&& str)
+{
+	return jl_cstr_to_string(str.c_str());
+}
+
+inline jl_value_t* convert_to_julia(void* const& p)
 {
 	return jl_box_voidpointer(p);
 }
 
-template<>
 inline jl_value_t* convert_to_julia(jl_value_t* const& p)
 {
 	return p;
 }
 
-template<>
-inline mapped_type<jl_datatype_t*> convert_to_julia(jl_datatype_t* const& dt)
+inline jl_datatype_t* convert_to_julia(jl_datatype_t* const& dt)
 {
 	return dt;
 }
@@ -235,7 +271,7 @@ inline mapped_type<jl_datatype_t*> convert_to_julia(jl_datatype_t* const& dt)
 template<typename CppT, typename JuliaT>
 inline CppT convert_to_cpp(const JuliaT& julia_val)
 {
-	static_assert(std::is_fundamental<CppT>::value, "Unimplemented convert_to_cpp");
+	static_assert(std::is_fundamental<CppT>::value || IsBits<CppT>::value, "Unimplemented convert_to_cpp");
 	return julia_val;
 }
 
@@ -284,11 +320,6 @@ struct DoUnpack<std::false_type, std::false_type>
 	}
 };
 
-inline std::string julia_type_name(jl_datatype_t* dt)
-{
-	return symbol_name(dt->name->name);
-}
-
 inline jl_value_t* box(const int i)
 {
 	return jl_box_int32(i);
@@ -320,12 +351,20 @@ struct JuliaUnpacker
 	static stripped_cpp_t* extract_cpp_pointer(jl_value_t* julia_value)
 	{
 		assert(julia_value != nullptr);
-		assert(jl_type_morespecific(jl_typeof(julia_value), (jl_value_t*)static_type_mapping<stripped_cpp_t>::julia_type()));
+		jl_datatype_t* dt = static_type_mapping<stripped_cpp_t>::julia_type();
+		assert(jl_type_morespecific(jl_typeof(julia_value), (jl_value_t*)dt));
 
-		// Get the pointer to the C++ class
-		jl_value_t* cpp_ref = jl_fieldref(julia_value,0);
-		assert(jl_is_pointer(cpp_ref));
-		return reinterpret_cast<stripped_cpp_t*>(jl_unbox_voidpointer(cpp_ref));
+		if(!jl_isbits(dt))
+		{
+			// Get the pointer to the C++ class
+			jl_value_t* cpp_ref = jl_fieldref(julia_value,0);
+			assert(jl_is_pointer(cpp_ref));
+			return reinterpret_cast<stripped_cpp_t*>(jl_unbox_voidpointer(cpp_ref));
+		}
+		else
+		{
+			return reinterpret_cast<stripped_cpp_t*>(jl_data_ptr(julia_value));
+		}
 	}
 };
 
