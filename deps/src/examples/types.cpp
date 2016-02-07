@@ -21,35 +21,26 @@ struct NonCopyable
   NonCopyable(const NonCopyable&) = delete;
 };
 
-class BoxedDouble
+class BitsInt64
 {
 public:
-  BoxedDouble(const double value = 0.) : m_value(value)
+  BitsInt64(const int64_t value = 0) : m_value(value)
   {
+    std::cout << "constructed BitsInt64 with value " << get_value() << std::endl;
   }
 
-  const double get_value() const
+  int64_t get_value() const
   {
     return m_value;
   }
 
-  void print() const
-  {
-    std::cout << "boxed double has value " << m_value << std::endl;
-  }
-
-  ~BoxedDouble()
-  {
-    std::cout << "Deleting BoxedDouble with value " << m_value << std::endl;
-  }
-
 private:
-  const double m_value;
+  int64_t m_value;
 };
 
 } // namespace cpp_types
 
-namespace cpp_wrapper { template<> struct IsBits<cpp_types::BoxedDouble> : std::true_type {}; }
+namespace cpp_wrapper { template<> struct IsBits<cpp_types::BitsInt64> : std::true_type {}; }
 
 JULIA_CPP_MODULE_BEGIN(registry)
   using namespace cpp_types;
@@ -63,14 +54,11 @@ JULIA_CPP_MODULE_BEGIN(registry)
 
   types.add_type<NonCopyable>("NonCopyable");
 
-  types.add_bits<BoxedDouble>("BoxedDouble")
-    .constructor<const double>()
-    .method("print", &BoxedDouble::print);
-  types.method("convert", [](cpp_wrapper::SingletonType<double>, const BoxedDouble& d) { return d.get_value(); });
-  // types.method("+", [](const BoxedDouble& a, const BoxedDouble& b)
-  // {
-  //   return BoxedDouble(a.get_value() + b.get_value());
-  // });
-  // types.method("==", [](const BoxedDouble& a, const double b) { return a.get_value() == b; });
-  // types.method("==", [](const double b, const BoxedDouble& a) { return a.get_value() == b; });
+  // BitsInt64
+  types.add_bits<BitsInt64>("BitsInt64", cpp_wrapper::TypeList<int64_t>("value"))
+    .constructor<int64_t>();
+  types.method("convert", [](cpp_wrapper::SingletonType<int64_t>, const BitsInt64& a) { std::cout << "convert returning " << a.get_value() << std::endl; return a.get_value(); });
+  types.method("+", [](const BitsInt64& a, const BitsInt64& b) { return BitsInt64(a.get_value() + b.get_value()); });
+  types.method("==", [](const BitsInt64& a, const int64_t b) { std::cout << "calling comparison operator 1 with result " << std::boolalpha << (a.get_value() == b) << std::endl; return a.get_value() == b; });
+  types.method("==", [](const int64_t b, const BitsInt64& a) { std::cout << "calling comparison operator 2 with result " << std::boolalpha << (a.get_value() == b) << std::endl; return a.get_value() == b; });
 JULIA_CPP_MODULE_END

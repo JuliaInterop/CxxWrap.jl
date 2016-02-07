@@ -40,16 +40,19 @@ finalize(w)
 noncopyable = CppTypes.NonCopyable()
 @test_throws ErrorException other_noncopyable = deepcopy(noncopyable)
 
-println("Size of BoxedDouble: $(sizeof(CppTypes.BoxedDouble))")
 
-@show methods(CppTypes.BoxedDouble)
+@test sizeof(CppTypes.BitsInt64) == 8
+@test isbits(CppTypes.BitsInt64)
+println("Dumping BitsInt64...")
+xdump(CppTypes.BitsInt64)
+bdbl = CppTypes.BitsInt64(1)
+xdump(bdbl)
+@test Int64(bdbl) == 1
 
-# bdbl = CppTypes.BoxedDouble(1.)
-# @test Float64(bdbl) == 1.
-#
-# bdbl2 = CppTypes.BoxedDouble(2.)
-# CppTypes.print(bdbl + bdbl2)
+@show methods(==, (CppTypes.BitsInt64, Any))
+@show methods(==, (Any, CppTypes.BitsInt64))
 
-
-# @test typeof(bdbl + bdbl2) == CppTypes.BoxedDouble
-# @test Float64(bdbl + bdbl2) == 3.
+bdbl2 = CppTypes.BitsInt64(2)
+@test bdbl2 == 2
+@test typeof(bdbl + bdbl2) == CppTypes.BitsInt64
+@test (bdbl + bdbl2) == 3

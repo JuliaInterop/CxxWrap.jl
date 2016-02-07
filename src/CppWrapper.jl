@@ -8,6 +8,9 @@ const cpp_wrapper_lib = Libdl.dlopen(joinpath(Pkg.dir("CppWrapper"),"deps","usr"
 # Base type for wrapped C++ types
 abstract CppAny
 
+# Avoid conversion by default
+Base.cconvert(T::Type, x::CppAny) = x
+
 # Encapsulate information about a function
 type CppFunctionInfo
   name::AbstractString
@@ -52,6 +55,9 @@ function build_function_expression(func::CppFunctionInfo)
 
   # Return type
   return_type = func.return_type
+  if(func.name == "==")
+    println("return type for == is $(func.return_type)")
+  end
 
   # Function pointer
   fpointer = func.function_pointer

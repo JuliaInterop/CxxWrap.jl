@@ -170,6 +170,13 @@ template<> struct static_type_mapping<double>
 	template<typename T> using remove_const_ref = cpp_wrapper::remove_const_ref<T>;
 };
 
+template<> struct static_type_mapping<float>
+{
+	typedef float type;
+	static jl_datatype_t* julia_type() { return jl_float64_type; }
+	template<typename T> using remove_const_ref = cpp_wrapper::remove_const_ref<T>;
+};
+
 template<> struct static_type_mapping<int>
 {
 	typedef int type;
@@ -236,9 +243,15 @@ template<> struct static_type_mapping<ObjectIdDict>
 	template<typename T> using remove_const_ref = cpp_wrapper::remove_const_ref<T>;
 };
 
-/// Auto-conversion to the statically mapped target type.
-template<typename T, typename std::enable_if<std::is_fundamental<T>::value || IsBits<T>::value>::type* = nullptr>
-inline T convert_to_julia(T&& cpp_val)
+/// Conversion to the statically mapped target type.
+template<typename T>
+inline typename std::enable_if<std::is_fundamental<T>::value, T>::type convert_to_julia(T&& cpp_val)
+{
+	return cpp_val;
+}
+
+template<typename T>
+inline typename std::enable_if<IsBits<T>::value, T>::type convert_to_julia(T&& cpp_val)
 {
 	return cpp_val;
 }
@@ -269,9 +282,15 @@ inline jl_datatype_t* convert_to_julia(jl_datatype_t* const& dt)
 }
 
 template<typename CppT, typename JuliaT>
-inline CppT convert_to_cpp(const JuliaT& julia_val)
+inline typename std::enable_if<std::is_fundamental<CppT>::value, CppT>::type convert_to_cpp(const JuliaT& julia_val)
 {
-	static_assert(std::is_fundamental<CppT>::value || IsBits<CppT>::value, "Unimplemented convert_to_cpp");
+	return julia_val;
+}
+
+template<typename CppT, typename JuliaT>
+inline typename std::enable_if<IsBits<CppT>::value, CppT>::type convert_to_cpp(JuliaT julia_val)
+{
+	std::cout << "converting to cpp: " << julia_val.get_value() << std::endl;
 	return julia_val;
 }
 
@@ -387,7 +406,6 @@ inline std::string convert_to_cpp(jl_value_t* const& julia_string)
 	return result;
 }
 
-template<>
 inline jl_datatype_t* convert_to_cpp(jl_datatype_t* const& julia_value)
 {
 	return julia_value;
