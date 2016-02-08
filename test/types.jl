@@ -16,6 +16,7 @@ using CppTypes.World
 @test super(World) == CppWrapper.CppAny
 w = World()
 @test CppTypes.greet(w) == "default hello"
+println("Dumping type w...")
 xdump(w)
 
 CppTypes.set(w, "hello")
@@ -40,19 +41,16 @@ finalize(w)
 noncopyable = CppTypes.NonCopyable()
 @test_throws ErrorException other_noncopyable = deepcopy(noncopyable)
 
+import CppTypes.BitsInt64
 
-@test sizeof(CppTypes.BitsInt64) == 8
-@test isbits(CppTypes.BitsInt64)
-println("Dumping BitsInt64...")
-xdump(CppTypes.BitsInt64)
-bdbl = CppTypes.BitsInt64(1)
-xdump(bdbl)
-@test Int64(bdbl) == 1
-
-@show methods(==, (CppTypes.BitsInt64, Any))
-@show methods(==, (Any, CppTypes.BitsInt64))
-
-bdbl2 = CppTypes.BitsInt64(2)
-@test bdbl2 == 2
-@test typeof(bdbl + bdbl2) == CppTypes.BitsInt64
-@test (bdbl + bdbl2) == 3
+@test sizeof(BitsInt64) == 8
+@test isbits(BitsInt64)
+@test length(fieldnames(BitsInt64)) == 1
+bitsint1 = BitsInt64(1)
+@test bitsint1.value == 1
+@test Int64(bitsint1) == 1
+@test CppTypes.getvalue(bitsint1) == 1
+bitsint2 = CppTypes.BitsInt64(2)
+@test bitsint2 == 2
+@test typeof(bitsint1 + bitsint2) == CppTypes.BitsInt64
+@test (bitsint1 + bitsint2) == 3

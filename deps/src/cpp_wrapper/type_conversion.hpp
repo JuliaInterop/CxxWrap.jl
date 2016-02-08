@@ -288,9 +288,8 @@ inline typename std::enable_if<std::is_fundamental<CppT>::value, CppT>::type con
 }
 
 template<typename CppT, typename JuliaT>
-inline typename std::enable_if<IsBits<CppT>::value, CppT>::type convert_to_cpp(JuliaT julia_val)
+inline typename std::enable_if<IsBits<CppT>::value, CppT>::type convert_to_cpp(const JuliaT& julia_val)
 {
-	std::cout << "converting to cpp: " << julia_val.get_value() << std::endl;
 	return julia_val;
 }
 

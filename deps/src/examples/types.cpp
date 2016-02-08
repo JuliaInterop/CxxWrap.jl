@@ -26,7 +26,6 @@ class BitsInt64
 public:
   BitsInt64(const int64_t value = 0) : m_value(value)
   {
-    std::cout << "constructed BitsInt64 with value " << get_value() << std::endl;
   }
 
   int64_t get_value() const
@@ -56,9 +55,10 @@ JULIA_CPP_MODULE_BEGIN(registry)
 
   // BitsInt64
   types.add_bits<BitsInt64>("BitsInt64", cpp_wrapper::TypeList<int64_t>("value"))
-    .constructor<int64_t>();
-  types.method("convert", [](cpp_wrapper::SingletonType<int64_t>, const BitsInt64& a) { std::cout << "convert returning " << a.get_value() << std::endl; return a.get_value(); });
+    .constructor<int64_t>()
+    .method("getvalue", &BitsInt64::get_value);
+  types.method("convert", [](cpp_wrapper::SingletonType<int64_t>, const BitsInt64& a) { return a.get_value(); });
   types.method("+", [](const BitsInt64& a, const BitsInt64& b) { return BitsInt64(a.get_value() + b.get_value()); });
-  types.method("==", [](const BitsInt64& a, const int64_t b) { std::cout << "calling comparison operator 1 with result " << std::boolalpha << (a.get_value() == b) << std::endl; return a.get_value() == b; });
-  types.method("==", [](const int64_t b, const BitsInt64& a) { std::cout << "calling comparison operator 2 with result " << std::boolalpha << (a.get_value() == b) << std::endl; return a.get_value() == b; });
+  types.method("==", [](const BitsInt64& a, const int64_t b) { return a.get_value() == b; } );
+  types.method("==", [](const int64_t b, const BitsInt64& a) { return a.get_value() == b; } );
 JULIA_CPP_MODULE_END

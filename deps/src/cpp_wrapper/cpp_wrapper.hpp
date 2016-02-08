@@ -122,7 +122,6 @@ typename std::enable_if<!IsBits<T>::value, jl_value_t*>::type create(ArgsT... ar
 template<typename T, typename... ArgsT>
 typename std::enable_if<IsBits<T>::value, T>::type create(ArgsT... args)
 {
-	std::cout << "ceating bits of type " << typeid(T).name() << std::endl;
 	jl_datatype_t* dt = static_type_mapping<T>::julia_type();
 	assert(jl_isbits(dt));
 	return T(args...);
