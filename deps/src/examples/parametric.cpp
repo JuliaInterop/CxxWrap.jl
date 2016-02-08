@@ -22,7 +22,7 @@ struct P2
     return 10.;
   }
 };
-
+/*
 template<typename A, typename B>
 struct Parametric
 {
@@ -75,7 +75,7 @@ void apply_nontype(cpp_wrapper::Module& types)
     .template constructor<T>();
   types.method("get_nontype", [](const WrappedT& w) { return w.i; });
 }
-
+*/
 } // namespace parametric
 
 JULIA_CPP_MODULE_BEGIN(registry)
@@ -85,12 +85,12 @@ JULIA_CPP_MODULE_BEGIN(registry)
   types.add_type<P1>("P1");
   types.add_type<P2>("P2");
 
-  types.add_parametric<Parametric<cpp_wrapper::TypeVar<1>, cpp_wrapper::TypeVar<2>>>("Parametric");
-  apply_parametric<P1,P2>(types);
-  apply_parametric<P2,P1>(types);
-
-  types.add_parametric<NonTypeParam_<cpp_wrapper::TypeVar<1>, cpp_wrapper::TypeVar<2>>>("NonTypeParam");
-  apply_nontype<int, 1>(types);
-  apply_nontype<unsigned int, 2>(types);
-  apply_nontype<int64_t, 64>(types);
+  // types.add_parametric<Parametric<cpp_wrapper::TypeVar<1>, cpp_wrapper::TypeVar<2>>>("Parametric");
+  // apply_parametric<P1,P2>(types);
+  // apply_parametric<P2,P1>(types);
+  //
+  // types.add_parametric<NonTypeParam_<cpp_wrapper::TypeVar<1>, cpp_wrapper::TypeVar<2>>>("NonTypeParam");
+  // apply_nontype<int, 1>(types);
+  // apply_nontype<unsigned int, 2>(types);
+  // apply_nontype<int64_t, 64>(types);
 JULIA_CPP_MODULE_END

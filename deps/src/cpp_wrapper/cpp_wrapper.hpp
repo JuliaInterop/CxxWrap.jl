@@ -243,17 +243,16 @@ struct TypeList
 	TypeList(StringT... names)
 	{
 		static_assert(sizeof...(TypesT) == sizeof...(StringT), "Number of types must be equal to number of field names");
-		field_names = {names...};
+		field_names = jl_svec(sizeof...(TypesT), jl_symbol(names)...);
 	}
 
-	std::vector<std::string> field_names;
+	jl_svec_t* field_names;
 };
 
-/// Wrap the base type
-template<typename SuperT>
-struct Super
+/// Indicate that a parametric type is to be added
+template<typename... ParametersT>
+struct Parametric
 {
-	typedef SuperT type;
 };
 
 /// Represent a Julia TypeVar in the template parameter list
@@ -327,22 +326,16 @@ public:
 	}
 
 	/// Add a composite type
-	template<typename T, typename... ArgsT>
-	TypeWrapper<T> add_type(const std::string& name, ArgsT... args);
+	template<typename T>
+	TypeWrapper<T> add_type(const std::string& name, jl_datatype_t* super = julia_type<CppAny>());
 
 	/// Add an abstract type
 	template<typename T, typename... ArgsT>
-	TypeWrapper<T> add_abstract(const std::string& name, ArgsT... args);
-
-	template<typename T, typename... ArgsT>
-	void add_parametric(const std::string& name, ArgsT... args);
-
-	template<typename T>
-	TypeWrapper<T> apply();
+	TypeWrapper<T> add_abstract(const std::string& name, jl_datatype_t* super = julia_type<CppAny>());
 
 	/// Add type T as a struct that can be captured as bits type, using an immutable in Julia
-	template<typename T, typename... ArgsT>
-	TypeWrapper<T> add_bits(const std::string& name, ArgsT... args);
+	template<typename T, typename FieldListT>
+	TypeWrapper<T> add_bits(const std::string& name, FieldListT&& field_list, jl_datatype_t* super = julia_type<CppAny>());
 
 	const std::string& name() const
 	{
@@ -358,6 +351,8 @@ public:
 	}
 
 private:
+	template<typename T>
+	TypeWrapper<T> add_type_internal(const std::string& name, jl_datatype_t* super, int abstract);
 
 	template<typename T>
 	void add_default_constructor(std::true_type);
@@ -443,36 +438,12 @@ void Module::add_default_constructor(std::true_type)
 namespace detail
 {
 
-template<template<typename...> class ParameterT, typename T, typename FunctorT>
-void process_argument(FunctorT&&, T)
-{
-}
-
-template<template<typename...> class ParameterT, typename FunctorT, typename... ParameterArgsT>
-void process_argument(FunctorT&& f, ParameterT<ParameterArgsT...> arg)
-{
-	f(arg);
-}
-
-template<template<typename...> class ParameterT, typename FunctorT>
-void process_arguments(FunctorT&&)
-{
-}
-
-/// Look for a template ParameterT in the argument list
-template<template<typename...> class ParameterT, typename FunctorT, typename ArgT, typename... OtherArgsT>
-void process_arguments(FunctorT&& f, ArgT arg, OtherArgsT... other_args)
-{
-	process_argument<ParameterT>(f, arg);
-	process_arguments<ParameterT>(f, other_args...);
-}
-
 template<typename T>
 struct GetJlType
 {
 	jl_datatype_t* operator()() const
 	{
-		return static_type_mapping<T>::julia_type();
+		return julia_type<T>();
 	}
 };
 
@@ -485,23 +456,14 @@ struct GetJlType<TypeVar<I>>
 	}
 };
 
-template<template<typename...> class T, typename... ParametersT>
-struct GetJlType<T<ParametersT...>>
+template<typename T>
+struct GetParameters
 {
-	jl_datatype_t* operator()() const;
-};
-
-template<typename T, T Val>
-struct GetJlType<std::integral_constant<T, Val>>
-{
-	jl_value_t* operator()() const
+	jl_svec_t* operator()()
 	{
-		return box(convert_to_julia(Val));
+		return jl_emptysvec;
 	}
 };
-
-template<typename T>
-struct GetParameters;
 
 template<template<typename...> class T, typename... ParametersT>
 struct GetParameters<T<ParametersT...>>
@@ -512,214 +474,111 @@ struct GetParameters<T<ParametersT...>>
 	}
 };
 
-template<template<typename...> class T, typename... ParametersT>
-jl_datatype_t* GetJlType<T<ParametersT...>>::operator()() const
-{
-	return (jl_datatype_t*)jl_apply_type((jl_value_t*)parametric_type_mapping<T>::julia_type(), GetParameters<T<ParametersT...>>()());
-}
-
-template<typename... TypesT>
-void build_type_vectors(const TypeList<TypesT...>& typelist, jl_svec_t*& fnames, jl_svec_t*& ftypes, int& ninitialized, bool add_ptr)
-{
-	static constexpr int nb_types = sizeof...(TypesT);
-	const int ptr_offset = add_ptr ? 1 : 0;
-	if(add_ptr)
-	{
-		ftypes = jl_svec(nb_types + ptr_offset, jl_voidpointer_type, GetJlType<TypesT>()()...);
-	}
-	else
-	{
-		ftypes = jl_svec(nb_types + ptr_offset, GetJlType<TypesT>()()...);
-	}
-	fnames = jl_alloc_svec_uninit(nb_types + ptr_offset);
-
-	if(add_ptr)
-	{
-		jl_svecset(fnames, 0, jl_symbol("cpp_object"));
-	}
-	for(int i = 0; i != nb_types; ++i)
-	{
-		jl_svecset(fnames, i+ptr_offset, jl_symbol(typelist.field_names[i].c_str()));
-	}
-	ninitialized = nb_types+ptr_offset;
-}
-
 template<typename T>
-struct ParametricTypeMapping;
-
-template<template<typename...> class TemplateT, typename... TypesT>
-struct ParametricTypeMapping<TemplateT<TypesT...>> : parametric_type_mapping<TemplateT> {};
-
-template<typename... ArgsT>
-void build_type_data(bool add_ptr, jl_datatype_t*& super, jl_svec_t*& fnames, jl_svec_t*& ftypes, int& ninitialized, ArgsT... args)
+struct IsParametric
 {
-	// Fill fnames and ftypes
-	process_arguments<TypeList>([&](auto typelist)
-	{
-		detail::build_type_vectors(typelist, fnames, ftypes, ninitialized, add_ptr);
-	}, args...);
+	static constexpr bool value = false;
+};
 
-	if(fnames == nullptr)
-	{
-		assert(ftypes == nullptr);
-		detail::build_type_vectors(TypeList<>(), fnames, ftypes, ninitialized, add_ptr);
-	}
-
-	process_arguments<Super>([&](auto super_t) { super = GetJlType<typename decltype(super_t)::type>()(); }, args...);
-	if(super == nullptr)
-	{
-		super = static_type_mapping<CppAny>::julia_type();
-	}
-}
+template<typename... ParametersT>
+struct IsParametric<Parametric<ParametersT...>>
+{
+	static constexpr bool value = true;
+};
 
 } // namespace detail
 
-template<typename T, typename... ArgsT>
-TypeWrapper<T> Module::add_type(const std::string& name, ArgsT... args)
+template<typename T>
+TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t* super, int abstract)
 {
-	static_assert(!IsBits<T>::value, "Bits types (marked with IsBits) can't be added using add_type, use add_bits instead");
+	static constexpr bool is_parametric = detail::IsParametric<T>::value;
+	static_assert(!IsBits<T>::value || is_parametric, "Bits types (marked with IsBits) can't be added using add_type, use add_bits instead");
 	if(m_jl_datatypes.count(name) > 0)
 	{
 		throw std::runtime_error("Duplicate registration of type " + name);
 	}
 
-	jl_datatype_t* super = nullptr;
-	jl_svec_t* parameters = jl_emptysvec;
-	jl_svec_t* fnames = nullptr;
-	jl_svec_t* ftypes = nullptr;
-	int abstract = 0;
+	jl_svec_t* parameters = is_parametric ? detail::GetParameters<T>()() : jl_emptysvec;
+	jl_svec_t* fnames = jl_svec1(jl_symbol("cpp_object"));
+	jl_svec_t* ftypes = jl_svec1(jl_voidpointer_type);
 	int mutabl = 1;
-	int ninitialized = 0;
+	int ninitialized = 1;
 
-	JL_GC_PUSH4(super, parameters, fnames, ftypes);
-
-	// Fill fnames and ftypes
-	detail::build_type_data(true, super, fnames, ftypes, ninitialized, args...);
+	JL_GC_PUSH4(&super, &parameters, &fnames, &ftypes);
 
 	// Create the datatype
 	jl_datatype_t* dt = jl_new_datatype(jl_symbol(name.c_str()), super, parameters, fnames, ftypes, abstract, mutabl, ninitialized);
 
 	// Register the type
-	static_type_mapping<T>::set_julia_type(dt);
-	static_type_mapping<T*>::set_julia_type(dt);
+	if(!is_parametric)
+	{
+		static_type_mapping<T>::set_julia_type(dt);
+		static_type_mapping<T*>::set_julia_type(dt);
+		if(!abstract)
+		{
+			add_default_constructor<T>(std::is_default_constructible<T>());
+			add_copy_constructor<T>(std::is_copy_constructible<T>());
+		}
+	}
+
 	m_jl_datatypes[name] = dt;
 	JL_GC_POP();
-
-	// Add constructors
-	add_default_constructor<T>(std::is_default_constructible<T>());
-	add_copy_constructor<T>(std::is_copy_constructible<T>());
-
 	return TypeWrapper<T>(*this);
 }
 
-template<typename T, typename... ArgsT>
-TypeWrapper<T> Module::add_abstract(const std::string& name, ArgsT... args)
+/// Add a composite type
+template<typename T>
+TypeWrapper<T> Module::add_type(const std::string& name, jl_datatype_t* super)
 {
+	return add_type_internal<T>(name, super, 0);
+}
+
+/// Add an abstract type
+template<typename T, typename... ArgsT>
+TypeWrapper<T> Module::add_abstract(const std::string& name, jl_datatype_t* super)
+{
+	return add_type_internal<T>(name, super, 1);
+}
+
+/// Add type T as a struct that can be captured as bits type, using an immutable in Julia
+template<typename T, typename FieldListT>
+TypeWrapper<T> Module::add_bits(const std::string& name, FieldListT&& field_list, jl_datatype_t* super)
+{
+	static constexpr bool is_parametric = detail::IsParametric<T>::value;
+	static_assert(std::is_standard_layout<T>::value || is_parametric, "Bits types must be standard layout");
+	static_assert(IsBits<T>::value || is_parametric, "Bits types must be marked as such by specializing the IsBits template");
 	if(m_jl_datatypes.count(name) > 0)
 	{
 		throw std::runtime_error("Duplicate registration of type " + name);
 	}
 
-	jl_datatype_t* super = nullptr;
-	jl_svec_t* parameters = jl_emptysvec;
-	jl_svec_t* fnames = jl_emptysvec;
-	jl_svec_t* ftypes = jl_emptysvec;
-	int abstract = 1;
+	jl_svec_t* parameters = is_parametric ? detail::GetParameters<T>()() : jl_emptysvec;
+	jl_svec_t* fnames = field_list.field_names;
+	jl_svec_t* ftypes = detail::GetParameters<FieldListT>()();
 	int mutabl = 0;
-	int ninitialized = 0;
+	int ninitialized = jl_svec_len(ftypes);
+	const int abstract = 0;
 
-	JL_GC_PUSH4(super, parameters, fnames, ftypes);
+	assert(jl_svec_len(ftypes) == jl_svec_len(fnames));
 
-	// Get superclass, if defined
-	detail::process_arguments<Super>([&](auto super_t) { super = detail::GetJlType<decltype(super_t)>()(); }, args...);
-	if(super == nullptr)
-	{
-		super = static_type_mapping<CppAny>::julia_type();
-	}
+	JL_GC_PUSH4(&super, &parameters, &fnames, &ftypes);
 
 	// Create the datatype
 	jl_datatype_t* dt = jl_new_datatype(jl_symbol(name.c_str()), super, parameters, fnames, ftypes, abstract, mutabl, ninitialized);
 
 	// Register the type
-	static_type_mapping<T>::set_julia_type(dt);
-	static_type_mapping<T*>::set_julia_type(dt);
+	if(!is_parametric)
+	{
+		static_type_mapping<T>::set_julia_type(dt);
+		add_default_constructor<T>(std::is_default_constructible<T>());
+	}
+
 	m_jl_datatypes[name] = dt;
 	JL_GC_POP();
-
 	return TypeWrapper<T>(*this);
 }
 
-template<typename T, typename... ArgsT>
-void Module::add_parametric(const std::string& name, ArgsT... args)
-{
-	if(m_jl_datatypes.count(name) > 0)
-	{
-		throw std::runtime_error("Duplicate registration of type " + name);
-	}
-
-	jl_datatype_t* super = nullptr;
-	jl_svec_t* parameters = nullptr;
-	jl_svec_t* fnames = nullptr;
-	jl_svec_t* ftypes = nullptr;
-	int abstract = 0;
-	int mutabl = 1;
-	int ninitialized = 0;
-
-	JL_GC_PUSH4(super, parameters, fnames, ftypes);
-
-	// Set the parameters
-	parameters = detail::GetParameters<T>()();
-
-	// Fill fnames and ftypes
-	detail::build_type_data(true, super, fnames, ftypes, ninitialized, args...);
-
-	// Create the datatype associated with the parametric type
-	jl_datatype_t* dt = jl_new_datatype(jl_symbol(name.c_str()), super, parameters, fnames, ftypes, abstract, mutabl, ninitialized);
-	detail::ParametricTypeMapping<T>::set_julia_type(dt);
-
-	m_jl_datatypes[name] = dt;
-	JL_GC_POP();
-}
-
-/// Add a bits type
-template<typename T, typename... ArgsT>
-TypeWrapper<T> Module::add_bits(const std::string& name, ArgsT... args)
-{
-	static_assert(std::is_standard_layout<T>::value, "Bits types must be standard layout");
-	static_assert(IsBits<T>::value, "Bits types must be marked as such by specializing the IsBits template");
-	if(m_jl_datatypes.count(name) > 0)
-	{
-		throw std::runtime_error("Duplicate registration of type " + name);
-	}
-
-	jl_datatype_t* super = nullptr;
-	jl_svec_t* parameters = jl_emptysvec;
-	jl_svec_t* fnames = nullptr;
-	jl_svec_t* ftypes = nullptr;
-	int abstract = 0;
-	int mutabl = 0;
-	int ninitialized = 0;
-
-	JL_GC_PUSH4(super, parameters, fnames, ftypes);
-
-	// Fill fnames and ftypes
-	detail::build_type_data(false, super, fnames, ftypes, ninitialized, args...);
-
-	// Create the datatype
-	jl_datatype_t* dt = jl_new_datatype(jl_symbol(name.c_str()), super, parameters, fnames, ftypes, abstract, mutabl, ninitialized);
-
-	// Register the type
-	static_type_mapping<T>::set_julia_type(dt);
-	static_type_mapping<T*>::set_julia_type(dt);
-	m_jl_datatypes[name] = dt;
-	JL_GC_POP();
-
-	// Add constructors
-	add_default_constructor<T>(std::is_default_constructible<T>());
-
-	return TypeWrapper<T>(*this);
-}
-
+/*
 template<typename T>
 TypeWrapper<T> Module::apply()
 {
@@ -730,6 +589,7 @@ TypeWrapper<T> Module::apply()
 	static_type_mapping<T*>::set_julia_type(app_dt);
 	return TypeWrapper<T>(*this);
 }
+*/
 
 
 /// Registry containing different modules

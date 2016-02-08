@@ -96,40 +96,6 @@ private:
 
 template<typename SourceT> jl_datatype_t* static_type_mapping<SourceT>::m_type_pointer = nullptr;
 
-/// Type mapping for templates translated to parametric types
-template<template<typename...> class SourceT> struct parametric_type_mapping
-{
-	typedef jl_value_t* type;
-
-	static jl_datatype_t* julia_type()
-	{
-		if(m_type_pointer == nullptr)
-		{
-			throw std::runtime_error("No Julia type for requested template type");
-		}
-		return m_type_pointer;
-	}
-
-	static void set_julia_type(jl_datatype_t* dt)
-	{
-		if(m_type_pointer != nullptr)
-		{
-			throw std::runtime_error("Template type was already registered as " + std::string(jl_typename_str((jl_value_t*)m_type_pointer)));
-		}
-		m_type_pointer = dt;
-	}
-
-	static bool has_julia_type()
-	{
-		return m_type_pointer != nullptr;
-	}
-
-private:
-	static jl_datatype_t* m_type_pointer;
-};
-
-template<template<typename...> class SourceT> jl_datatype_t* parametric_type_mapping<SourceT>::m_type_pointer = nullptr;
-
 /// Helper for Singleton types (Type{T} in Julia)
 template<typename T>
 struct SingletonType
@@ -426,6 +392,13 @@ template<>
 inline ObjectIdDict convert_to_cpp(jl_value_t* const&)
 {
 	return ObjectIdDict();
+}
+
+/// Convenience function to get the julia data type associated with T
+template<typename T>
+inline jl_datatype_t* julia_type()
+{
+	return static_type_mapping<T>::julia_type();
 }
 
 }

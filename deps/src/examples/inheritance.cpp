@@ -35,5 +35,5 @@ struct BWrapper
 JULIA_CPP_MODULE_BEGIN(registry)
   cpp_wrapper::Module& types = registry.create_module("CppInheritance");
   types.add_abstract<A>("A").method("message", &A::message);
-  types.add_type<B>("B", cpp_wrapper::Super<A>());
+  types.add_type<B>("B", cpp_wrapper::julia_type<A>());
 JULIA_CPP_MODULE_END
