@@ -54,7 +54,7 @@ JULIA_CPP_MODULE_BEGIN(registry)
   types.add_type<NonCopyable>("NonCopyable");
 
   // BitsInt64
-  types.add_bits<BitsInt64>("BitsInt64", cpp_wrapper::TypeList<int64_t>("value"))
+  types.add_bits<BitsInt64>("BitsInt64", cpp_wrapper::FieldList<int64_t>("value"))
     .constructor<int64_t>()
     .method("getvalue", &BitsInt64::get_value);
   types.method("convert", [](cpp_wrapper::SingletonType<int64_t>, const BitsInt64& a) { return a.get_value(); });

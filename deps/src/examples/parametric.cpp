@@ -22,9 +22,9 @@ struct P2
     return 10.;
   }
 };
-/*
+
 template<typename A, typename B>
-struct Parametric
+struct TemplateType
 {
   typedef typename A::val_type first_val_type;
   typedef typename B::val_type second_val_type;
@@ -40,18 +40,11 @@ struct Parametric
   }
 };
 
-template<typename A, typename B>
-void apply_parametric(cpp_wrapper::Module& types)
-{
-  types.apply<Parametric<A,B>>()
-    .method("get_first", &Parametric<A,B>::get_first)
-    .method("get_second", &Parametric<A,B>::get_second);
-}
-
 // Template containing a non-type parameter
 template<typename T, T I>
 struct NonTypeParam
 {
+  typedef T type;
   NonTypeParam(T v = I) : i(v)
   {
   }
@@ -59,38 +52,40 @@ struct NonTypeParam
   T i = I;
 };
 
-// Wrap it, so we only have type parameters
-template<typename T1, typename T2>
-struct NonTypeParam_ : NonTypeParam<T1, T2::value>
-{
-  using NonTypeParam<T1, T2::value>::NonTypeParam;
-};
-
-// Add methods
-template<typename T, T I>
-void apply_nontype(cpp_wrapper::Module& types)
-{
-  typedef NonTypeParam_<T, std::integral_constant<T, I>> WrappedT;
-  types.apply<WrappedT>()
-    .template constructor<T>();
-  types.method("get_nontype", [](const WrappedT& w) { return w.i; });
-}
-*/
 } // namespace parametric
 
+namespace cpp_wrapper
+{
+  // Match type followed by non-type of the same type
+  template<typename NonTT, NonTT Val, template<typename, NonTT> class T>
+  struct BuildParameterList<T<NonTT, Val>>
+  {
+    typedef ParameterList<NonTT, std::integral_constant<NonTT, Val>> type;
+  };
+} // namespace cpp_wrapper
+
 JULIA_CPP_MODULE_BEGIN(registry)
+  using namespace cpp_wrapper;
   using namespace parametric;
-  cpp_wrapper::Module& types = registry.create_module("ParametricTypes");
+  Module& types = registry.create_module("ParametricTypes");
 
   types.add_type<P1>("P1");
   types.add_type<P2>("P2");
 
-  // types.add_parametric<Parametric<cpp_wrapper::TypeVar<1>, cpp_wrapper::TypeVar<2>>>("Parametric");
-  // apply_parametric<P1,P2>(types);
-  // apply_parametric<P2,P1>(types);
-  //
-  // types.add_parametric<NonTypeParam_<cpp_wrapper::TypeVar<1>, cpp_wrapper::TypeVar<2>>>("NonTypeParam");
-  // apply_nontype<int, 1>(types);
-  // apply_nontype<unsigned int, 2>(types);
-  // apply_nontype<int64_t, 64>(types);
+  types.add_type<Parametric<TypeVar<1>, TypeVar<2>>>("TemplateType")
+    .apply<TemplateType<P1,P2>, TemplateType<P2,P1>>([](auto wrapped)
+  {
+    typedef typename decltype(wrapped)::type WrappedT;
+    wrapped.method("get_first", &WrappedT::get_first);
+    wrapped.method("get_second", &WrappedT::get_second);
+  });
+
+
+  types.add_type<Parametric<cpp_wrapper::TypeVar<1>, cpp_wrapper::TypeVar<2>>>("NonTypeParam")
+    .apply<NonTypeParam<int, 1>, NonTypeParam<unsigned int, 2>, NonTypeParam<int64_t, 64>>([&](auto wrapped)
+  {
+      typedef typename decltype(wrapped)::type WrappedT;
+      wrapped.template constructor<typename WrappedT::type>();
+      types.method("get_nontype", [](const WrappedT& w) { return w.i; });
+  });
 JULIA_CPP_MODULE_END

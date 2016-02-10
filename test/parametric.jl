@@ -8,8 +8,10 @@ using Base.Test
 # Wrap the functions defined in C++
 wrap_modules(joinpath(Pkg.dir("CppWrapper"),"deps","usr","lib","libparametric"))
 
-p1 = ParametricTypes.Parametric{ParametricTypes.P1, ParametricTypes.P2}()
-p2 = ParametricTypes.Parametric{ParametricTypes.P2, ParametricTypes.P1}()
+import ParametricTypes.TemplateType, ParametricTypes.NonTypeParam
+
+p1 = TemplateType{ParametricTypes.P1, ParametricTypes.P2}()
+p2 = TemplateType{ParametricTypes.P2, ParametricTypes.P1}()
 
 println("Dumping object p1:")
 xdump(p1)
