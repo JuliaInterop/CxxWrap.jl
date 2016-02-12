@@ -112,7 +112,7 @@ private:
 };
 
 /// Reference a Julia array in an STL-compatible wrapper
-template<typename ValueT>
+template<typename ValueT, int Dim = 1>
 class ArrayRef
 {
 public:
@@ -120,6 +120,9 @@ public:
 	{
     assert(m_array != nullptr);
 	}
+
+  /// Convert from existing C-array
+  ArrayRef(ValueT* ptr, const int rows, const int cols);
 
   jl_array_t* wrapped()
 	{
@@ -156,15 +159,22 @@ private:
 };
 
 // Conversions
-template<typename T> struct static_type_mapping<ArrayRef<T>>
+template<typename T, int Dim> struct static_type_mapping<ArrayRef<T, Dim>>
 {
   typedef jl_array_t* type;
-  static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_array_type(static_type_mapping<T>::julia_type(), 1); }
+  static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_array_type(static_type_mapping<T>::julia_type(), Dim); }
   template<typename T2> using remove_const_ref = cpp_wrapper::remove_const_ref<T2>;
 };
 
-template<typename T>
-inline mapped_julia_type<ArrayRef<T>> convert_to_julia(const ArrayRef<T>& arr)
+template<typename ValueT, int Dim> ArrayRef<ValueT, Dim>::ArrayRef(ValueT* c_ptr, const int rows, const int cols)
+{
+  jl_datatype_t* dt = static_type_mapping<ArrayRef<ValueT, Dim>>::julia_type();
+  jl_value_t *dims = jl_new_struct((jl_datatype_t*)jl_tupletype_fill(Dim, (jl_value_t*)jl_long_type), jl_box_long(rows), jl_box_long(cols));
+  m_array = jl_ptr_to_array((jl_value_t*)dt, c_ptr, dims, 0);
+}
+
+template<typename T, int Dim>
+inline mapped_julia_type<ArrayRef<T,Dim>> convert_to_julia(ArrayRef<T,Dim>&& arr)
 {
 	return arr.wrapped();
 }
@@ -229,6 +239,21 @@ bool operator-(const array_iterator_base<T,T>& l, const std::ptrdiff_t n)
 {
   return l.ptr() - n;
 }
+
+/// Julia Matrix parametric type
+struct JuliaMatrix {};
+
+template<> struct static_type_mapping<JuliaMatrix>
+{
+  typedef jl_datatype_t* type;
+	static jl_datatype_t* julia_type()
+  {
+    static jl_tvar_t* this_tvar = jl_new_typevar(jl_symbol("T"), (jl_value_t*)jl_bottom_type, (jl_value_t*)jl_any_type);
+    return (jl_datatype_t*)jl_apply_type((jl_value_t*)jl_type_type,
+                                              jl_svec1(jl_apply_type((jl_value_t*)jl_array_type, jl_svec2(this_tvar, jl_box_long(2)))));
+  }
+	template<typename T> using remove_const_ref = cpp_wrapper::remove_const_ref<T>;
+};
 
 }
 

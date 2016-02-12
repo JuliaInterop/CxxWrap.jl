@@ -21,10 +21,10 @@ struct NonCopyable
   NonCopyable(const NonCopyable&) = delete;
 };
 
-class BitsInt64
+class ImmutableInt64
 {
 public:
-  BitsInt64(const int64_t value = 0) : m_value(value)
+  ImmutableInt64(const int64_t value = 0) : m_value(value)
   {
   }
 
@@ -37,9 +37,19 @@ private:
   int64_t m_value;
 };
 
+struct BitsClass
+{
+  double a;
+  int64_t b;
+};
+
 } // namespace cpp_types
 
-namespace cpp_wrapper { template<> struct IsBits<cpp_types::BitsInt64> : std::true_type {}; }
+namespace cpp_wrapper
+{
+  template<> struct IsImmutable<cpp_types::ImmutableInt64> : std::true_type {};
+  template<> struct IsBits<cpp_types::BitsClass> : std::true_type {};
+}
 
 JULIA_CPP_MODULE_BEGIN(registry)
   using namespace cpp_types;
@@ -53,12 +63,31 @@ JULIA_CPP_MODULE_BEGIN(registry)
 
   types.add_type<NonCopyable>("NonCopyable");
 
-  // BitsInt64
-  types.add_bits<BitsInt64>("BitsInt64", cpp_wrapper::FieldList<int64_t>("value"))
+  // ImmutableInt64
+  types.add_immutable<ImmutableInt64>("ImmutableInt64", cpp_wrapper::FieldList<int64_t>("value"))
     .constructor<int64_t>()
-    .method("getvalue", &BitsInt64::get_value);
-  types.method("convert", [](cpp_wrapper::SingletonType<int64_t>, const BitsInt64& a) { return a.get_value(); });
-  types.method("+", [](const BitsInt64& a, const BitsInt64& b) { return BitsInt64(a.get_value() + b.get_value()); });
-  types.method("==", [](const BitsInt64& a, const int64_t b) { return a.get_value() == b; } );
-  types.method("==", [](const int64_t b, const BitsInt64& a) { return a.get_value() == b; } );
+    .method("getvalue", &ImmutableInt64::get_value);
+  types.method("convert", [](cpp_wrapper::SingletonType<int64_t>, const ImmutableInt64& a) { return a.get_value(); });
+  types.method("+", [](const ImmutableInt64& a, const ImmutableInt64& b) { return ImmutableInt64(a.get_value() + b.get_value()); });
+  types.method("==", [](const ImmutableInt64& a, const int64_t b) { return a.get_value() == b; } );
+  types.method("==", [](const int64_t b, const ImmutableInt64& a) { return a.get_value() == b; } );
+
+  types.add_bits<BitsClass>("BitsClass");
+  types.method("make_bits", [](const double a, const int64_t b)
+  {
+    BitsClass result;
+    result.a = a;
+    result.b = b;
+    return result;
+  });
+
+  types.method("get_bits_a", [](const BitsClass bits)
+  {
+    return bits.a;
+  });
+
+  types.method("get_bits_b", [](const BitsClass bits)
+  {
+    return bits.b;
+  });
 JULIA_CPP_MODULE_END

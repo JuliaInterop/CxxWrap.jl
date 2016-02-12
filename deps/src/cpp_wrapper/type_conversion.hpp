@@ -38,7 +38,10 @@ struct CppAny
 {
 };
 
-/// Trait to determine if a type is to be treated as a Julia bits type
+/// Trait to determine if a type is to be treated as a Julia immutable type that has isbits == true
+template<typename T> struct IsImmutable : std::false_type {};
+
+/// Trait to determine if the given type is to be treated as a bits type
 template<typename T> struct IsBits : std::false_type {};
 
 namespace detail
@@ -64,9 +67,9 @@ namespace detail
 /// Static mapping base template
 template<typename SourceT> struct static_type_mapping
 {
-	typedef typename detail::DispatchBits<IsBits<SourceT>::value, SourceT, jl_value_t*>::type type;
+	typedef typename detail::DispatchBits<IsImmutable<SourceT>::value, SourceT, jl_value_t*>::type type;
 
-	template<typename T> using remove_const_ref = typename detail::DispatchBits<IsBits<cpp_wrapper::remove_const_ref<T>>::value, cpp_wrapper::remove_const_ref<T>, T>::type;
+	template<typename T> using remove_const_ref = typename detail::DispatchBits<IsImmutable<cpp_wrapper::remove_const_ref<T>>::value || IsBits<cpp_wrapper::remove_const_ref<T>>::value, cpp_wrapper::remove_const_ref<T>, T>::type;
 	static jl_datatype_t* julia_type()
 	{
 		if(m_type_pointer == nullptr)
@@ -217,9 +220,15 @@ inline typename std::enable_if<std::is_fundamental<T>::value, T>::type convert_t
 }
 
 template<typename T>
-inline typename std::enable_if<IsBits<T>::value, T>::type convert_to_julia(T&& cpp_val)
+inline typename std::enable_if<IsImmutable<T>::value, T>::type convert_to_julia(T&& cpp_val)
 {
 	return cpp_val;
+}
+
+template<typename T>
+inline typename std::enable_if<IsBits<T>::value, jl_value_t*>::type convert_to_julia(T&& cpp_val)
+{
+	return jl_new_bits((jl_value_t*)static_type_mapping<T>::julia_type(), &cpp_val);
 }
 
 inline jl_value_t* convert_to_julia(const std::string& str)
@@ -254,7 +263,7 @@ inline typename std::enable_if<std::is_fundamental<CppT>::value, CppT>::type con
 }
 
 template<typename CppT, typename JuliaT>
-inline typename std::enable_if<IsBits<CppT>::value, CppT>::type convert_to_cpp(const JuliaT& julia_val)
+inline typename std::enable_if<IsImmutable<CppT>::value, CppT>::type convert_to_cpp(const JuliaT& julia_val)
 {
 	return julia_val;
 }
@@ -320,7 +329,7 @@ inline jl_value_t* box(const int64_t i)
 }
 
 /// Helper class to unpack a julia type
-template<typename CppT>
+template<typename CppT, bool>
 struct JuliaUnpacker
 {
 	// The C++ type stripped of all pointer, reference, const
@@ -347,8 +356,18 @@ struct JuliaUnpacker
 		}
 		else
 		{
-			return reinterpret_cast<stripped_cpp_t*>(jl_data_ptr(julia_value));
+			throw std::runtime_error("Attempt to convert a bits type as a struct");
 		}
+	}
+};
+
+// Unpack for bits type
+template<typename CppT>
+struct JuliaUnpacker<CppT, true>
+{
+	CppT operator()(jl_value_t* julia_value)
+	{
+		return *(CppT*)jl_data_ptr(julia_value);
 	}
 };
 
@@ -357,7 +376,7 @@ struct JuliaUnpacker
 template<typename CppT>
 inline CppT convert_to_cpp(jl_value_t* const& julia_value)
 {
-	return detail::JuliaUnpacker<CppT>()(julia_value);
+	return detail::JuliaUnpacker<CppT, IsBits<CppT>::value>()(julia_value);
 }
 
 template<>

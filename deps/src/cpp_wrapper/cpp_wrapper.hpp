@@ -105,7 +105,7 @@ jl_value_t* finalizer(jl_value_t *F, jl_value_t **args, uint32_t nargs)
 
 /// Create a new julia object wrapping the C++ type
 template<typename T, typename... ArgsT>
-typename std::enable_if<!IsBits<T>::value, jl_value_t*>::type create(ArgsT... args)
+typename std::enable_if<!IsImmutable<T>::value, jl_value_t*>::type create(ArgsT... args)
 {
 	jl_datatype_t* dt = static_type_mapping<T>::julia_type();
 	assert(!jl_isbits(dt));
@@ -120,7 +120,7 @@ typename std::enable_if<!IsBits<T>::value, jl_value_t*>::type create(ArgsT... ar
 }
 
 template<typename T, typename... ArgsT>
-typename std::enable_if<IsBits<T>::value, T>::type create(ArgsT... args)
+typename std::enable_if<IsImmutable<T>::value, T>::type create(ArgsT... args)
 {
 	jl_datatype_t* dt = static_type_mapping<T>::julia_type();
 	assert(jl_isbits(dt));
@@ -335,7 +335,10 @@ public:
 
 	/// Add type T as a struct that can be captured as bits type, using an immutable in Julia
 	template<typename T, typename FieldListT>
-	TypeWrapper<T> add_bits(const std::string& name, FieldListT&& field_list, jl_datatype_t* super = julia_type<CppAny>());
+	TypeWrapper<T> add_immutable(const std::string& name, FieldListT&& field_list, jl_datatype_t* super = julia_type<CppAny>());
+
+	template<typename T>
+	TypeWrapper<T> add_bits(const std::string& name, jl_datatype_t* super = julia_type<CppAny>());
 
 	const std::string& name() const
 	{
@@ -536,7 +539,7 @@ private:
 
 		static_type_mapping<AppliedT>::set_julia_type(app_dt);
 		m_module.add_default_constructor<AppliedT>(std::is_default_constructible<AppliedT>(), app_dt);
-		if(!IsBits<AppliedT>::value)
+		if(!IsImmutable<AppliedT>::value)
 		{
 			m_module.add_copy_constructor<AppliedT>(std::is_copy_constructible<AppliedT>(), app_dt);
 			static_type_mapping<AppliedT*>::set_julia_type(app_dt);
@@ -554,9 +557,9 @@ template<typename T, bool AddBits, typename FieldListT>
 TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t* super, int abstract, FieldListT&& field_list)
 {
 	static constexpr bool is_parametric = detail::IsParametric<T>::value;
-	static_assert(((!IsBits<T>::value && !AddBits) || AddBits) || is_parametric, "Bits types (marked with IsBits) can't be added using add_type, use add_bits instead");
-	static_assert(((std::is_standard_layout<T>::value && AddBits) || !AddBits) || is_parametric, "Bits types must be standard layout");
-	static_assert(((IsBits<T>::value && AddBits) || !AddBits) || is_parametric, "Bits types must be marked as such by specializing the IsBits template");
+	static_assert(((!IsImmutable<T>::value && !AddBits) || AddBits) || is_parametric, "Immutable types (marked with IsImmutable) can't be added using add_type, use add_immutable instead");
+	static_assert(((std::is_standard_layout<T>::value && AddBits) || !AddBits) || is_parametric, "Immutable types must be standard layout");
+	static_assert(((IsImmutable<T>::value && AddBits) || !AddBits) || is_parametric, "Immutable types must be marked as such by specializing the IsImmutable template");
 	if(m_jl_datatypes.count(name) > 0)
 	{
 		throw std::runtime_error("Duplicate registration of type " + name);
@@ -617,9 +620,20 @@ TypeWrapper<T> Module::add_abstract(const std::string& name, jl_datatype_t* supe
 
 /// Add type T as a struct that can be captured as bits type, using an immutable in Julia
 template<typename T, typename FieldListT>
-TypeWrapper<T> Module::add_bits(const std::string& name, FieldListT&& field_list, jl_datatype_t* super)
+TypeWrapper<T> Module::add_immutable(const std::string& name, FieldListT&& field_list, jl_datatype_t* super)
 {
 	return add_type_internal<T, true>(name, super, 0, std::forward<FieldListT>(field_list));
+}
+
+/// Add a bits type
+template<typename T>
+TypeWrapper<T> Module::add_bits(const std::string& name, jl_datatype_t* super)
+{
+	static_assert(IsBits<T>::value, "Bits types must be marked as such by specializing the IsBits template");
+	jl_datatype_t* dt = jl_new_bitstype((jl_value_t*)jl_symbol(name.c_str()), super, jl_emptysvec, 8*sizeof(T));
+	static_type_mapping<T>::set_julia_type(dt);
+	m_jl_datatypes[name] = dt;
+	return TypeWrapper<T>(*this, dt);
 }
 
 /// Registry containing different modules
