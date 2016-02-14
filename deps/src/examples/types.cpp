@@ -5,6 +5,11 @@
 namespace cpp_types
 {
 
+struct DoubleData
+{
+  double a[4];
+};
+
 struct World
 {
   World(const std::string& message = "default hello") : msg(message){}
@@ -41,6 +46,19 @@ struct BitsClass
 {
   double a;
   int64_t b;
+
+  int64_t get_b() const
+  {
+    return b;
+  }
+
+  void set_b(const int64_t x)
+  {
+    b = x;
+  }
+
+  ~BitsClass() {}
+
 };
 
 } // namespace cpp_types
@@ -55,6 +73,8 @@ JULIA_CPP_MODULE_BEGIN(registry)
   using namespace cpp_types;
 
   cpp_wrapper::Module& types = registry.create_module("CppTypes");
+
+  types.add_type<DoubleData>("DoubleData");
 
   types.add_type<World>("World")
     .constructor<const std::string&>()
@@ -77,7 +97,7 @@ JULIA_CPP_MODULE_BEGIN(registry)
   {
     BitsClass result;
     result.a = a;
-    result.b = b;
+    result.set_b(b);
     return result;
   });
 
@@ -88,6 +108,6 @@ JULIA_CPP_MODULE_BEGIN(registry)
 
   types.method("get_bits_b", [](const BitsClass bits)
   {
-    return bits.b;
+    return bits.get_b();
   });
 JULIA_CPP_MODULE_END

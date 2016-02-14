@@ -154,6 +154,11 @@ public:
     return const_iterator(static_cast<julia_t*>(jl_array_data(m_array)) + jl_array_len(m_array));
 	}
 
+  const ValueT* data() const
+  {
+    return (ValueT*)jl_array_data(m_array);
+  }
+
 private:
   jl_array_t* m_array;
 };

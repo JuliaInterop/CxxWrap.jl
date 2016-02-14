@@ -44,6 +44,9 @@ template<typename T> struct IsImmutable : std::false_type {};
 /// Trait to determine if the given type is to be treated as a bits type
 template<typename T> struct IsBits : std::false_type {};
 
+template<typename CppT>
+inline CppT convert_to_cpp(jl_value_t* const& julia_value);
+
 namespace detail
 {
 	template<bool, typename T1, typename T2>
@@ -62,6 +65,22 @@ namespace detail
 	{
 		typedef T1 type;
 	};
+
+	/// Finalizer function for type T
+	template<typename T>
+	jl_value_t* finalizer(jl_value_t *F, jl_value_t **args, uint32_t nargs)
+	{
+		jl_value_t* to_delete = args[0];
+
+		T* stored_obj = convert_to_cpp<T*>(to_delete);
+		if(stored_obj != nullptr)
+		{
+			delete stored_obj;
+		}
+
+		jl_set_nth_field(to_delete, 0, jl_box_voidpointer(nullptr));
+		return nullptr;
+	}
 }
 
 /// Static mapping base template
@@ -86,6 +105,20 @@ template<typename SourceT> struct static_type_mapping
 			throw std::runtime_error("Type " + std::string(typeid(SourceT).name()) + " was already registered");
 		}
 		m_type_pointer = dt;
+		if(!std::is_pointer<SourceT>())
+		{
+			m_finalizer = jl_new_closure(detail::finalizer<SourceT>, (jl_value_t*)jl_emptysvec, NULL);
+			jl_gc_preserve((jl_value_t*)m_finalizer);
+		}
+	}
+
+	static jl_function_t* finalizer()
+	{
+		if(m_type_pointer == nullptr)
+		{
+			throw std::runtime_error("Type " + std::string(typeid(SourceT).name()) + " has no finalizer");
+		}
+		return m_finalizer;
 	}
 
 	static bool has_julia_type()
@@ -95,9 +128,11 @@ template<typename SourceT> struct static_type_mapping
 
 private:
 	static jl_datatype_t* m_type_pointer;
+	static jl_function_t* m_finalizer;
 };
 
 template<typename SourceT> jl_datatype_t* static_type_mapping<SourceT>::m_type_pointer = nullptr;
+template<typename SourceT> jl_function_t* static_type_mapping<SourceT>::m_finalizer = nullptr;
 
 /// Helper for Singleton types (Type{T} in Julia)
 template<typename T>
@@ -328,6 +363,12 @@ inline jl_value_t* box(const int64_t i)
 	return jl_box_int64(i);
 }
 
+/// Equivalent of the basic C++ type layout in Julia
+struct WrappedCppPtr {
+    JL_DATA_TYPE
+    jl_value_t* voidptr;
+};
+
 /// Helper class to unpack a julia type
 template<typename CppT, bool>
 struct JuliaUnpacker
@@ -349,10 +390,8 @@ struct JuliaUnpacker
 
 		if(!jl_isbits(dt))
 		{
-			// Get the pointer to the C++ class
-			jl_value_t* cpp_ref = jl_fieldref(julia_value,0);
-			assert(jl_is_pointer(cpp_ref));
-			return reinterpret_cast<stripped_cpp_t*>(jl_unbox_voidpointer(cpp_ref));
+			//Get the pointer to the C++ class
+			return reinterpret_cast<stripped_cpp_t*>(jl_data_ptr(reinterpret_cast<WrappedCppPtr*>(julia_value)->voidptr));
 		}
 		else
 		{
@@ -367,7 +406,7 @@ struct JuliaUnpacker<CppT, true>
 {
 	CppT operator()(jl_value_t* julia_value)
 	{
-		return *(CppT*)jl_data_ptr(julia_value);
+		return *reinterpret_cast<CppT*>(jl_data_ptr(julia_value));
 	}
 };
 

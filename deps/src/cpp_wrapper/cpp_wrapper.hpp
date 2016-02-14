@@ -88,20 +88,7 @@ struct NeedConvertHelper<>
 	}
 };
 
-/// Finalizer function for type T
-template<typename T>
-jl_value_t* finalizer(jl_value_t *F, jl_value_t **args, uint32_t nargs)
-{
-	jl_value_t* to_delete = args[0];
-
-	T* stored_obj = convert_to_cpp<T*>(to_delete);
-	if(stored_obj != nullptr)
-	{
-		delete stored_obj;
-	}
-
-	jl_set_nth_field(to_delete, 0, jl_box_voidpointer(nullptr));
-}
+} // end namespace detail
 
 /// Create a new julia object wrapping the C++ type
 template<typename T, typename... ArgsT>
@@ -112,10 +99,15 @@ typename std::enable_if<!IsImmutable<T>::value, jl_value_t*>::type create(ArgsT.
 
 	T* cpp_obj = new T(args...);
 
-	jl_value_t* result = jl_new_struct(dt, jl_box_voidpointer(static_cast<void*>(cpp_obj)));
-	static jl_function_t* finalizer_func = jl_new_closure(finalizer<T>, (jl_value_t*)jl_emptysvec, NULL);
-	jl_gc_add_finalizer(result, finalizer_func);
+	jl_value_t* result = nullptr;
+	jl_value_t* void_ptr = nullptr;
+	JL_GC_PUSH2(&result, &void_ptr);
+	void_ptr = jl_box_voidpointer(static_cast<void*>(cpp_obj));
 
+	result = jl_new_struct(dt, void_ptr);
+	jl_gc_add_finalizer(result, static_type_mapping<T>::finalizer());
+
+	JL_GC_POP();
 	return result;
 }
 
@@ -126,8 +118,6 @@ typename std::enable_if<IsImmutable<T>::value, T>::type create(ArgsT... args)
 	assert(jl_isbits(dt));
 	return T(args...);
 }
-
-} // end namespace detail
 
 // The CppWrapper Julia module
 extern jl_module_t* g_cpp_wrapper_module;
@@ -263,8 +253,15 @@ struct TypeVar
 
 	static jl_tvar_t* tvar()
 	{
-		static jl_tvar_t* this_tvar = jl_new_typevar(jl_symbol((std::string("T") + std::to_string(I)).c_str()), (jl_value_t*)jl_bottom_type, (jl_value_t*)jl_any_type);
+		static jl_tvar_t* this_tvar = build_tvar();
 		return this_tvar;
+	}
+
+	static jl_tvar_t* build_tvar()
+	{
+		jl_tvar_t* result = jl_new_typevar(jl_symbol((std::string("T") + std::to_string(I)).c_str()), (jl_value_t*)jl_bottom_type, (jl_value_t*)jl_any_type);
+		jl_gc_preserve((jl_value_t*)result);
+		return result;
 	}
 };
 
@@ -368,7 +365,7 @@ private:
 	{
 		method("deepcopy_internal", [this](const T& other, ObjectIdDict)
 		{
-			return detail::create<T>(other);
+			return create<T>(other);
 		});
 	}
 
@@ -500,7 +497,7 @@ public:
 	template<typename... ArgsT>
 	TypeWrapper<T>& constructor()
 	{
-		m_module.method("call", [](SingletonType<T>, ArgsT... args) { return detail::create<T>(args...); });
+		m_module.method("call", [](SingletonType<T>, ArgsT... args) { return create<T>(args...); });
 		return *this;
 	}
 
@@ -580,6 +577,7 @@ TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t*
 
 	// Create the datatype
 	jl_datatype_t* dt = jl_new_datatype(jl_symbol(name.c_str()), super, parameters, fnames, ftypes, abstract, mutabl, ninitialized);
+	jl_gc_preserve((jl_value_t*)dt);
 
 	// Register the type
 	if(!is_parametric)
@@ -630,7 +628,9 @@ template<typename T>
 TypeWrapper<T> Module::add_bits(const std::string& name, jl_datatype_t* super)
 {
 	static_assert(IsBits<T>::value, "Bits types must be marked as such by specializing the IsBits template");
+	static_assert(std::is_standard_layout<T>::value, "Bits types must be standard layout");
 	jl_datatype_t* dt = jl_new_bitstype((jl_value_t*)jl_symbol(name.c_str()), super, jl_emptysvec, 8*sizeof(T));
+	jl_gc_preserve((jl_value_t*)dt);
 	static_type_mapping<T>::set_julia_type(dt);
 	m_jl_datatypes[name] = dt;
 	return TypeWrapper<T>(*this, dt);

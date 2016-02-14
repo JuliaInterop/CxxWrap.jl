@@ -11,6 +11,11 @@ wrap_modules(joinpath(Pkg.dir("CppWrapper"),"deps","usr","lib","libtypes"))
 using CppTypes
 using CppTypes.World
 
+# Stress test
+for i in 1:100000
+  d = CppTypes.DoubleData()
+end
+
 # Default constructor
 @test World <: CppWrapper.CppAny
 @test super(World) == CppWrapper.CppAny

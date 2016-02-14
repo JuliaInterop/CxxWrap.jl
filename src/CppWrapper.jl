@@ -121,9 +121,12 @@ end
 # Wrap functions from the cpp module to the passed julia module
 function wrap_functions(functions, julia_mod)
   basenames = Set([
-    "deepcopy_internal",
+    "getindex",
+    "setindex!",
     "convert",
+    "deepcopy_internal",
     "+",
+    "*",
     "=="
   ])
   for func in functions
