@@ -4,6 +4,13 @@ This package aims to provide a Boost.Python-like wrapping for C++ types and func
 
 The mechanism behind this package is that functions and types are registered in C++ code that is compiled into a dynamic library. This dynamic library is then loaded into Julia, where the Julia part of this package uses the data provided through a C interface to generate functions accessible from Julia. The functions are passed to Julia either as raw function pointers (for regular C++ functions that  don't need argument or return type conversion) or std::functions (for lambda expressions and automatic conversion of arguments and return types). The Julia side of this package wraps all this into Julia methods automatically.
 
+## What's the difference with Cxx.jl?
+With Cxx.jl it is possible to directly access C++ using the `@cxx` macro from Julia. So when facing the task of wrapping a C++ library in a Julia package, authors now have 2 options:
+* Use Cxx.jl to write the wrapper package in Julia code (much like one uses `ccall` for wrapping a C library)
+* Use CppWrapper to write the wrapper completely in C++ (and one line of Julia code to load the .so)
+
+Boost.Python also uses the latter (C++-only) approach, so translating existing Python bindings based on Boost.Python may be easier using CppWrapper.
+
 ## Features
 * Support for C++ functions, member functions and lambdas
 * Classes with single inheritance, using abstract base classes on the Julia side
