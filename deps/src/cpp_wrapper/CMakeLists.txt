@@ -24,7 +24,6 @@ add_library(cpp_wrapper SHARED
 	cpp_wrapper.cpp
   type_conversion.hpp
 )
-target_compile_features(cpp_wrapper PUBLIC cxx_generic_lambdas)
 target_include_directories(cpp_wrapper PUBLIC ${JULIA_INCLUDE_DIRECTORY})
 generate_export_header(cpp_wrapper)
 

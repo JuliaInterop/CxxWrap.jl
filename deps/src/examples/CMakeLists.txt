@@ -17,15 +17,12 @@ target_link_libraries(hello CppWrapper::cpp_wrapper)
 
 add_library(types SHARED types.cpp)
 target_link_libraries(types CppWrapper::cpp_wrapper)
-target_compile_features(types PRIVATE cxx_generic_lambdas)
 
 add_library(inheritance SHARED inheritance.cpp)
 target_link_libraries(inheritance CppWrapper::cpp_wrapper)
-target_compile_features(inheritance PRIVATE cxx_generic_lambdas)
 
 add_library(parametric SHARED parametric.cpp)
 target_link_libraries(parametric CppWrapper::cpp_wrapper)
-target_compile_features(parametric PRIVATE cxx_generic_lambdas)
 
 install(TARGETS
   functions

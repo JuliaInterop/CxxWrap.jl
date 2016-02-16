@@ -525,6 +525,12 @@ public:
 		return *this;
 	}
 
+	// Access to the module
+	Module& module()
+	{
+		return m_module;
+	}
+
 private:
 
 	template<typename AppliedT, typename FunctorT>

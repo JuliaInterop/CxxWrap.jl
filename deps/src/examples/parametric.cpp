@@ -52,6 +52,31 @@ struct NonTypeParam
   T i = I;
 };
 
+// Helper to wrap TemplateType instances. May also be a C++14 lambda, see README.md
+struct WrapTemplateType
+{
+  template<typename TypeWrapperT>
+  void operator()(TypeWrapperT&& wrapped)
+  {
+    typedef typename TypeWrapperT::type WrappedT;
+    wrapped.method("get_first", &WrappedT::get_first);
+    wrapped.method("get_second", &WrappedT::get_second);
+  }
+};
+
+// Helper to wrap NonTypeParam instances
+struct WrapNonTypeParam
+{
+  template<typename TypeWrapperT>
+  void operator()(TypeWrapperT&& wrapped)
+  {
+    typedef typename TypeWrapperT::type WrappedT;
+    wrapped.template constructor<typename WrappedT::type>();
+    // Access the module to add a free function
+    wrapped.module().method("get_nontype", [](const WrappedT& w) { return w.i; });
+  }
+};
+
 } // namespace parametric
 
 namespace cpp_wrapper
@@ -73,19 +98,9 @@ JULIA_CPP_MODULE_BEGIN(registry)
   types.add_type<P2>("P2");
 
   types.add_type<Parametric<TypeVar<1>, TypeVar<2>>>("TemplateType")
-    .apply<TemplateType<P1,P2>, TemplateType<P2,P1>>([](auto wrapped)
-  {
-    typedef typename decltype(wrapped)::type WrappedT;
-    wrapped.method("get_first", &WrappedT::get_first);
-    wrapped.method("get_second", &WrappedT::get_second);
-  });
+    .apply<TemplateType<P1,P2>, TemplateType<P2,P1>>(WrapTemplateType());
 
 
   types.add_type<Parametric<cpp_wrapper::TypeVar<1>, cpp_wrapper::TypeVar<2>>>("NonTypeParam")
-    .apply<NonTypeParam<int, 1>, NonTypeParam<unsigned int, 2>, NonTypeParam<int64_t, 64>>([&](auto wrapped)
-  {
-      typedef typename decltype(wrapped)::type WrappedT;
-      wrapped.template constructor<typename WrappedT::type>();
-      types.method("get_nontype", [](const WrappedT& w) { return w.i; });
-  });
+    .apply<NonTypeParam<int, 1>, NonTypeParam<unsigned int, 2>, NonTypeParam<int64_t, 64>>(WrapNonTypeParam());
 JULIA_CPP_MODULE_END
