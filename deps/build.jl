@@ -12,6 +12,9 @@ lib_suffix = @windows? "dll" : (@osx? "dylib" : "so")
 julia_base_dir = splitdir(JULIA_HOME)[1]
 julia_lib = joinpath(julia_base_dir, "lib", "julia", "libjulia.$lib_suffix")
 if !isfile(julia_lib)
+	julia_lib = joinpath(julia_base_dir, "lib", "libjulia.$lib_suffix")
+end
+if !isfile(julia_lib)
 	julia_lib = joinpath(julia_base_dir, "lib64", "julia", "libjulia.$lib_suffix")
 end
 if !isfile(julia_lib)
