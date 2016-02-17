@@ -9,7 +9,9 @@ prefix=joinpath(BinDeps.depsdir(cpp_wrapper),"usr")
 cpp_wrapper_srcdir = joinpath(BinDeps.depsdir(cpp_wrapper),"src","cpp_wrapper")
 cpp_wrapper_builddir = joinpath(BinDeps.depsdir(cpp_wrapper),"builds","cpp_wrapper")
 lib_suffix = @windows? "dll" : (@osx? "dylib" : "so")
+
 julia_base_dir = splitdir(JULIA_HOME)[1]
+
 julia_lib = joinpath(julia_base_dir, "lib", "julia", "libjulia.$lib_suffix")
 if !isfile(julia_lib)
 	julia_lib = joinpath(julia_base_dir, "lib", "libjulia.$lib_suffix")
@@ -18,9 +20,20 @@ if !isfile(julia_lib)
 	julia_lib = joinpath(julia_base_dir, "lib64", "julia", "libjulia.$lib_suffix")
 end
 if !isfile(julia_lib)
+    julia_lib = joinpath(julia_base_dir, "lib", "libjulia.$lib_suffix")
+end
+if !isfile(julia_lib)
 	throw(ErrorException("Could not locate Julia library at $julia_lib"))
 end
+
 julia_include_dir = joinpath(julia_base_dir, "include", "julia")
+if !isdir(julia_include_dir)  # then we're running directly from build
+    julia_base_dir_aux = splitdir(splitdir(JULIA_HOME)[1])[1]  # useful for running-from-build
+    julia_include_dir = joinpath(julia_base_dir_aux, "usr", "include" )  
+    julia_include_dir *= ";" * joinpath(julia_base_dir_aux, "src", "support" )  
+    julia_include_dir *= ";" * joinpath(julia_base_dir_aux, "src" )  
+end
+
 provides(BuildProcess,
 	(@build_steps begin
 		CreateDirectory(cpp_wrapper_builddir)
