@@ -20,18 +20,15 @@ if !isfile(julia_lib)
 	julia_lib = joinpath(julia_base_dir, "lib64", "julia", "libjulia.$lib_suffix")
 end
 if !isfile(julia_lib)
-    julia_lib = joinpath(julia_base_dir, "lib", "libjulia.$lib_suffix")
-end
-if !isfile(julia_lib)
 	throw(ErrorException("Could not locate Julia library at $julia_lib"))
 end
 
 julia_include_dir = joinpath(julia_base_dir, "include", "julia")
 if !isdir(julia_include_dir)  # then we're running directly from build
-    julia_base_dir_aux = splitdir(splitdir(JULIA_HOME)[1])[1]  # useful for running-from-build
-    julia_include_dir = joinpath(julia_base_dir_aux, "usr", "include" )  
-    julia_include_dir *= ";" * joinpath(julia_base_dir_aux, "src", "support" )  
-    julia_include_dir *= ";" * joinpath(julia_base_dir_aux, "src" )  
+	julia_base_dir_aux = splitdir(splitdir(JULIA_HOME)[1])[1]  # useful for running-from-build
+	julia_include_dir = joinpath(julia_base_dir_aux, "usr", "include" )
+	julia_include_dir *= ";" * joinpath(julia_base_dir_aux, "src", "support" )
+	julia_include_dir *= ";" * joinpath(julia_base_dir_aux, "src" )
 end
 
 provides(BuildProcess,
