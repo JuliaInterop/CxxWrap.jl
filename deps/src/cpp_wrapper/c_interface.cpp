@@ -7,7 +7,7 @@ extern "C"
 using namespace cpp_wrapper;
 
 /// Initialize the module
-void initialize(jl_value_t* julia_module, jl_value_t* cpp_any_type, jl_value_t* cppfunctioninfo_type)
+CPP_WRAPPER_EXPORT void initialize(jl_value_t* julia_module, jl_value_t* cpp_any_type, jl_value_t* cppfunctioninfo_type)
 {
 	g_cpp_wrapper_module = (jl_module_t*)julia_module;
 	static_type_mapping<CppAny>::set_julia_type((jl_datatype_t*)cpp_any_type);
@@ -15,13 +15,13 @@ void initialize(jl_value_t* julia_module, jl_value_t* cpp_any_type, jl_value_t* 
 }
 
 /// Create a new registry
-void* create_registry()
+CPP_WRAPPER_EXPORT void* create_registry()
 {
 	return static_cast<void*>(new ModuleRegistry());
 }
 
 /// Get the names of all modules in the registry
-jl_array_t* get_module_names(void* void_registry)
+CPP_WRAPPER_EXPORT jl_array_t* get_module_names(void* void_registry)
 {
 	assert(void_registry != nullptr);
 	const ModuleRegistry& registry = *reinterpret_cast<ModuleRegistry*>(void_registry);
@@ -36,7 +36,7 @@ jl_array_t* get_module_names(void* void_registry)
 }
 
 /// Bind jl_datatype_t structures to corresponding Julia symbols in the given module
-void bind_module_types(void* void_registry, jl_value_t* module_any)
+CPP_WRAPPER_EXPORT void bind_module_types(void* void_registry, jl_value_t* module_any)
 {
 	assert(void_registry != nullptr);
 	ModuleRegistry& registry = *reinterpret_cast<ModuleRegistry*>(void_registry);
@@ -46,7 +46,7 @@ void bind_module_types(void* void_registry, jl_value_t* module_any)
 }
 
 /// Get the functions defined in the modules. Any classes used by these functions must be defined on the Julia side first
-jl_array_t* get_module_functions(void* void_registry)
+CPP_WRAPPER_EXPORT jl_array_t* get_module_functions(void* void_registry)
 {
 	assert(void_registry != nullptr);
 	const ModuleRegistry& registry = *reinterpret_cast<ModuleRegistry*>(void_registry);

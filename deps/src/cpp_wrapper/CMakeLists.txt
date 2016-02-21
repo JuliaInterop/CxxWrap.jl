@@ -40,7 +40,7 @@ set_property(TARGET cpp_wrapper APPEND PROPERTY
 install(TARGETS cpp_wrapper EXPORT CppWrapperTargets
 	LIBRARY DESTINATION lib
 	ARCHIVE DESTINATION lib
-	RUNTIME DESTINATION bin
+	RUNTIME DESTINATION lib
 	INCLUDES DESTINATION include
 )
 install(

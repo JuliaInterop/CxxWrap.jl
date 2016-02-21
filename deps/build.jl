@@ -1,6 +1,21 @@
 using BinDeps
 
+
+@windows_only push!(BinDeps.defaults, SimpleBuild)
+
+
 @BinDeps.setup
+
+function find_julia_lib(lib_suffix::AbstractString, julia_base_dir::AbstractString)
+	julia_lib = joinpath(julia_base_dir, "lib", "julia", "libjulia.$lib_suffix")
+	if !isfile(julia_lib)
+		julia_lib = joinpath(julia_base_dir, "lib", "libjulia.$lib_suffix")
+	end
+	if !isfile(julia_lib)
+		julia_lib = joinpath(julia_base_dir, "lib64", "julia", "libjulia.$lib_suffix")
+	end
+	return julia_lib
+end
 
 # The base library, needed to wrap functions
 cpp_wrapper = library_dependency("cpp_wrapper", aliases=["libcpp_wrapper"])
@@ -8,19 +23,21 @@ cpp_wrapper = library_dependency("cpp_wrapper", aliases=["libcpp_wrapper"])
 prefix=joinpath(BinDeps.depsdir(cpp_wrapper),"usr")
 cpp_wrapper_srcdir = joinpath(BinDeps.depsdir(cpp_wrapper),"src","cpp_wrapper")
 cpp_wrapper_builddir = joinpath(BinDeps.depsdir(cpp_wrapper),"builds","cpp_wrapper")
-lib_suffix = @windows? "dll" : (@osx? "dylib" : "so")
-
+lib_prefix = @windows ? "" : "lib"
+lib_suffix = @windows ? "dll" : (@osx? "dylib" : "so")
 julia_base_dir = splitdir(JULIA_HOME)[1]
+julia_lib = ""
+for suff in ["dll", "dll.a", "dylib", "so"]
+	julia_lib = find_julia_lib(suff, julia_base_dir)
+	if isfile(julia_lib)
+		break
+	end
+end
 
-julia_lib = joinpath(julia_base_dir, "lib", "julia", "libjulia.$lib_suffix")
-if !isfile(julia_lib)
-	julia_lib = joinpath(julia_base_dir, "lib", "libjulia.$lib_suffix")
-end
-if !isfile(julia_lib)
-	julia_lib = joinpath(julia_base_dir, "lib64", "julia", "libjulia.$lib_suffix")
-end
 if !isfile(julia_lib)
 	throw(ErrorException("Could not locate Julia library at $julia_lib"))
+else
+	println("Located Julia lib at $julia_lib")
 end
 
 julia_include_dir = joinpath(julia_base_dir, "include", "julia")
@@ -31,15 +48,25 @@ if !isdir(julia_include_dir)  # then we're running directly from build
 	julia_include_dir *= ";" * joinpath(julia_base_dir_aux, "src" )
 end
 
+# Set generator if on windows
+genopt = "Unix Makefiles"
+@windows_only begin
+	if WORD_SIZE == 64
+		genopt = "Visual Studio 14 2015 Win64"
+	else
+		genopt = "Visual Studio 14 2015"
+	end
+end
+
+
 provides(BuildProcess,
 	(@build_steps begin
 		CreateDirectory(cpp_wrapper_builddir)
 		@build_steps begin
 			ChangeDirectory(cpp_wrapper_builddir)
-			FileRule(joinpath(prefix,"lib", "libcpp_wrapper.$lib_suffix"),@build_steps begin
-				`cmake -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="Release"  -DJULIA_INCLUDE_DIRECTORY="$julia_include_dir" -DJULIA_LIBRARY="$julia_lib" $cpp_wrapper_srcdir`
-				`make`
-				`make install`
+			FileRule(joinpath(prefix,"lib", "$(lib_prefix)cpp_wrapper.$lib_suffix"),@build_steps begin
+				`cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="Release"  -DJULIA_INCLUDE_DIRECTORY="$julia_include_dir" -DJULIA_LIBRARY="$julia_lib" $cpp_wrapper_srcdir`
+				`cmake --build . --config Release --target install`
 			end)
 		end
 	end),cpp_wrapper)
@@ -54,10 +81,9 @@ provides(BuildProcess,
 		CreateDirectory(examples_builddir)
 		@build_steps begin
 			ChangeDirectory(examples_builddir)
-			FileRule(joinpath(prefix,"lib", "libfunctions.$lib_suffix"),@build_steps begin
-				`cmake -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="Release" $examples_srcdir`
-				`make`
-				`make install`
+			FileRule(joinpath(prefix,"lib", "$(lib_prefix)functions.$lib_suffix"),@build_steps begin
+				`cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="Release" $examples_srcdir`
+				`cmake --build . --config Release --target install`
 			end)
 		end
 	end),examples)

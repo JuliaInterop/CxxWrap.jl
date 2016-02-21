@@ -13,6 +13,12 @@
 #include "array.hpp"
 #include "type_conversion.hpp"
 
+#ifdef _WIN32
+  #define  CPP_WRAPPER_EXPORT __declspec(dllexport)
+#else
+ 	#define  CPP_WRAPPER_EXPORT
+#endif
+
 namespace cpp_wrapper
 {
 
@@ -269,7 +275,7 @@ template<typename T>
 class TypeWrapper;
 
 /// Store all exposed C++ functions associated with a module
-class Module
+class CPP_WRAPPER_EXPORT Module
 {
 public:
 
@@ -389,7 +395,7 @@ private:
 	}
 
 	std::string m_name;
-	std::vector<std::unique_ptr<FunctionWrapperBase>> m_functions;
+	std::vector<std::shared_ptr<FunctionWrapperBase>> m_functions;
 	std::map<std::string, jl_datatype_t*> m_jl_datatypes;
 
 	template<class T> friend class TypeWrapper;
@@ -643,7 +649,7 @@ TypeWrapper<T> Module::add_bits(const std::string& name, jl_datatype_t* super)
 }
 
 /// Registry containing different modules
-class ModuleRegistry
+class CPP_WRAPPER_EXPORT ModuleRegistry
 {
 public:
 	/// Create a module and register it
@@ -671,7 +677,7 @@ public:
 	}
 
 private:
-	std::map<std::string, std::unique_ptr<Module>> m_modules;
+	std::map<std::string, std::shared_ptr<Module>> m_modules;
 };
 
 
@@ -679,7 +685,7 @@ private:
 
 /// Register a new module
 #define JULIA_CPP_MODULE_BEGIN(registry) \
-extern "C" void register_julia_modules(void* void_reg) { \
+extern "C" CPP_WRAPPER_EXPORT void register_julia_modules(void* void_reg) { \
 	cpp_wrapper::ModuleRegistry& registry = *reinterpret_cast<cpp_wrapper::ModuleRegistry*>(void_reg);
 
 #define JULIA_CPP_MODULE_END }
