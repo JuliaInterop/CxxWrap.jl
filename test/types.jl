@@ -12,7 +12,7 @@ using CppTypes
 using CppTypes.World
 
 # Stress test
-for i in 1:100000
+for i in 1:1000000
   d = CppTypes.DoubleData()
 end
 

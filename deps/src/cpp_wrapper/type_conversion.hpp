@@ -15,6 +15,14 @@
 namespace cpp_wrapper
 {
 
+extern jl_array_t* g_gc_protected;
+
+template<typename T>
+void protect_from_gc(T* val)
+{
+	jl_cell_1d_push(g_gc_protected, (jl_value_t*)val);
+}
+
 /// Get the symbol name correctly depending on Julia version
 inline std::string symbol_name(jl_sym_t* symbol)
 {
@@ -108,7 +116,7 @@ template<typename SourceT> struct static_type_mapping
 		if(!std::is_pointer<SourceT>())
 		{
 			m_finalizer = jl_new_closure(detail::finalizer<SourceT>, (jl_value_t*)jl_emptysvec, NULL);
-			jl_gc_preserve((jl_value_t*)m_finalizer);
+			protect_from_gc(m_finalizer);
 		}
 	}
 

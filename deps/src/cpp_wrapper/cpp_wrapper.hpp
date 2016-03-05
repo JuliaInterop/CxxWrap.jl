@@ -266,7 +266,7 @@ struct TypeVar
 	static jl_tvar_t* build_tvar()
 	{
 		jl_tvar_t* result = jl_new_typevar(jl_symbol((std::string("T") + std::to_string(I)).c_str()), (jl_value_t*)jl_bottom_type, (jl_value_t*)jl_any_type);
-		jl_gc_preserve((jl_value_t*)result);
+		protect_from_gc(result);
 		return result;
 	}
 };
@@ -589,7 +589,7 @@ TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t*
 
 	// Create the datatype
 	jl_datatype_t* dt = jl_new_datatype(jl_symbol(name.c_str()), super, parameters, fnames, ftypes, abstract, mutabl, ninitialized);
-	jl_gc_preserve((jl_value_t*)dt);
+	protect_from_gc(dt);
 
 	// Register the type
 	if(!is_parametric)
@@ -642,7 +642,7 @@ TypeWrapper<T> Module::add_bits(const std::string& name, jl_datatype_t* super)
 	static_assert(IsBits<T>::value, "Bits types must be marked as such by specializing the IsBits template");
 	static_assert(std::is_standard_layout<T>::value, "Bits types must be standard layout");
 	jl_datatype_t* dt = jl_new_bitstype((jl_value_t*)jl_symbol(name.c_str()), super, jl_emptysvec, 8*sizeof(T));
-	jl_gc_preserve((jl_value_t*)dt);
+	protect_from_gc(dt);
 	static_type_mapping<T>::set_julia_type(dt);
 	m_jl_datatypes[name] = dt;
 	return TypeWrapper<T>(*this, dt);

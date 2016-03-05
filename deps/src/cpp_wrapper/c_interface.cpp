@@ -10,6 +10,11 @@ using namespace cpp_wrapper;
 CPP_WRAPPER_EXPORT void initialize(jl_value_t* julia_module, jl_value_t* cpp_any_type, jl_value_t* cppfunctioninfo_type)
 {
 	g_cpp_wrapper_module = (jl_module_t*)julia_module;
+
+	// Global GC protection
+	g_gc_protected = jl_alloc_cell_1d(0);
+	jl_set_const(g_cpp_wrapper_module,jl_symbol("_gc_protected"),(jl_value_t*)g_gc_protected);
+
 	static_type_mapping<CppAny>::set_julia_type((jl_datatype_t*)cpp_any_type);
 	g_cppfunctioninfo_type = (jl_datatype_t*)cppfunctioninfo_type;
 }
