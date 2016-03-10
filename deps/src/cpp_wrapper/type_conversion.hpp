@@ -76,10 +76,8 @@ namespace detail
 
 	/// Finalizer function for type T
 	template<typename T>
-	jl_value_t* finalizer(jl_value_t *F, jl_value_t **args, uint32_t nargs)
+	void finalizer(jl_value_t* to_delete)
 	{
-		jl_value_t* to_delete = args[0];
-
 		T* stored_obj = convert_to_cpp<T*>(to_delete);
 		if(stored_obj != nullptr)
 		{
@@ -87,6 +85,13 @@ namespace detail
 		}
 
 		jl_set_nth_field(to_delete, 0, jl_box_voidpointer(nullptr));
+	}
+
+	// Julia 0.4 version
+	template<typename T>
+	jl_value_t* finalizer_closure(jl_value_t *F, jl_value_t **args, uint32_t nargs)
+	{
+		finalizer<T>(args[0]);
 		return nullptr;
 	}
 }
@@ -115,7 +120,11 @@ template<typename SourceT> struct static_type_mapping
 		m_type_pointer = dt;
 		if(!std::is_pointer<SourceT>())
 		{
-			m_finalizer = jl_new_closure(detail::finalizer<SourceT>, (jl_value_t*)jl_emptysvec, NULL);
+#if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 5
+			m_finalizer = jl_new_closure(detail::finalizer_closure<SourceT>, (jl_value_t*)jl_emptysvec, NULL);
+#else
+			m_finalizer = jl_box_voidpointer((void*)detail::finalizer<SourceT>);
+#endif
 			protect_from_gc(m_finalizer);
 		}
 	}

@@ -37,8 +37,8 @@ w_deep = deepcopy(w)
 @test w_assigned == w
 @test w_deep != w
 
+# Destroy w: w and w_assigned should be dead, w_deep alive
 finalize(w)
-
 @test_throws ErrorException CppTypes.greet(w)
 @test_throws ErrorException CppTypes.greet(w_assigned)
 @test CppTypes.greet(w_deep) == "constructed"
