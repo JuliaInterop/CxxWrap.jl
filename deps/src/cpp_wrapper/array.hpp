@@ -179,16 +179,23 @@ template<typename ValueT, int Dim> ArrayRef<ValueT, Dim>::ArrayRef(ValueT* c_ptr
 }
 
 template<typename T, int Dim>
-inline mapped_julia_type<ArrayRef<T,Dim>> convert_to_julia(ArrayRef<T,Dim>&& arr)
+struct ConvertToJulia<ArrayRef<T,Dim>, false, false, false>
 {
-	return arr.wrapped();
-}
+  template<typename ArrayRefT>
+	jl_array_t* operator()(ArrayRefT&& arr) const
+	{
+		return arr.wrapped();
+	}
+};
 
-template<typename ArrRefT>
-inline ArrRefT convert_to_cpp(jl_array_t* const& arr)
+template<typename T, int Dim>
+struct ConvertToCpp<ArrayRef<T,Dim>, false, false, false>
 {
-	return ArrRefT(arr);
-}
+	ArrayRef<T,Dim> operator()(jl_array_t* arr) const
+	{
+		return ArrayRef<T,Dim>(arr);
+	}
+};
 
 // Iterator operator implementation
 template<typename L, typename R>
@@ -245,7 +252,7 @@ bool operator-(const array_iterator_base<T,T>& l, const std::ptrdiff_t n)
   return l.ptr() - n;
 }
 
-/// Julia Matrix parametric type
+/// Julia Matrix parametric singleton type
 struct JuliaMatrix {};
 
 template<> struct static_type_mapping<JuliaMatrix>
@@ -258,6 +265,15 @@ template<> struct static_type_mapping<JuliaMatrix>
                                               jl_svec1(jl_apply_type((jl_value_t*)jl_array_type, jl_svec2(this_tvar, jl_box_long(2)))));
   }
 	template<typename T> using remove_const_ref = cpp_wrapper::remove_const_ref<T>;
+};
+
+template<>
+struct ConvertToCpp<JuliaMatrix, false, false, false>
+{
+	JuliaMatrix operator()(jl_datatype_t* julia_value) const
+	{
+		return JuliaMatrix();
+	}
 };
 
 }

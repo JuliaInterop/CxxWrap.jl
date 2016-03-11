@@ -36,8 +36,6 @@ end
 
 if !isfile(julia_lib)
 	throw(ErrorException("Could not locate Julia library at $julia_lib"))
-else
-	println("Located Julia lib at $julia_lib")
 end
 
 julia_include_dir = joinpath(julia_base_dir, "include", "julia")

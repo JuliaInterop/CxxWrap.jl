@@ -52,8 +52,26 @@ template<typename T> struct IsImmutable : std::false_type {};
 /// Trait to determine if the given type is to be treated as a bits type
 template<typename T> struct IsBits : std::false_type {};
 
-template<typename CppT>
-inline CppT convert_to_cpp(jl_value_t* const& julia_value);
+/// Base class to specialize for conversion to C++
+template<typename CppT, bool Fundamental=false, bool Immutable=false, bool Bits=false>
+struct ConvertToCpp
+{
+	template<typename JuliaT>
+	CppT* operator()(JuliaT&& julia_val) const
+	{
+		static_assert(sizeof(CppT)==0, "No appropriate specialization for ConvertToCpp");
+		return nullptr; // not reached
+	}
+};
+
+template<typename T> using cpp_converter_type = ConvertToCpp<T, std::is_fundamental<remove_const_ref<T>>::value, IsImmutable<remove_const_ref<T>>::value, IsBits<remove_const_ref<T>>::value>;
+
+/// Conversion to C++
+template<typename CppT, typename JuliaT>
+inline auto convert_to_cpp(JuliaT&& julia_val) -> decltype(cpp_converter_type<CppT>()(julia_val))
+{
+	return cpp_converter_type<CppT>()(std::forward<JuliaT>(julia_val));
+}
 
 namespace detail
 {
@@ -264,63 +282,118 @@ template<> struct static_type_mapping<ObjectIdDict>
 	template<typename T> using remove_const_ref = cpp_wrapper::remove_const_ref<T>;
 };
 
+/// Base class to specialize for conversion to Julia
+template<typename T, bool Fundamental=false, bool Immutable=false, bool Bits=false>
+struct ConvertToJulia
+{
+	template<typename CppT>
+	jl_value_t* operator()(CppT&& cpp_val) const
+	{
+		static_assert(sizeof(T)==0, "No appropriate specialization for ConvertToJulia");
+		return nullptr; // not reached
+	}
+};
+
+// Fundamental type
+template<typename T>
+struct ConvertToJulia<T, true, false, false>
+{
+	T operator()(const T& cpp_val) const
+	{
+		return cpp_val;
+	}
+};
+
+// Immutable type
+template<typename T>
+struct ConvertToJulia<T, false, true, false>
+{
+	T operator()(const T& cpp_val) const
+	{
+		return cpp_val;
+	}
+};
+
+// Bits type
+template<typename T>
+struct ConvertToJulia<T, false, false, true>
+{
+	template<typename T2>
+	jl_value_t* operator()(T2&& cpp_val) const
+	{
+		return jl_new_bits((jl_value_t*)static_type_mapping<T>::julia_type(), &cpp_val);
+	}
+};
+
+template<>
+struct ConvertToJulia<std::string, false, false, false>
+{
+	jl_value_t* operator()(const std::string& str) const
+	{
+		return jl_cstr_to_string(str.c_str());
+	}
+};
+
+template<>
+struct ConvertToJulia<void*, false, false, false>
+{
+	jl_value_t* operator()(void* p) const
+	{
+		return jl_box_voidpointer(p);
+	}
+};
+
+template<>
+struct ConvertToJulia<jl_value_t*, false, false, false>
+{
+	jl_value_t* operator()(jl_value_t* p) const
+	{
+		return p;
+	}
+};
+
+template<>
+struct ConvertToJulia<jl_datatype_t*, false, false, false>
+{
+	jl_datatype_t* operator()(jl_datatype_t* p) const
+	{
+		return p;
+	}
+};
+
+template<typename T> using julia_converter_type = ConvertToJulia<remove_const_ref<T>, std::is_fundamental<remove_const_ref<T>>::value, IsImmutable<remove_const_ref<T>>::value, IsBits<remove_const_ref<T>>::value>;
+
 /// Conversion to the statically mapped target type.
 template<typename T>
-inline typename std::enable_if<std::is_fundamental<T>::value, T>::type convert_to_julia(T&& cpp_val)
+inline auto convert_to_julia(T&& cpp_val) -> decltype(julia_converter_type<T>()(cpp_val))
 {
-	return cpp_val;
+	return julia_converter_type<T>()(std::forward<T>(cpp_val));
 }
 
-template<typename T>
-inline typename std::enable_if<IsImmutable<T>::value, T>::type convert_to_julia(T&& cpp_val)
+// Fundamental type conversion
+template<typename CppT>
+struct ConvertToCpp<CppT, true, false, false>
 {
-	return cpp_val;
-}
+	template<typename JuliaT>
+	CppT operator()(JuliaT&& julia_val) const
+	{
+		return julia_val;
+	}
+};
 
-template<typename T>
-inline typename std::enable_if<IsBits<T>::value, jl_value_t*>::type convert_to_julia(T&& cpp_val)
+// Immutable-as-bits type conversion
+template<typename CppT>
+struct ConvertToCpp<CppT, false, true, false>
 {
-	return jl_new_bits((jl_value_t*)static_type_mapping<T>::julia_type(), &cpp_val);
-}
+	template<typename JuliaT>
+	CppT operator()(JuliaT&& julia_val) const
+	{
+		return julia_val;
+	}
+};
 
-inline jl_value_t* convert_to_julia(const std::string& str)
+namespace detail
 {
-	return jl_cstr_to_string(str.c_str());
-}
-
-inline jl_value_t* convert_to_julia(std::string&& str)
-{
-	return jl_cstr_to_string(str.c_str());
-}
-
-inline jl_value_t* convert_to_julia(void* const& p)
-{
-	return jl_box_voidpointer(p);
-}
-
-inline jl_value_t* convert_to_julia(jl_value_t* const& p)
-{
-	return p;
-}
-
-inline jl_datatype_t* convert_to_julia(jl_datatype_t* const& dt)
-{
-	return dt;
-}
-
-template<typename CppT, typename JuliaT>
-inline typename std::enable_if<std::is_fundamental<CppT>::value, CppT>::type convert_to_cpp(const JuliaT& julia_val)
-{
-	return julia_val;
-}
-
-template<typename CppT, typename JuliaT>
-inline typename std::enable_if<IsImmutable<CppT>::value, CppT>::type convert_to_cpp(const JuliaT& julia_val)
-{
-	return julia_val;
-}
-
-namespace detail {
 
 // Unpack based on reference or pointer target type
 template<typename IsReference, typename IsPointer>
@@ -387,7 +460,7 @@ struct WrappedCppPtr {
 };
 
 /// Helper class to unpack a julia type
-template<typename CppT, bool>
+template<typename CppT>
 struct JuliaUnpacker
 {
 	// The C++ type stripped of all pointer, reference, const
@@ -417,57 +490,68 @@ struct JuliaUnpacker
 	}
 };
 
-// Unpack for bits type
+} // namespace detail
+
+// Bits type conversion
 template<typename CppT>
-struct JuliaUnpacker<CppT, true>
+struct ConvertToCpp<CppT, false, false, true>
 {
-	CppT operator()(jl_value_t* julia_value)
+	CppT operator()(jl_value_t* julia_value) const
 	{
 		return *reinterpret_cast<CppT*>(jl_data_ptr(julia_value));
 	}
 };
 
-} // namespace detail
-
+// Generic conversion for C++ classes wrapped in a composite type
 template<typename CppT>
-inline CppT convert_to_cpp(jl_value_t* const& julia_value)
+struct ConvertToCpp<CppT, false, false, false>
 {
-	return detail::JuliaUnpacker<CppT, IsBits<CppT>::value>()(julia_value);
-}
-
-template<>
-inline std::string convert_to_cpp(jl_value_t* const& julia_string)
-{
-	if(julia_string == nullptr || !jl_is_byte_string(julia_string))
+	CppT operator()(jl_value_t* julia_value) const
 	{
-		throw std::runtime_error("Any type to convert to string is not a string");
+		return detail::JuliaUnpacker<CppT>()(julia_value);
 	}
-	std::string result(jl_bytestring_ptr(julia_string));
-	return result;
-}
 
-inline jl_datatype_t* convert_to_cpp(jl_datatype_t* const& julia_value)
-{
-	return julia_value;
-}
+	// pass-through for Julia pointers
+	template<typename JuliaPtrT>
+	JuliaPtrT* operator()(JuliaPtrT* julia_value) const
+	{
+		return julia_value;
+	}
+};
 
-template<typename SingletonT>
-inline SingletonT convert_to_cpp(jl_datatype_t* const& julia_value)
-{
-	return SingletonT();
-}
-
+// strings
 template<>
-inline jl_value_t* convert_to_cpp(jl_value_t* const& julia_value)
+struct ConvertToCpp<std::string, false, false, false>
 {
-	return julia_value;
-}
+	std::string operator()(jl_value_t* julia_string) const
+	{
+		if(julia_string == nullptr || !jl_is_byte_string(julia_string))
+		{
+			throw std::runtime_error("Any type to convert to string is not a string");
+		}
+		std::string result(jl_bytestring_ptr(julia_string));
+		return result;
+	}
+};
 
-template<>
-inline ObjectIdDict convert_to_cpp(jl_value_t* const&)
+template<typename T>
+struct ConvertToCpp<SingletonType<T>, false, false, false>
 {
-	return ObjectIdDict();
-}
+	SingletonType<T> operator()(jl_datatype_t* julia_value) const
+	{
+		return SingletonType<T>();
+	}
+};
+
+// Used for deepcopy_internal overloading
+template<>
+struct ConvertToCpp<ObjectIdDict, false, false, false>
+{
+	ObjectIdDict operator()(jl_value_t*) const
+	{
+		return ObjectIdDict();
+	}
+};
 
 /// Convenience function to get the julia data type associated with T
 template<typename T>
