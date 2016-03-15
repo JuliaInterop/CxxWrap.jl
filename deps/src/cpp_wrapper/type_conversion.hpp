@@ -251,6 +251,13 @@ template<> struct static_type_mapping<std::string>
 	template<typename T> using remove_const_ref = cpp_wrapper::remove_const_ref<T>;
 };
 
+template<> struct static_type_mapping<const char*>
+{
+	typedef jl_value_t* type;
+	static jl_datatype_t* julia_type() { return jl_any_type; }
+	template<typename T> using remove_const_ref = cpp_wrapper::remove_const_ref<T>;
+};
+
 template<> struct static_type_mapping<void*>
 {
 	typedef jl_value_t* type;
@@ -325,12 +332,40 @@ struct ConvertToJulia<T, false, false, true>
 	}
 };
 
+// Pointer to wraped type
+template<typename T>
+struct ConvertToJulia<T*, false, false, false>
+{
+	jl_value_t* operator()(T* cpp_obj) const
+	{
+		jl_datatype_t* dt = static_type_mapping<T>::julia_type();
+		assert(!jl_isbits(dt));
+
+		jl_value_t* result = nullptr;
+		jl_value_t* void_ptr = nullptr;
+		JL_GC_PUSH2(&result, &void_ptr);
+		void_ptr = jl_box_voidpointer(static_cast<void*>(cpp_obj));
+		result = jl_new_struct(dt, void_ptr);
+		JL_GC_POP();
+		return result;
+	}
+};
+
 template<>
 struct ConvertToJulia<std::string, false, false, false>
 {
 	jl_value_t* operator()(const std::string& str) const
 	{
 		return jl_cstr_to_string(str.c_str());
+	}
+};
+
+template<>
+struct ConvertToJulia<const char*, false, false, false>
+{
+	jl_value_t* operator()(const char* str) const
+	{
+		return jl_cstr_to_string(str);
 	}
 };
 
@@ -531,6 +566,19 @@ struct ConvertToCpp<std::string, false, false, false>
 		}
 		std::string result(jl_bytestring_ptr(julia_string));
 		return result;
+	}
+};
+
+template<>
+struct ConvertToCpp<const char*, false, false, false>
+{
+	const char* operator()(jl_value_t* julia_string) const
+	{
+		if(julia_string == nullptr || !jl_is_byte_string(julia_string))
+		{
+			throw std::runtime_error("Any type to convert to string is not a string");
+		}
+		return jl_bytestring_ptr(julia_string);
 	}
 };
 
