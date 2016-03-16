@@ -92,4 +92,17 @@ CPP_WRAPPER_EXPORT jl_array_t* get_module_functions(void* void_registry)
 	return module_array.wrapped();
 }
 
+CPP_WRAPPER_EXPORT jl_array_t* get_exported_symbols(void* void_registry, jl_value_t* mod_name)
+{
+	assert(void_registry != nullptr);
+	ModuleRegistry& registry = *reinterpret_cast<ModuleRegistry*>(void_registry);
+	Array<std::string> syms;
+	for(auto&& sym_name : registry.get_module(convert_to_cpp<std::string>(mod_name)).exported_symbols())
+	{
+		syms.push_back(sym_name);
+	}
+
+	return syms.wrapped();
+}
+
 }

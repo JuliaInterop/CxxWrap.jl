@@ -41,6 +41,10 @@ function bind_types(registry::Ptr{Void}, m::Module)
   ccall(Libdl.dlsym(cpp_wrapper_lib, "bind_module_types"), Void, (Ptr{Void},Any), registry, m)
 end
 
+function exported_symbols(registry::Ptr{Void}, modname::AbstractString)
+  ccall(Libdl.dlsym(cpp_wrapper_lib, "get_exported_symbols"), Array{AbstractString}, (Ptr{Void},AbstractString), registry, modname)
+end
+
 # Build the expression to wrap the given function
 function build_function_expression(func::CppFunctionInfo)
   # Name of the function
@@ -157,6 +161,11 @@ function wrap_modules(registry::Ptr{Void}, parent_mod=Main)
   module_functions = get_module_functions(registry)
   for (jl_mod, mod_functions) in zip(jl_modules, module_functions)
     wrap_functions(mod_functions, jl_mod)
+  end
+
+  for (jl_mod, mod_name) in zip(jl_modules, module_names)
+    exps = [symbol(s) for s in exported_symbols(registry, mod_name)]
+    jl_mod.eval(:(export $(exps...)))
   end
 end
 

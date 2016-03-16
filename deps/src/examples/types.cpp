@@ -110,4 +110,7 @@ JULIA_CPP_MODULE_BEGIN(registry)
   {
     return bits.get_b();
   });
+
+  types.export_symbols("get_bits_a", "get_bits_b", "make_bits");
+  types.export_symbols("BitsClass");
 JULIA_CPP_MODULE_END

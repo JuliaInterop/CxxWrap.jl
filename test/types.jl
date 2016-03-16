@@ -60,8 +60,6 @@ bitsint2 = CppTypes.ImmutableInt64(2)
 @test typeof(bitsint1 + bitsint2) == CppTypes.ImmutableInt64
 @test (bitsint1 + bitsint2) == 3
 
-import CppTypes.BitsClass, CppTypes.make_bits, CppTypes.get_bits_a, CppTypes.get_bits_b
-
 bc = make_bits(1, 2)
 @test sizeof(bc)==16
 @test get_bits_a(bc)==1

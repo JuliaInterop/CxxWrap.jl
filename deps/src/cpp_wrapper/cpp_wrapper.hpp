@@ -356,6 +356,18 @@ public:
 		}
 	}
 
+  /// Export the given symbols
+  template<typename... ArgsT>
+  void export_symbols(ArgsT... args)
+  {
+    m_exported_symbols.insert(m_exported_symbols.end(), {args...});
+  }
+
+  const std::vector<std::string>& exported_symbols()
+  {
+    return m_exported_symbols;
+  }
+
 private:
 
 	template<typename T>
@@ -397,6 +409,7 @@ private:
 	std::string m_name;
 	std::vector<std::shared_ptr<FunctionWrapperBase>> m_functions;
 	std::map<std::string, jl_datatype_t*> m_jl_datatypes;
+  std::vector<std::string> m_exported_symbols;
 
 	template<class T> friend class TypeWrapper;
 };
