@@ -112,6 +112,31 @@ namespace detail
 		finalizer<T>(args[0]);
 		return nullptr;
 	}
+
+	// Unbox boxed type
+	template<typename CppT>
+	inline CppT unbox(jl_value_t* v)
+	{
+		static_assert(sizeof(CppT) == 0, "Unimplemented unbox in cpp_wrapper");
+	}
+
+	template<>
+	inline double unbox(jl_value_t* v)
+	{
+		return jl_unbox_float64(v);
+	}
+
+	template<>
+	inline int32_t unbox(jl_value_t* v)
+	{
+		return jl_unbox_int32(v);
+	}
+
+	template<>
+	inline int64_t unbox(jl_value_t* v)
+	{
+		return jl_unbox_int64(v);
+	}
 }
 
 /// Static mapping base template
@@ -247,14 +272,14 @@ template<> struct static_type_mapping<uint64_t>
 template<> struct static_type_mapping<std::string>
 {
 	typedef jl_value_t* type;
-	static jl_datatype_t* julia_type() { return jl_any_type; }
+	static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_get_global(jl_base_module, jl_symbol("AbstractString")); }
 	template<typename T> using remove_const_ref = cpp_wrapper::remove_const_ref<T>;
 };
 
 template<> struct static_type_mapping<const char*>
 {
 	typedef jl_value_t* type;
-	static jl_datatype_t* julia_type() { return jl_any_type; }
+	static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_get_global(jl_base_module, jl_symbol("AbstractString")); }
 	template<typename T> using remove_const_ref = cpp_wrapper::remove_const_ref<T>;
 };
 
@@ -413,6 +438,11 @@ struct ConvertToCpp<CppT, true, false, false>
 	CppT operator()(JuliaT&& julia_val) const
 	{
 		return julia_val;
+	}
+
+	CppT operator()(jl_value_t* julia_val) const
+	{
+		return detail::unbox<CppT>(julia_val);
 	}
 };
 
