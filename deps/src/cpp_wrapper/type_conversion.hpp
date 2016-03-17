@@ -112,31 +112,51 @@ namespace detail
 		finalizer<T>(args[0]);
 		return nullptr;
 	}
+}
 
-	// Unbox boxed type
-	template<typename CppT>
-	inline CppT unbox(jl_value_t* v)
-	{
-		static_assert(sizeof(CppT) == 0, "Unimplemented unbox in cpp_wrapper");
-	}
+inline jl_value_t* box(const int i)
+{
+	return jl_box_int32(i);
+}
 
-	template<>
-	inline double unbox(jl_value_t* v)
-	{
-		return jl_unbox_float64(v);
-	}
+inline jl_value_t* box(const unsigned int i)
+{
+	return jl_box_uint32(i);
+}
 
-	template<>
-	inline int32_t unbox(jl_value_t* v)
-	{
-		return jl_unbox_int32(v);
-	}
+inline jl_value_t* box(const int64_t i)
+{
+	return jl_box_int64(i);
+}
 
-	template<>
-	inline int64_t unbox(jl_value_t* v)
-	{
-		return jl_unbox_int64(v);
-	}
+inline jl_value_t* box(const double x)
+{
+	return jl_box_float64(x);
+}
+
+// Unbox boxed type
+template<typename CppT>
+inline CppT unbox(jl_value_t* v)
+{
+	static_assert(sizeof(CppT) == 0, "Unimplemented unbox in cpp_wrapper");
+}
+
+template<>
+inline double unbox(jl_value_t* v)
+{
+	return jl_unbox_float64(v);
+}
+
+template<>
+inline int32_t unbox(jl_value_t* v)
+{
+	return jl_unbox_int32(v);
+}
+
+template<>
+inline int64_t unbox(jl_value_t* v)
+{
+	return jl_unbox_int64(v);
 }
 
 /// Static mapping base template
@@ -442,7 +462,7 @@ struct ConvertToCpp<CppT, true, false, false>
 
 	CppT operator()(jl_value_t* julia_val) const
 	{
-		return detail::unbox<CppT>(julia_val);
+		return unbox<CppT>(julia_val);
 	}
 };
 
@@ -502,21 +522,6 @@ struct DoUnpack<std::false_type, std::false_type>
 		return *ptr;
 	}
 };
-
-inline jl_value_t* box(const int i)
-{
-	return jl_box_int32(i);
-}
-
-inline jl_value_t* box(const unsigned int i)
-{
-	return jl_box_uint32(i);
-}
-
-inline jl_value_t* box(const int64_t i)
-{
-	return jl_box_int64(i);
-}
 
 /// Equivalent of the basic C++ type layout in Julia
 struct WrappedCppPtr {
