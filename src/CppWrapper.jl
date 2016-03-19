@@ -54,9 +54,6 @@ function build_function_expression(func::CppFunctionInfo)
   argtypes = func.argument_types
   argsymbols = map((i) -> symbol(:arg,i[1]), enumerate(argtypes))
 
-  # Return type
-  return_type = func.return_type
-
   # Function pointer
   fpointer = func.function_pointer
   assert(fpointer != C_NULL)
@@ -64,15 +61,11 @@ function build_function_expression(func::CppFunctionInfo)
   # Thunk
   thunk = func.thunk_pointer
 
+  map_arg_type(t::DataType) = (t <: CppAny && !isbits(t)) ? Any : t
+
   # Build the types for the ccall argument list
-  c_arg_types = DataType[]
-  for argtype in argtypes
-    if argtype <: CppAny && !isbits(argtype)
-      push!(c_arg_types, Any)
-    else
-      push!(c_arg_types, argtype)
-    end
-  end
+  c_arg_types = [map_arg_type(t) for t in argtypes]
+  return_type = map_arg_type(func.return_type)
 
   # Build the final call expression
   call_exp = nothing

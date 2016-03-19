@@ -68,9 +68,9 @@ template<typename T> using cpp_converter_type = ConvertToCpp<T, std::is_fundamen
 
 /// Conversion to C++
 template<typename CppT, typename JuliaT>
-inline auto convert_to_cpp(JuliaT&& julia_val) -> decltype(cpp_converter_type<CppT>()(julia_val))
+inline CppT convert_to_cpp(const JuliaT& julia_val)
 {
-	return cpp_converter_type<CppT>()(std::forward<JuliaT>(julia_val));
+	return cpp_converter_type<CppT>()(julia_val);
 }
 
 namespace detail
@@ -391,6 +391,7 @@ struct ConvertToJulia<T*, false, false, false>
 		JL_GC_PUSH2(&result, &void_ptr);
 		void_ptr = jl_box_voidpointer(static_cast<void*>(cpp_obj));
 		result = jl_new_struct(dt, void_ptr);
+		assert(convert_to_cpp<T*>(result) == cpp_obj);
 		JL_GC_POP();
 		return result;
 	}
@@ -448,6 +449,12 @@ template<typename T>
 inline auto convert_to_julia(T&& cpp_val) -> decltype(julia_converter_type<T>()(cpp_val))
 {
 	return julia_converter_type<T>()(std::forward<T>(cpp_val));
+}
+
+template<typename T>
+inline auto convert_to_julia(const T& cpp_val) -> decltype(julia_converter_type<T>()(cpp_val))
+{
+	return julia_converter_type<T>()(cpp_val);
 }
 
 // Fundamental type conversion
@@ -584,6 +591,16 @@ struct ConvertToCpp<CppT, false, false, false>
 	// pass-through for Julia pointers
 	template<typename JuliaPtrT>
 	JuliaPtrT* operator()(JuliaPtrT* julia_value) const
+	{
+		return julia_value;
+	}
+};
+
+// pass-through for jl_value_t*
+template<>
+struct ConvertToCpp<jl_value_t*, false, false, false>
+{
+	jl_value_t* operator()(jl_value_t* julia_value) const
 	{
 		return julia_value;
 	}

@@ -80,6 +80,10 @@ JULIA_CPP_MODULE_BEGIN(registry)
     .constructor<const std::string&>()
     .method("set", &World::set)
     .method("greet", &World::greet);
+  types.method("world_factory", []()
+  {
+    return new World("factory hello");
+  });
 
   types.add_type<NonCopyable>("NonCopyable");
 

@@ -105,15 +105,12 @@ typename std::enable_if<!IsImmutable<T>::value, jl_value_t*>::type create(ArgsT.
 
 	T* cpp_obj = new T(args...);
 
-	jl_value_t* result = nullptr;
-	jl_value_t* void_ptr = nullptr;
-	JL_GC_PUSH2(&result, &void_ptr);
-	void_ptr = jl_box_voidpointer(static_cast<void*>(cpp_obj));
-
-	result = jl_new_struct(dt, void_ptr);
+	jl_value_t* result = convert_to_julia(cpp_obj);
+	JL_GC_PUSH1(&result);
 	jl_gc_add_finalizer(result, static_type_mapping<T>::finalizer());
-
 	JL_GC_POP();
+
+  assert(convert_to_cpp<T*>(result) == cpp_obj);
 	return result;
 }
 
@@ -521,16 +518,16 @@ public:
 	}
 
 	/// Define a member function
-	template<typename R, typename... ArgsT>
-	TypeWrapper<T>& method(const std::string& name, R(T::*f)(ArgsT...))
+	template<typename R, typename CT, typename... ArgsT>
+	TypeWrapper<T>& method(const std::string& name, R(CT::*f)(ArgsT...))
 	{
 		m_module.method(name, [f](T& obj, ArgsT... args) { return (obj.*f)(args...); } );
 		return *this;
 	}
 
 	/// Define a member function, const version
-	template<typename R, typename... ArgsT>
-	TypeWrapper<T>& method(const std::string& name, R(T::*f)(ArgsT...) const)
+	template<typename R, typename CT, typename... ArgsT>
+	TypeWrapper<T>& method(const std::string& name, R(CT::*f)(ArgsT...) const)
 	{
 		m_module.method(name, [f](const T& obj, ArgsT... args) { return (obj.*f)(args...); } );
 		return *this;

@@ -20,9 +20,11 @@ end
 @test World <: CppWrapper.CppAny
 @test super(World) == CppWrapper.CppAny
 w = World()
-@test CppTypes.greet(w) == "default hello"
 println("Dumping type w...")
 xdump(w)
+@test CppTypes.greet(w) == "default hello"
+@show fw = CppTypes.world_factory()
+@test CppTypes.greet(fw) == "factory hello"
 
 CppTypes.set(w, "hello")
 @show CppTypes.greet(w)
