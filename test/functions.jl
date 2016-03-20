@@ -5,7 +5,7 @@ println("Running functions.jl...")
 using CppWrapper
 using Base.Test
 
-const functions_lib_path = joinpath(Pkg.dir("CppWrapper"),"deps","usr","lib","libfunctions")
+const functions_lib_path = CppWrapper.lib_path(joinpath(Pkg.dir("CppWrapper"),"deps","usr","lib","libfunctions"))
 
 # Wrap the functions defined in C++
 wrap_modules(functions_lib_path)

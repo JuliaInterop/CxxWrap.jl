@@ -3,7 +3,19 @@ module CppWrapper
 using BinDeps
 @BinDeps.load_dependencies
 
-const cpp_wrapper_lib = Libdl.dlopen(joinpath(Pkg.dir("CppWrapper"),"deps","usr","lib","libcpp_wrapper"), Libdl.RTLD_GLOBAL)
+# Convert path if it contains lib prefix on windows
+function lib_path(so_path::AbstractString)
+  path_copy = so_path
+  @windows_only begin
+    basedir, libname = splitdir(so_path)
+    if startswith(libname, "lib") && !isfile(so_path)
+      path_copy = joinpath(basedir, libname[4:end])
+    end
+  end
+  return path_copy
+end
+
+const cpp_wrapper_lib = Libdl.dlopen(lib_path(joinpath(Pkg.dir("CppWrapper"),"deps","usr","lib","libcpp_wrapper")), Libdl.RTLD_GLOBAL)
 
 # Base type for wrapped C++ types
 abstract CppAny
@@ -164,7 +176,7 @@ end
 
 # Wrap modules in the given path
 function wrap_modules(so_path::AbstractString, parent_mod=Main)
-  registry = CppWrapper.load_modules(so_path)
+  registry = CppWrapper.load_modules(lib_path(so_path))
   wrap_modules(registry, parent_mod)
 end
 

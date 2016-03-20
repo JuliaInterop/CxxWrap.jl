@@ -7,7 +7,17 @@ namespace cpp_wrapper
 
 jl_module_t* g_cpp_wrapper_module;
 jl_datatype_t* g_cppfunctioninfo_type;
-jl_array_t* g_gc_protected;
+
+CPP_WRAPPER_EXPORT jl_array_t* gc_protected()
+{
+	static jl_array_t* m_arr = nullptr;
+	if (m_arr == nullptr)
+	{
+		m_arr = jl_alloc_cell_1d(0);
+		jl_set_const(g_cpp_wrapper_module, jl_symbol("_gc_protected"), (jl_value_t*)m_arr);
+	}
+	return m_arr;
+}
 
 Module::Module(const std::string& name) : m_name(name)
 {

@@ -12,15 +12,22 @@
 
 #include <iostream>
 
+#ifdef _WIN32
+  #define  CPP_WRAPPER_EXPORT __declspec(dllexport)
+#else
+ 	#define  CPP_WRAPPER_EXPORT
+#endif
+
 namespace cpp_wrapper
 {
 
-extern jl_array_t* g_gc_protected;
+CPP_WRAPPER_EXPORT jl_array_t* gc_protected();
+
 
 template<typename T>
-void protect_from_gc(T* val)
+inline void protect_from_gc(T* val)
 {
-	jl_cell_1d_push(g_gc_protected, (jl_value_t*)val);
+	jl_cell_1d_push(gc_protected(), (jl_value_t*)val);
 }
 
 /// Get the symbol name correctly depending on Julia version
@@ -213,59 +220,65 @@ inline uint64_t unbox(jl_value_t* v)
 }
 
 /// Static mapping base template
-template<typename SourceT> struct static_type_mapping
+template<typename SourceT> struct CPP_WRAPPER_EXPORT static_type_mapping
 {
 	typedef typename detail::DispatchBits<IsImmutable<SourceT>::value, SourceT, jl_value_t*>::type type;
 
 	template<typename T> using remove_const_ref = typename detail::DispatchBits<IsImmutable<cpp_wrapper::remove_const_ref<T>>::value || IsBits<cpp_wrapper::remove_const_ref<T>>::value, cpp_wrapper::remove_const_ref<T>, T>::type;
 	static jl_datatype_t* julia_type()
 	{
-		if(m_type_pointer == nullptr)
+		if(type_pointer() == nullptr)
 		{
 			throw std::runtime_error("Type " + std::string(typeid(SourceT).name()) + " has no Julia wrapper");
 		}
-		return m_type_pointer;
+		return type_pointer();
 	}
 
 	static void set_julia_type(jl_datatype_t* dt)
 	{
-		if(m_type_pointer != nullptr)
+		if(type_pointer() != nullptr)
 		{
 			throw std::runtime_error("Type " + std::string(typeid(SourceT).name()) + " was already registered");
 		}
-		m_type_pointer = dt;
+		type_pointer() = dt;
 		if(!std::is_pointer<SourceT>())
 		{
 #if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 5
-			m_finalizer = jl_new_closure(detail::finalizer_closure<SourceT>, (jl_value_t*)jl_emptysvec, NULL);
+			finalizer_pointer() = jl_new_closure(detail::finalizer_closure<SourceT>, (jl_value_t*)jl_emptysvec, NULL);
 #else
-			m_finalizer = jl_box_voidpointer((void*)detail::finalizer<SourceT>);
+			finalizer_pointer() = jl_box_voidpointer((void*)detail::finalizer<SourceT>);
 #endif
-			protect_from_gc(m_finalizer);
+			protect_from_gc(finalizer_pointer());
 		}
 	}
 
 	static jl_function_t* finalizer()
 	{
-		if(m_type_pointer == nullptr)
+		if(type_pointer() == nullptr)
 		{
 			throw std::runtime_error("Type " + std::string(typeid(SourceT).name()) + " has no finalizer");
 		}
-		return m_finalizer;
+		return finalizer_pointer();
 	}
 
 	static bool has_julia_type()
 	{
-		return m_type_pointer != nullptr;
+		return type_pointer() != nullptr;
 	}
 
 private:
-	static jl_datatype_t* m_type_pointer;
-	static jl_function_t* m_finalizer;
-};
+	static jl_datatype_t*& type_pointer()
+	{
+		static jl_datatype_t* m_type_pointer = nullptr;
+		return m_type_pointer;
+	}
 
-template<typename SourceT> jl_datatype_t* static_type_mapping<SourceT>::m_type_pointer = nullptr;
-template<typename SourceT> jl_function_t* static_type_mapping<SourceT>::m_finalizer = nullptr;
+	static jl_function_t*& finalizer_pointer()
+	{
+		static jl_function_t* m_finalizer = nullptr;
+		return m_finalizer;
+	}
+};
 
 /// Helper for Singleton types (Type{T} in Julia)
 template<typename T>
@@ -286,6 +299,16 @@ template<typename SourceT> using mapped_julia_type = typename static_type_mappin
 template<typename T> using mapped_reference_type = typename static_type_mapping<remove_const_ref<T>>::template remove_const_ref<T>;
 
 /// Specializations
+
+// Needed for Visual C++, static members are different in each DLL
+extern "C" CPP_WRAPPER_EXPORT jl_datatype_t* get_any_type(); // Implemented in c_interface.cpp
+template<> struct CPP_WRAPPER_EXPORT static_type_mapping<CppAny>
+{
+	typedef jl_value_t* type;
+	static jl_datatype_t* julia_type() { return get_any_type(); }
+	template<typename T> using remove_const_ref = T;
+};
+
 template<> struct static_type_mapping<void>
 {
 	typedef void type;

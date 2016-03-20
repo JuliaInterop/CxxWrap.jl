@@ -59,7 +59,7 @@ public:
     return *this;
   }
 
-  const PointedT* ptr() const
+  PointedT* ptr() const
   {
     return m_ptr;
   }
@@ -235,21 +235,27 @@ bool operator<(const array_iterator_base<L,L>& l, const array_iterator_base<R,R>
 }
 
 template<typename T>
-bool operator+(const array_iterator_base<T,T>& l, const std::ptrdiff_t n)
+array_iterator_base<T, T> operator+(const array_iterator_base<T,T>& l, const std::ptrdiff_t n)
 {
-  return l.ptr() + n;
+  return array_iterator_base<T, T>(l.ptr() + n);
 }
 
 template<typename T>
-bool operator+(const std::ptrdiff_t n, const array_iterator_base<T,T>& r)
+array_iterator_base<T, T> operator+(const std::ptrdiff_t n, const array_iterator_base<T,T>& r)
 {
-  return r.ptr() + n;
+  return array_iterator_base<T, T>(r.ptr() + n);
 }
 
 template<typename T>
-bool operator-(const array_iterator_base<T,T>& l, const std::ptrdiff_t n)
+array_iterator_base<T, T> operator-(const array_iterator_base<T,T>& l, const std::ptrdiff_t n)
 {
-  return l.ptr() - n;
+  return array_iterator_base<T, T>(l.ptr() - n);
+}
+
+template<typename T>
+std::ptrdiff_t operator-(const array_iterator_base<T,T>& l, const array_iterator_base<T,T>& r)
+{
+  return l.ptr() - r.ptr();
 }
 
 /// Julia Matrix parametric singleton type

@@ -13,12 +13,6 @@
 #include "array.hpp"
 #include "type_conversion.hpp"
 
-#ifdef _WIN32
-  #define  CPP_WRAPPER_EXPORT __declspec(dllexport)
-#else
- 	#define  CPP_WRAPPER_EXPORT
-#endif
-
 namespace cpp_wrapper
 {
 

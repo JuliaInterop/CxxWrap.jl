@@ -5,7 +5,7 @@
 #include <sstream>
 
 // C function for performance comparison
-extern "C" double half_c(const double d)
+extern "C" CPP_WRAPPER_EXPORT double half_c(const double d)
 {
   return 0.5*d;
 }
