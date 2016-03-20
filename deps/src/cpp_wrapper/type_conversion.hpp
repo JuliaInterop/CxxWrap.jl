@@ -324,6 +324,15 @@ template<> struct static_type_mapping<jl_value_t*>
 	template<typename T> using remove_const_ref = cpp_wrapper::remove_const_ref<T>;
 };
 
+#if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 5
+template<> struct static_type_mapping<jl_function_t*>
+{
+	typedef jl_function_t* type;
+	static jl_datatype_t* julia_type() { return jl_any_type; }
+	template<typename T> using remove_const_ref = cpp_wrapper::remove_const_ref<T>;
+};
+#endif
+
 // Helper for ObjectIdDict
 struct ObjectIdDict {};
 
@@ -596,6 +605,7 @@ struct ConvertToCpp<CppT, false, false, false>
 	}
 };
 
+
 // pass-through for jl_value_t*
 template<>
 struct ConvertToCpp<jl_value_t*, false, false, false>
@@ -605,6 +615,18 @@ struct ConvertToCpp<jl_value_t*, false, false, false>
 		return julia_value;
 	}
 };
+
+#if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 5
+// pass-through for jl_function_t*
+template<>
+struct ConvertToCpp<jl_function_t*, false, false, false>
+{
+	jl_function_t* operator()(jl_function_t* julia_value) const
+	{
+		return julia_value;
+	}
+};
+#endif
 
 // strings
 template<>
