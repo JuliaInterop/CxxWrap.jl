@@ -114,21 +114,50 @@ namespace detail
 	}
 }
 
-inline jl_value_t* box(const int i)
+template<typename CppT>
+inline jl_value_t* box(const CppT v)
+{
+	static_assert(sizeof(CppT) == 0, "Unimplemented box in cpp_wrapper");
+	return nullptr;
+}
+
+template<>
+inline jl_value_t* box(const bool b)
+{
+	return jl_box_bool(b);
+}
+
+template<>
+inline jl_value_t* box(const int32_t i)
 {
 	return jl_box_int32(i);
 }
 
-inline jl_value_t* box(const unsigned int i)
-{
-	return jl_box_uint32(i);
-}
-
+template<>
 inline jl_value_t* box(const int64_t i)
 {
 	return jl_box_int64(i);
 }
 
+template<>
+inline jl_value_t* box(const uint32_t i)
+{
+	return jl_box_uint32(i);
+}
+
+template<>
+inline jl_value_t* box(const uint64_t i)
+{
+	return jl_box_uint64(i);
+}
+
+template<>
+inline jl_value_t* box(const float x)
+{
+	return jl_box_float32(x);
+}
+
+template<>
 inline jl_value_t* box(const double x)
 {
 	return jl_box_float64(x);
@@ -139,6 +168,18 @@ template<typename CppT>
 inline CppT unbox(jl_value_t* v)
 {
 	static_assert(sizeof(CppT) == 0, "Unimplemented unbox in cpp_wrapper");
+}
+
+template<>
+inline bool unbox(jl_value_t* v)
+{
+	return jl_unbox_bool(v);
+}
+
+template<>
+inline float unbox(jl_value_t* v)
+{
+	return jl_unbox_float32(v);
 }
 
 template<>
@@ -157,6 +198,18 @@ template<>
 inline int64_t unbox(jl_value_t* v)
 {
 	return jl_unbox_int64(v);
+}
+
+template<>
+inline uint32_t unbox(jl_value_t* v)
+{
+	return jl_unbox_uint32(v);
+}
+
+template<>
+inline uint64_t unbox(jl_value_t* v)
+{
+	return jl_unbox_uint64(v);
 }
 
 /// Static mapping base template
