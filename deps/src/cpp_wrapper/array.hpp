@@ -213,25 +213,25 @@ bool operator==(const array_iterator_base<L,L>& l, const array_iterator_base<R,R
 template<typename L, typename R>
 bool operator<=(const array_iterator_base<L,L>& l, const array_iterator_base<R,R>& r)
 {
-  return r.ptr() <= l.ptr();
+  return l.ptr() <= r.ptr();
 }
 
 template<typename L, typename R>
 bool operator>=(const array_iterator_base<L,L>& l, const array_iterator_base<R,R>& r)
 {
-  return r.ptr() >= l.ptr();
+  return l.ptr() >= r.ptr();
 }
 
 template<typename L, typename R>
 bool operator>(const array_iterator_base<L,L>& l, const array_iterator_base<R,R>& r)
 {
-  return r.ptr() > l.ptr();
+  return l.ptr() > r.ptr();
 }
 
 template<typename L, typename R>
 bool operator<(const array_iterator_base<L,L>& l, const array_iterator_base<R,R>& r)
 {
-  return r.ptr() < l.ptr();
+  return l.ptr() < r.ptr();
 }
 
 template<typename T>

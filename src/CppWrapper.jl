@@ -73,7 +73,7 @@ function build_function_expression(func::CppFunctionInfo)
   # Thunk
   thunk = func.thunk_pointer
 
-  map_arg_type(t::DataType) = (t <: CppAny && !isbits(t)) ? Any : t
+  map_arg_type(t::DataType) = (t <: CppAny) ? Any : t
 
   # Build the types for the ccall argument list
   c_arg_types = [map_arg_type(t) for t in argtypes]

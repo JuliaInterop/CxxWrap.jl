@@ -90,31 +90,42 @@ struct NeedConvertHelper<>
 
 } // end namespace detail
 
-/// Create a new julia object wrapping the C++ type
+template<bool, typename T, typename... ArgsT>
+struct CreateChooser
+{};
+
+// Normal types
 template<typename T, typename... ArgsT>
-typename std::enable_if<!IsImmutable<T>::value, jl_value_t*>::type create(ArgsT... args)
+struct CreateChooser<false, T, ArgsT...>
 {
-	jl_datatype_t* dt = static_type_mapping<T>::julia_type();
-	assert(!jl_isbits(dt));
+	static jl_value_t* create(SingletonType<T>, ArgsT... args)
+	{
+		jl_datatype_t* dt = static_type_mapping<T>::julia_type();
+		assert(!jl_isbits(dt));
 
-	T* cpp_obj = new T(args...);
+		T* cpp_obj = new T(args...);
 
-	jl_value_t* result = convert_to_julia(cpp_obj);
-	JL_GC_PUSH1(&result);
-	jl_gc_add_finalizer(result, static_type_mapping<T>::finalizer());
-	JL_GC_POP();
+		jl_value_t* result = convert_to_julia(cpp_obj);
+		JL_GC_PUSH1(&result);
+		jl_gc_add_finalizer(result, static_type_mapping<T>::finalizer());
+		JL_GC_POP();
 
-  assert(convert_to_cpp<T*>(result) == cpp_obj);
-	return result;
-}
+		assert(convert_to_cpp<T*>(result) == cpp_obj);
+		return result;
+	}
+};
 
+// Immutable-as-bits types
 template<typename T, typename... ArgsT>
-typename std::enable_if<IsImmutable<T>::value, T>::type create(ArgsT... args)
+struct CreateChooser<true, T, ArgsT...>
 {
-	jl_datatype_t* dt = static_type_mapping<T>::julia_type();
-	assert(jl_isbits(dt));
-	return T(args...);
-}
+	static jl_value_t* create(SingletonType<T>, ArgsT... args)
+	{
+		assert(jl_isbits(static_type_mapping<T>::julia_type()));
+		T result(args...);
+		return convert_to_julia(result);
+	}
+};
 
 // The CppWrapper Julia module
 extern jl_module_t* g_cpp_wrapper_module;
@@ -165,7 +176,7 @@ public:
 
 	virtual void* pointer()
 	{
-		return reinterpret_cast<void*>(&detail::call_functor<R, Args...>);
+		return reinterpret_cast<void*>(detail::call_functor<R, Args...>);
 	}
 
 	virtual void* thunk()
@@ -374,7 +385,7 @@ private:
 	{
 		method("deepcopy_internal", [this](const T& other, ObjectIdDict)
 		{
-			return create<T>(other);
+			return CreateChooser<IsImmutable<T>::value, T, const T&>::create(SingletonType<T>(), other);
 		});
 	}
 
@@ -507,7 +518,7 @@ public:
 	template<typename... ArgsT>
 	TypeWrapper<T>& constructor()
 	{
-		m_module.method("call", [](SingletonType<T>, ArgsT... args) { return create<T>(args...); });
+		m_module.method("call", CreateChooser<IsImmutable<T>::value, T, ArgsT...>::create);
 		return *this;
 	}
 

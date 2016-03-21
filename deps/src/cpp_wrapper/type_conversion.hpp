@@ -222,7 +222,7 @@ inline uint64_t unbox(jl_value_t* v)
 /// Static mapping base template
 template<typename SourceT> struct CPP_WRAPPER_EXPORT static_type_mapping
 {
-	typedef typename detail::DispatchBits<IsImmutable<SourceT>::value, SourceT, jl_value_t*>::type type;
+	typedef jl_value_t* type;
 
 	template<typename T> using remove_const_ref = typename detail::DispatchBits<IsImmutable<cpp_wrapper::remove_const_ref<T>>::value || IsBits<cpp_wrapper::remove_const_ref<T>>::value, cpp_wrapper::remove_const_ref<T>, T>::type;
 	static jl_datatype_t* julia_type()
@@ -445,9 +445,10 @@ struct ConvertToJulia<T, true, false, false>
 template<typename T>
 struct ConvertToJulia<T, false, true, false>
 {
-	T operator()(const T& cpp_val) const
+	template<typename T2>
+	jl_value_t* operator()(T2&& cpp_val) const
 	{
-		return cpp_val;
+		return jl_new_bits((jl_value_t*)static_type_mapping<T>::julia_type(), &cpp_val);
 	}
 };
 
@@ -462,7 +463,7 @@ struct ConvertToJulia<T, false, false, true>
 	}
 };
 
-// Pointer to wraped type
+// Pointer to wrapped type
 template<typename T>
 struct ConvertToJulia<T*, false, false, false>
 {
@@ -562,10 +563,9 @@ struct ConvertToCpp<CppT, true, false, false>
 template<typename CppT>
 struct ConvertToCpp<CppT, false, true, false>
 {
-	template<typename JuliaT>
-	CppT operator()(JuliaT&& julia_val) const
+	CppT operator()(jl_value_t* julia_value) const
 	{
-		return julia_val;
+		return *reinterpret_cast<CppT*>(jl_data_ptr(julia_value));
 	}
 };
 
