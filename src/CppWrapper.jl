@@ -1,7 +1,6 @@
-module CppWrapper
+isdefined(Base, :__precompile__) && __precompile__()
 
-using BinDeps
-@BinDeps.load_dependencies
+module CppWrapper
 
 # Convert path if it contains lib prefix on windows
 function lib_path(so_path::AbstractString)
@@ -15,7 +14,7 @@ function lib_path(so_path::AbstractString)
   return path_copy
 end
 
-const cpp_wrapper_lib = Libdl.dlopen(lib_path(joinpath(Pkg.dir("CppWrapper"),"deps","usr","lib","libcpp_wrapper")), Libdl.RTLD_GLOBAL)
+const cpp_wrapper_path = lib_path(joinpath(Pkg.dir("CppWrapper"),"deps","usr","lib","libcpp_wrapper"))
 
 # Base type for wrapped C++ types
 abstract CppAny
@@ -30,31 +29,31 @@ type CppFunctionInfo
 end
 
 function __init__()
-  ccall(Libdl.dlsym(cpp_wrapper_lib, "initialize"), Void, (Any, Any, Any), CppWrapper, CppAny, CppFunctionInfo)
+  ccall((:initialize, cpp_wrapper_path), Void, (Any, Any, Any), CppWrapper, CppAny, CppFunctionInfo)
 end
 
 # Load the modules in the shared library located at the given path
 function load_modules(path::AbstractString)
   module_lib = Libdl.dlopen(path, Libdl.RTLD_GLOBAL)
-  registry = ccall(Libdl.dlsym(cpp_wrapper_lib, "create_registry"), Ptr{Void}, ())
+  registry = ccall((:create_registry, cpp_wrapper_path), Ptr{Void}, ())
   ccall(Libdl.dlsym(module_lib, "register_julia_modules"), Void, (Ptr{Void},), registry)
   return registry
 end
 
 function get_module_names(registry::Ptr{Void})
-  ccall(Libdl.dlsym(cpp_wrapper_lib, "get_module_names"), Array{AbstractString}, (Ptr{Void},), registry)
+  ccall((:get_module_names, cpp_wrapper_path), Array{AbstractString}, (Ptr{Void},), registry)
 end
 
 function get_module_functions(registry::Ptr{Void})
-  ccall(Libdl.dlsym(cpp_wrapper_lib, "get_module_functions"), Array{CppFunctionInfo}, (Ptr{Void},), registry)
+  ccall((:get_module_functions, cpp_wrapper_path), Array{CppFunctionInfo}, (Ptr{Void},), registry)
 end
 
 function bind_types(registry::Ptr{Void}, m::Module)
-  ccall(Libdl.dlsym(cpp_wrapper_lib, "bind_module_types"), Void, (Ptr{Void},Any), registry, m)
+  ccall((:bind_module_types, cpp_wrapper_path), Void, (Ptr{Void},Any), registry, m)
 end
 
 function exported_symbols(registry::Ptr{Void}, modname::AbstractString)
-  ccall(Libdl.dlsym(cpp_wrapper_lib, "get_exported_symbols"), Array{AbstractString}, (Ptr{Void},AbstractString), registry, modname)
+  ccall((:get_exported_symbols, cpp_wrapper_path), Array{AbstractString}, (Ptr{Void},AbstractString), registry, modname)
 end
 
 # Build the expression to wrap the given function
