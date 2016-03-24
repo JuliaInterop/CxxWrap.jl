@@ -90,20 +90,21 @@ struct NeedConvertHelper<>
 
 } // end namespace detail
 
-template<bool, typename T, typename... ArgsT>
+template<bool>
 struct CreateChooser
 {};
 
 // Normal types
-template<typename T, typename... ArgsT>
-struct CreateChooser<false, T, ArgsT...>
+template<>
+struct CreateChooser<false>
 {
-	static jl_value_t* create(SingletonType<T>, ArgsT... args)
+	template<typename T, typename... ArgsT>
+	static jl_value_t* create(SingletonType<T>, ArgsT&&... args)
 	{
 		jl_datatype_t* dt = static_type_mapping<T>::julia_type();
 		assert(!jl_isbits(dt));
 
-		T* cpp_obj = new T(args...);
+		T* cpp_obj = new T(std::forward<ArgsT>(args)...);
 
 		jl_value_t* result = convert_to_julia(cpp_obj);
 		JL_GC_PUSH1(&result);
@@ -116,16 +117,24 @@ struct CreateChooser<false, T, ArgsT...>
 };
 
 // Immutable-as-bits types
-template<typename T, typename... ArgsT>
-struct CreateChooser<true, T, ArgsT...>
+template<>
+struct CreateChooser<true>
 {
-	static jl_value_t* create(SingletonType<T>, ArgsT... args)
+	template<typename T, typename... ArgsT>
+	static jl_value_t* create(SingletonType<T>, ArgsT&&... args)
 	{
 		assert(jl_isbits(static_type_mapping<T>::julia_type()));
-		T result(args...);
+		T result(std::forward<ArgsT>(args)...);
 		return convert_to_julia(result);
 	}
 };
+
+/// Convenience function to create an object with a finalizer attached
+template<typename T, typename... ArgsT>
+jl_value_t* create(ArgsT&&... args)
+{
+	return CreateChooser<IsImmutable<T>::value>::create(SingletonType<T>(), std::forward<ArgsT>(args)...);
+}
 
 // The CppWrapper Julia module
 extern jl_module_t* g_cpp_wrapper_module;
@@ -385,7 +394,7 @@ private:
 	{
 		method("deepcopy_internal", [this](const T& other, ObjectIdDict)
 		{
-			return CreateChooser<IsImmutable<T>::value, T, const T&>::create(SingletonType<T>(), other);
+			return CreateChooser<IsImmutable<T>::value>::create(SingletonType<T>(), other);
 		});
 	}
 
@@ -518,7 +527,7 @@ public:
 	template<typename... ArgsT>
 	TypeWrapper<T>& constructor()
 	{
-		m_module.method("call", CreateChooser<IsImmutable<T>::value, T, ArgsT...>::create);
+		m_module.method("call", [](SingletonType<T>, ArgsT... args) { return create<T>(args...); });
 		return *this;
 	}
 
