@@ -2,11 +2,11 @@
 
 println("Running hello.jl...")
 
-using CppWrapper
+using CxxWrap
 using Base.Test
 
 # Wrap the functions defined in C++
-wrap_modules(joinpath(Pkg.dir("CppWrapper"),"deps","usr","lib","libhello"))
+wrap_modules(joinpath(Pkg.dir("CxxWrap"),"deps","usr","lib","libhello"))
 
 # Output:
 @show CppHello.greet()

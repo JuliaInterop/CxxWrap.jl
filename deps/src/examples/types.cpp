@@ -1,6 +1,6 @@
 #include <string>
 
-#include <cpp_wrapper.hpp>
+#include <cxx_wrap.hpp>
 
 namespace cpp_types
 {
@@ -63,7 +63,7 @@ struct BitsClass
 
 } // namespace cpp_types
 
-namespace cpp_wrapper
+namespace cxx_wrap
 {
   template<> struct IsImmutable<cpp_types::ImmutableInt64> : std::true_type {};
   template<> struct IsBits<cpp_types::BitsClass> : std::true_type {};
@@ -72,7 +72,7 @@ namespace cpp_wrapper
 JULIA_CPP_MODULE_BEGIN(registry)
   using namespace cpp_types;
 
-  cpp_wrapper::Module& types = registry.create_module("CppTypes");
+  cxx_wrap::Module& types = registry.create_module("CppTypes");
 
   types.add_type<DoubleData>("DoubleData");
 
@@ -88,10 +88,10 @@ JULIA_CPP_MODULE_BEGIN(registry)
   types.add_type<NonCopyable>("NonCopyable");
 
   // ImmutableInt64
-  types.add_immutable<ImmutableInt64>("ImmutableInt64", cpp_wrapper::FieldList<int64_t>("value"))
+  types.add_immutable<ImmutableInt64>("ImmutableInt64", cxx_wrap::FieldList<int64_t>("value"))
     .constructor<int64_t>()
     .method("getvalue", &ImmutableInt64::get_value);
-  types.method("convert", [](cpp_wrapper::SingletonType<int64_t>, const ImmutableInt64& a) { return a.get_value(); });
+  types.method("convert", [](cxx_wrap::SingletonType<int64_t>, const ImmutableInt64& a) { return a.get_value(); });
   types.method("+", [](const ImmutableInt64& a, const ImmutableInt64& b) { return ImmutableInt64(a.get_value() + b.get_value()); });
   types.method("==", [](const ImmutableInt64& a, const int64_t b) { return a.get_value() == b; } );
   types.method("==", [](const int64_t b, const ImmutableInt64& a) { return a.get_value() == b; } );

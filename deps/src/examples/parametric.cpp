@@ -1,6 +1,6 @@
 #include <string>
 
-#include <cpp_wrapper.hpp>
+#include <cxx_wrap.hpp>
 
 namespace parametric
 {
@@ -79,7 +79,7 @@ struct WrapNonTypeParam
 
 } // namespace parametric
 
-namespace cpp_wrapper
+namespace cxx_wrap
 {
   // Match type followed by non-type of the same type
   template<typename NonTT, NonTT Val, template<typename, NonTT> class T>
@@ -87,10 +87,10 @@ namespace cpp_wrapper
   {
     typedef ParameterList<NonTT, std::integral_constant<NonTT, Val>> type;
   };
-} // namespace cpp_wrapper
+} // namespace cxx_wrap
 
 JULIA_CPP_MODULE_BEGIN(registry)
-  using namespace cpp_wrapper;
+  using namespace cxx_wrap;
   using namespace parametric;
   Module& types = registry.create_module("ParametricTypes");
 
@@ -101,6 +101,6 @@ JULIA_CPP_MODULE_BEGIN(registry)
     .apply<TemplateType<P1,P2>, TemplateType<P2,P1>>(WrapTemplateType());
 
 
-  types.add_type<Parametric<cpp_wrapper::TypeVar<1>, cpp_wrapper::TypeVar<2>>>("NonTypeParam")
+  types.add_type<Parametric<cxx_wrap::TypeVar<1>, cxx_wrap::TypeVar<2>>>("NonTypeParam")
     .apply<NonTypeParam<int, 1>, NonTypeParam<unsigned int, 2>, NonTypeParam<int64_t, 64>>(WrapNonTypeParam());
 JULIA_CPP_MODULE_END

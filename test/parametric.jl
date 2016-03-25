@@ -2,11 +2,11 @@
 
 println("Running parametric.jl...")
 
-using CppWrapper
+using CxxWrap
 using Base.Test
 
 # Wrap the functions defined in C++
-wrap_modules(joinpath(Pkg.dir("CppWrapper"),"deps","usr","lib","libparametric"))
+wrap_modules(joinpath(Pkg.dir("CxxWrap"),"deps","usr","lib","libparametric"))
 
 import ParametricTypes.TemplateType, ParametricTypes.NonTypeParam
 

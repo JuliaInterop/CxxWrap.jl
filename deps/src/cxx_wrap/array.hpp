@@ -5,7 +5,7 @@
 
 #include "type_conversion.hpp"
 
-namespace cpp_wrapper
+namespace cxx_wrap
 {
 
 template<typename PointedT, typename CppT>
@@ -168,7 +168,7 @@ template<typename T, int Dim> struct static_type_mapping<ArrayRef<T, Dim>>
 {
   typedef jl_array_t* type;
   static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_array_type(static_type_mapping<T>::julia_type(), Dim); }
-  template<typename T2> using remove_const_ref = cpp_wrapper::remove_const_ref<T2>;
+  template<typename T2> using remove_const_ref = cxx_wrap::remove_const_ref<T2>;
 };
 
 template<typename ValueT, int Dim> ArrayRef<ValueT, Dim>::ArrayRef(ValueT* c_ptr, const int rows, const int cols)
@@ -270,7 +270,7 @@ template<> struct static_type_mapping<JuliaMatrix>
     return (jl_datatype_t*)jl_apply_type((jl_value_t*)jl_type_type,
                                               jl_svec1(jl_apply_type((jl_value_t*)jl_array_type, jl_svec2(this_tvar, jl_box_long(2)))));
   }
-	template<typename T> using remove_const_ref = cpp_wrapper::remove_const_ref<T>;
+	template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 template<>

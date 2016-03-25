@@ -1,5 +1,5 @@
-#ifndef CPP_WRAPPER_HPP
-#define CPP_WRAPPER_HPP
+#ifndef CXX_WRAP_HPP
+#define CXX_WRAP_HPP
 
 #include <cassert>
 #include <functional>
@@ -13,7 +13,7 @@
 #include "array.hpp"
 #include "type_conversion.hpp"
 
-namespace cpp_wrapper
+namespace cxx_wrap
 {
 
 /// Some helper functions
@@ -136,8 +136,8 @@ jl_value_t* create(ArgsT&&... args)
 	return CreateChooser<IsImmutable<T>::value>::create(SingletonType<T>(), std::forward<ArgsT>(args)...);
 }
 
-// The CppWrapper Julia module
-extern jl_module_t* g_cpp_wrapper_module;
+// The CxxWrap Julia module
+extern jl_module_t* g_cxx_wrap_module;
 extern jl_datatype_t* g_cppfunctioninfo_type;
 
 /// Abstract base class for storing any function
@@ -286,7 +286,7 @@ template<typename T>
 class TypeWrapper;
 
 /// Store all exposed C++ functions associated with a module
-class CPP_WRAPPER_EXPORT Module
+class CXX_WRAP_EXPORT Module
 {
 public:
 
@@ -566,7 +566,7 @@ private:
 	template<typename AppliedT, typename FunctorT>
 	int apply_internal(FunctorT&& apply_ftor)
 	{
-		static_assert(parameter_list<AppliedT>::nb_parameters != 0, "No parameters found when applying type. Specialize cpp_wrapper::BuildParameterList for your combination of type and non-type parameters.");
+		static_assert(parameter_list<AppliedT>::nb_parameters != 0, "No parameters found when applying type. Specialize cxx_wrap::BuildParameterList for your combination of type and non-type parameters.");
 		static_assert(parameter_list<AppliedT>::nb_parameters == parameter_list<T>::nb_parameters, "Parametric type applied to wrong number of parameters.");
 		jl_datatype_t* app_dt = (jl_datatype_t*)jl_apply_type((jl_value_t*)m_dt, parameter_list<AppliedT>()());
 
@@ -673,7 +673,7 @@ TypeWrapper<T> Module::add_bits(const std::string& name, jl_datatype_t* super)
 }
 
 /// Registry containing different modules
-class CPP_WRAPPER_EXPORT ModuleRegistry
+class CXX_WRAP_EXPORT ModuleRegistry
 {
 public:
 	/// Create a module and register it
@@ -705,12 +705,12 @@ private:
 };
 
 
-} // namespace cpp_wrapper
+} // namespace cxx_wrap
 
 /// Register a new module
 #define JULIA_CPP_MODULE_BEGIN(registry) \
-extern "C" CPP_WRAPPER_EXPORT void register_julia_modules(void* void_reg) { \
-	cpp_wrapper::ModuleRegistry& registry = *reinterpret_cast<cpp_wrapper::ModuleRegistry*>(void_reg);
+extern "C" CXX_WRAP_EXPORT void register_julia_modules(void* void_reg) { \
+	cxx_wrap::ModuleRegistry& registry = *reinterpret_cast<cxx_wrap::ModuleRegistry*>(void_reg);
 
 #define JULIA_CPP_MODULE_END }
 

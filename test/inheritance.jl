@@ -2,11 +2,11 @@
 
 println("Running inheritace.jl...")
 
-using CppWrapper
+using CxxWrap
 using Base.Test
 
 # Wrap the functions defined in C++
-wrap_modules(joinpath(Pkg.dir("CppWrapper"),"deps","usr","lib","libinheritance"))
+wrap_modules(joinpath(Pkg.dir("CxxWrap"),"deps","usr","lib","libinheritance"))
 
 using CppInheritance.A, CppInheritance.B
 

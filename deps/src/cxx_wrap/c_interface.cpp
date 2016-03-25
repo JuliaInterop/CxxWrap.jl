@@ -1,34 +1,34 @@
 #include "array.hpp"
-#include "cpp_wrapper.hpp"
+#include "cxx_wrap.hpp"
 
 extern "C"
 {
 
-using namespace cpp_wrapper;
+using namespace cxx_wrap;
 
 jl_datatype_t* g_any_type = nullptr;
 
 /// Initialize the module
-CPP_WRAPPER_EXPORT void initialize(jl_value_t* julia_module, jl_value_t* cpp_any_type, jl_value_t* cppfunctioninfo_type)
+CXX_WRAP_EXPORT void initialize(jl_value_t* julia_module, jl_value_t* cpp_any_type, jl_value_t* cppfunctioninfo_type)
 {
-	g_cpp_wrapper_module = (jl_module_t*)julia_module;
+	g_cxx_wrap_module = (jl_module_t*)julia_module;
 	g_any_type = (jl_datatype_t*)cpp_any_type;
 	g_cppfunctioninfo_type = (jl_datatype_t*)cppfunctioninfo_type;
 }
 
-CPP_WRAPPER_EXPORT jl_datatype_t* get_any_type()
+CXX_WRAP_EXPORT jl_datatype_t* get_any_type()
 {
 	return g_any_type;
 }
 
 /// Create a new registry
-CPP_WRAPPER_EXPORT void* create_registry()
+CXX_WRAP_EXPORT void* create_registry()
 {
 	return static_cast<void*>(new ModuleRegistry());
 }
 
 /// Get the names of all modules in the registry
-CPP_WRAPPER_EXPORT jl_array_t* get_module_names(void* void_registry)
+CXX_WRAP_EXPORT jl_array_t* get_module_names(void* void_registry)
 {
 	assert(void_registry != nullptr);
 	const ModuleRegistry& registry = *reinterpret_cast<ModuleRegistry*>(void_registry);
@@ -43,7 +43,7 @@ CPP_WRAPPER_EXPORT jl_array_t* get_module_names(void* void_registry)
 }
 
 /// Bind jl_datatype_t structures to corresponding Julia symbols in the given module
-CPP_WRAPPER_EXPORT void bind_module_types(void* void_registry, jl_value_t* module_any)
+CXX_WRAP_EXPORT void bind_module_types(void* void_registry, jl_value_t* module_any)
 {
 	assert(void_registry != nullptr);
 	ModuleRegistry& registry = *reinterpret_cast<ModuleRegistry*>(void_registry);
@@ -53,7 +53,7 @@ CPP_WRAPPER_EXPORT void bind_module_types(void* void_registry, jl_value_t* modul
 }
 
 /// Get the functions defined in the modules. Any classes used by these functions must be defined on the Julia side first
-CPP_WRAPPER_EXPORT jl_array_t* get_module_functions(void* void_registry)
+CXX_WRAP_EXPORT jl_array_t* get_module_functions(void* void_registry)
 {
 	assert(void_registry != nullptr);
 	const ModuleRegistry& registry = *reinterpret_cast<ModuleRegistry*>(void_registry);
@@ -94,7 +94,7 @@ CPP_WRAPPER_EXPORT jl_array_t* get_module_functions(void* void_registry)
 	return module_array.wrapped();
 }
 
-CPP_WRAPPER_EXPORT jl_array_t* get_exported_symbols(void* void_registry, jl_value_t* mod_name)
+CXX_WRAP_EXPORT jl_array_t* get_exported_symbols(void* void_registry, jl_value_t* mod_name)
 {
 	assert(void_registry != nullptr);
 	ModuleRegistry& registry = *reinterpret_cast<ModuleRegistry*>(void_registry);

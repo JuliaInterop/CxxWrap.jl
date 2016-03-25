@@ -1,6 +1,6 @@
 isdefined(Base, :__precompile__) && __precompile__()
 
-module CppWrapper
+module CxxWrap
 
 # Convert path if it contains lib prefix on windows
 function lib_path(so_path::AbstractString)
@@ -14,7 +14,7 @@ function lib_path(so_path::AbstractString)
   return path_copy
 end
 
-const cpp_wrapper_path = lib_path(joinpath(Pkg.dir("CppWrapper"),"deps","usr","lib","libcpp_wrapper"))
+const cxx_wrap_path = lib_path(joinpath(Pkg.dir("CxxWrap"),"deps","usr","lib","libcxx_wrap"))
 
 # Base type for wrapped C++ types
 abstract CppAny
@@ -29,31 +29,31 @@ type CppFunctionInfo
 end
 
 function __init__()
-  ccall((:initialize, cpp_wrapper_path), Void, (Any, Any, Any), CppWrapper, CppAny, CppFunctionInfo)
+  ccall((:initialize, cxx_wrap_path), Void, (Any, Any, Any), CxxWrap, CppAny, CppFunctionInfo)
 end
 
 # Load the modules in the shared library located at the given path
 function load_modules(path::AbstractString)
   module_lib = Libdl.dlopen(path, Libdl.RTLD_GLOBAL)
-  registry = ccall((:create_registry, cpp_wrapper_path), Ptr{Void}, ())
+  registry = ccall((:create_registry, cxx_wrap_path), Ptr{Void}, ())
   ccall(Libdl.dlsym(module_lib, "register_julia_modules"), Void, (Ptr{Void},), registry)
   return registry
 end
 
 function get_module_names(registry::Ptr{Void})
-  ccall((:get_module_names, cpp_wrapper_path), Array{AbstractString}, (Ptr{Void},), registry)
+  ccall((:get_module_names, cxx_wrap_path), Array{AbstractString}, (Ptr{Void},), registry)
 end
 
 function get_module_functions(registry::Ptr{Void})
-  ccall((:get_module_functions, cpp_wrapper_path), Array{CppFunctionInfo}, (Ptr{Void},), registry)
+  ccall((:get_module_functions, cxx_wrap_path), Array{CppFunctionInfo}, (Ptr{Void},), registry)
 end
 
 function bind_types(registry::Ptr{Void}, m::Module)
-  ccall((:bind_module_types, cpp_wrapper_path), Void, (Ptr{Void},Any), registry, m)
+  ccall((:bind_module_types, cxx_wrap_path), Void, (Ptr{Void},Any), registry, m)
 end
 
 function exported_symbols(registry::Ptr{Void}, modname::AbstractString)
-  ccall((:get_exported_symbols, cpp_wrapper_path), Array{AbstractString}, (Ptr{Void},AbstractString), registry, modname)
+  ccall((:get_exported_symbols, cxx_wrap_path), Array{AbstractString}, (Ptr{Void},AbstractString), registry, modname)
 end
 
 # Build the expression to wrap the given function
@@ -175,7 +175,7 @@ end
 
 # Wrap modules in the given path
 function wrap_modules(so_path::AbstractString, parent_mod=Main)
-  registry = CppWrapper.load_modules(lib_path(so_path))
+  registry = CxxWrap.load_modules(lib_path(so_path))
   wrap_modules(registry, parent_mod)
 end
 

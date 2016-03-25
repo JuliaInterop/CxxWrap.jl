@@ -1,6 +1,6 @@
 #include <string>
 
-#include <cpp_wrapper.hpp>
+#include <cxx_wrap.hpp>
 
 struct A
 {
@@ -33,7 +33,7 @@ struct BWrapper
 };
 
 JULIA_CPP_MODULE_BEGIN(registry)
-  cpp_wrapper::Module& types = registry.create_module("CppInheritance");
+  cxx_wrap::Module& types = registry.create_module("CppInheritance");
   types.add_abstract<A>("A").method("message", &A::message);
-  types.add_type<B>("B", cpp_wrapper::julia_type<A>());
+  types.add_type<B>("B", cxx_wrap::julia_type<A>());
 JULIA_CPP_MODULE_END

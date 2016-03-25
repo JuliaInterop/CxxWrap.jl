@@ -1,4 +1,4 @@
-# CppWrapper
+# CxxWrap
 
 This package aims to provide a Boost.Python-like wrapping for C++ types and functions to Julia. The idea is to write the code for the Julia wrapper in C++, and then use a one-liner on the Julia side to make the wrapped C++ library available there.
 
@@ -7,9 +7,9 @@ The mechanism behind this package is that functions and types are registered in 
 ## What's the difference with Cxx.jl?
 With Cxx.jl it is possible to directly access C++ using the `@cxx` macro from Julia. So when facing the task of wrapping a C++ library in a Julia package, authors now have 2 options:
 * Use Cxx.jl to write the wrapper package in Julia code (much like one uses `ccall` for wrapping a C library)
-* Use CppWrapper to write the wrapper completely in C++ (and one line of Julia code to load the .so)
+* Use CxxWrap to write the wrapper completely in C++ (and one line of Julia code to load the .so)
 
-Boost.Python also uses the latter (C++-only) approach, so translating existing Python bindings based on Boost.Python may be easier using CppWrapper.
+Boost.Python also uses the latter (C++-only) approach, so translating existing Python bindings based on Boost.Python may be easier using CxxWrap.
 
 ## Features
 * Support for C++ functions, member functions and lambdas
@@ -22,8 +22,8 @@ Boost.Python also uses the latter (C++-only) approach, so translating existing P
 ## Installation
 Just like any unregistered package:
 ```julia
-Pkg.clone("https://github.com/barche/CppWrapper.git")
-Pkg.build("CppWrapper")
+Pkg.clone("https://github.com/barche/CxxWrap.jl.git")
+Pkg.build("CxxWrap")
 ```
 
 ## Boost Python Hello World example
@@ -34,12 +34,12 @@ std::string greet()
    return "hello, world";
 }
 ```
-Using the C++ side of `CppWrapper`, this can be exposed as follows:
+Using the C++ side of `CxxWrap`, this can be exposed as follows:
 ```c++
-#include <cpp_wrapper.hpp>
+#include <cxx_wrap.hpp>
 
 JULIA_CPP_MODULE_BEGIN(registry)
-  cpp_wrapper::Module& hello = registry.create_module("CppHello");
+  cxx_wrap::Module& hello = registry.create_module("CppHello");
   hello.method("greet", &greet);
 JULIA_CPP_MODULE_END
 ```
@@ -47,7 +47,7 @@ JULIA_CPP_MODULE_END
 Once this code is compiled into a shared library (say `libhello.so`) it can be used in Julia as follows:
 
 ```julia
-using CppWrapper
+using CxxWrap
 
 # Load the module and generate the functions
 wrap_modules(joinpath("path/to/built/lib","libhello"))
@@ -144,14 +144,14 @@ Full example and test including non-type parameters at: [`deps/src/examples/para
 
 
 ## Linking with the C++ library
-The library (in [`deps/src/cpp_wrapper`](deps/src/cpp_wrapper)) is built using CMake, so it can be found from another CMake project using the following line in a `CMakeLists.txt`:
+The library (in [`deps/src/cxx_wrap`](deps/src/cxx_wrap)) is built using CMake, so it can be found from another CMake project using the following line in a `CMakeLists.txt`:
 
 ```cmake
-find_package(CppWrapper)
+find_package(CxxWrap)
 ```
-The CMake variable `CppWrapper_DIR` should be set to the directory containing the `CppWrapperConfig.cmake`, typically `~/.julia/<Julia version>/CppWrapper/deps/usr/lib/cmake`. One can then link using:
+The CMake variable `CxxWrap_DIR` should be set to the directory containing the `CxxWrapConfig.cmake`, typically `~/.julia/<Julia version>/CxxWrap/deps/usr/lib/cmake`. One can then link using:
 ```cmake
-target_link_libraries(your_own_lib CppWrapper::cpp_wrapper)
+target_link_libraries(your_own_lib CxxWrap::cxx_wrap)
 ```
 
 A complete `CMakeLists.txt` is at [`deps/src/examples/CMakeLists.txt`](deps/src/examples/CMakeLists.txt).

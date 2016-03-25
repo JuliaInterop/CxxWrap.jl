@@ -21,11 +21,11 @@ function find_julia_lib(lib_suffix::AbstractString, julia_base_dir::AbstractStri
 end
 
 # The base library, needed to wrap functions
-cpp_wrapper = library_dependency("cpp_wrapper", aliases=["libcpp_wrapper"])
+cxx_wrap = library_dependency("cxx_wrap", aliases=["libcxx_wrap"])
 
-prefix=joinpath(BinDeps.depsdir(cpp_wrapper),"usr")
-cpp_wrapper_srcdir = joinpath(BinDeps.depsdir(cpp_wrapper),"src","cpp_wrapper")
-cpp_wrapper_builddir = joinpath(BinDeps.depsdir(cpp_wrapper),"builds","cpp_wrapper")
+prefix=joinpath(BinDeps.depsdir(cxx_wrap),"usr")
+cxx_wrap_srcdir = joinpath(BinDeps.depsdir(cxx_wrap),"src","cxx_wrap")
+cxx_wrap_builddir = joinpath(BinDeps.depsdir(cxx_wrap),"builds","cxx_wrap")
 lib_prefix = @windows ? "" : "lib"
 lib_suffix = @windows ? "dll" : (@osx? "dylib" : "so")
 julia_base_dir = splitdir(JULIA_HOME)[1]
@@ -62,15 +62,15 @@ end
 
 provides(BuildProcess,
 	(@build_steps begin
-		CreateDirectory(cpp_wrapper_builddir)
+		CreateDirectory(cxx_wrap_builddir)
 		@build_steps begin
-			ChangeDirectory(cpp_wrapper_builddir)
-			FileRule(joinpath(prefix,"lib", "$(lib_prefix)cpp_wrapper.$lib_suffix"),@build_steps begin
-				`cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="Release"  -DJULIA_INCLUDE_DIRECTORY="$julia_include_dir" -DJULIA_LIBRARY="$julia_lib" $cpp_wrapper_srcdir`
+			ChangeDirectory(cxx_wrap_builddir)
+			FileRule(joinpath(prefix,"lib", "$(lib_prefix)cxx_wrap.$lib_suffix"),@build_steps begin
+				`cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="Release"  -DJULIA_INCLUDE_DIRECTORY="$julia_include_dir" -DJULIA_LIBRARY="$julia_lib" $cxx_wrap_srcdir`
 				`cmake --build . --config Release --target install`
 			end)
 		end
-	end),cpp_wrapper)
+	end),cxx_wrap)
 
 # Functions library for testing
 examples = library_dependency("functions", aliases=["libfunctions"])

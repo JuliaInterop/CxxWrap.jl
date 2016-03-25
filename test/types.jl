@@ -2,11 +2,11 @@
 
 println("Running types.jl...")
 
-using CppWrapper
+using CxxWrap
 using Base.Test
 
 # Wrap the functions defined in C++
-wrap_modules(joinpath(Pkg.dir("CppWrapper"),"deps","usr","lib","libtypes"))
+wrap_modules(joinpath(Pkg.dir("CxxWrap"),"deps","usr","lib","libtypes"))
 
 using CppTypes
 using CppTypes.World
@@ -17,8 +17,8 @@ for i in 1:1000000
 end
 
 # Default constructor
-@test World <: CppWrapper.CppAny
-@test super(World) == CppWrapper.CppAny
+@test World <: CxxWrap.CppAny
+@test super(World) == CxxWrap.CppAny
 w = World()
 println("Dumping type w...")
 xdump(w)

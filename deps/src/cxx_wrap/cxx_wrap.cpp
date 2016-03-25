@@ -1,20 +1,20 @@
-#include "cpp_wrapper.hpp"
+#include "cxx_wrap.hpp"
 
 #include <julia.h>
 
-namespace cpp_wrapper
+namespace cxx_wrap
 {
 
-jl_module_t* g_cpp_wrapper_module;
+jl_module_t* g_cxx_wrap_module;
 jl_datatype_t* g_cppfunctioninfo_type;
 
-CPP_WRAPPER_EXPORT jl_array_t* gc_protected()
+CXX_WRAP_EXPORT jl_array_t* gc_protected()
 {
 	static jl_array_t* m_arr = nullptr;
 	if (m_arr == nullptr)
 	{
 		m_arr = jl_alloc_cell_1d(0);
-		jl_set_const(g_cpp_wrapper_module, jl_symbol("_gc_protected"), (jl_value_t*)m_arr);
+		jl_set_const(g_cxx_wrap_module, jl_symbol("_gc_protected"), (jl_value_t*)m_arr);
 	}
 	return m_arr;
 }

@@ -1,11 +1,11 @@
-#include <cpp_wrapper.hpp>
+#include <cxx_wrap.hpp>
 #include <array.hpp>
 
 #include <algorithm>
 #include <sstream>
 
 // C function for performance comparison
-extern "C" CPP_WRAPPER_EXPORT double half_c(const double d)
+extern "C" CXX_WRAP_EXPORT double half_c(const double d)
 {
   return 0.5*d;
 }
@@ -24,7 +24,7 @@ T half_template (const T x)
 	return x / static_cast<T>(2);
 }
 
-void init_half_module(cpp_wrapper::Module& mod)
+void init_half_module(cxx_wrap::Module& mod)
 {
 	// register a standard C++ function
 	mod.method("half_d", &half_function);
@@ -38,7 +38,7 @@ void init_half_module(cpp_wrapper::Module& mod)
 
   // Looping function
   mod.method("half_loop_cpp!",
-  [](cpp_wrapper::ArrayRef<double> in, cpp_wrapper::ArrayRef<double> out)
+  [](cxx_wrap::ArrayRef<double> in, cxx_wrap::ArrayRef<double> out)
   {
     std::transform(in.begin(), in.end(), out.begin(), [](const double d) { return 0.5*d; });
   });
@@ -62,7 +62,7 @@ std::string concatenate_strings(const int n, std::string s, const std::string& s
   return result;
 }
 
-void init_test_module(cpp_wrapper::Module& mod)
+void init_test_module(cxx_wrap::Module& mod)
 {
   mod.method("concatenate_numbers", &concatenate_numbers);
   mod.method("concatenate_strings", &concatenate_strings);
