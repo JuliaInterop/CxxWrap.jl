@@ -59,7 +59,6 @@ genopt = "Unix Makefiles"
 	end
 end
 
-
 provides(BuildProcess,
 	(@build_steps begin
 		CreateDirectory(cxx_wrap_builddir)
@@ -88,5 +87,8 @@ provides(BuildProcess,
 			end)
 		end
 	end),examples)
+
+deps = [cxx_wrap, examples]
+provides(Binaries, Dict(URI("https://github.com/barche/CxxWrap.jl/releases/download/v0.1.0/CxxWrap.zip") => deps), os = :Windows)
 
 @BinDeps.install
