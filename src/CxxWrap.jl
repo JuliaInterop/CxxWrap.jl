@@ -30,6 +30,7 @@ end
 
 function __init__()
   ccall((:initialize, cxx_wrap_path), Void, (Any, Any, Any), CxxWrap, CppAny, CppFunctionInfo)
+  @windows_only ENV["Path"] *= ";"*joinpath(Pkg.dir("CxxWrap"),"deps","usr","lib")
 end
 
 # Load the modules in the shared library located at the given path
