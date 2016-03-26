@@ -3,7 +3,6 @@ using BinDeps
 
 @windows_only push!(BinDeps.defaults, SimpleBuild)
 
-
 @BinDeps.setup
 
 function find_julia_lib(lib_suffix::AbstractString, julia_base_dir::AbstractString)
@@ -92,3 +91,5 @@ deps = [cxx_wrap, examples]
 provides(Binaries, Dict(URI("https://github.com/barche/CxxWrap.jl/releases/download/v0.1.0/CxxWrap.zip") => deps), os = :Windows)
 
 @BinDeps.install
+
+@windows_only pop!(BinDeps.defaults)
