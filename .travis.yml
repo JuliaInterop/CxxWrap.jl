@@ -18,10 +18,13 @@ matrix:
           packages:
             - g++-4.9
       env: COMPILER=g++-4.9
+      julia:
+        - release
+        - nightly
     - os: osx
       compiler: "clang"
-julia:
-  - release
-  - nightly
+      julia:
+        - release
+        - nightly
 notifications:
   email: true
