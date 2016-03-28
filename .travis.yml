@@ -1,11 +1,4 @@
 # Documentation: http://docs.travis-ci.com/user/languages/julia/
-addons:
-  apt:
-    sources:
-      - george-edison55-precise-backports # cmake 3.2.3 / doxygen 1.8.3
-    packages:
-      - cmake
-      - cmake-data
 language: julia
 matrix:
   include:
@@ -15,8 +8,11 @@ matrix:
         apt:
           sources:
             - ubuntu-toolchain-r-test
+            - george-edison55-precise-backports # cmake 3.2.3 / doxygen 1.8.3
           packages:
             - g++-4.9
+            - cmake
+            - cmake-data
       env: COMPILER=g++-4.9
       julia: release
     - os: osx
