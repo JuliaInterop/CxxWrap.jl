@@ -1,4 +1,11 @@
 # Documentation: http://docs.travis-ci.com/user/languages/julia/
+addons:
+  apt:
+    sources:
+      - george-edison55-precise-backports # cmake 3.2.3 / doxygen 1.8.3
+    packages:
+      - cmake
+      - cmake-data
 language: julia
 os:
   - linux
