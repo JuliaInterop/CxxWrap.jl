@@ -13,7 +13,9 @@ matrix:
             - g++-4.9
             - cmake
             - cmake-data
-      env: COMPILER=g++-4.9
+      env:
+        - CC=gcc-4.9
+        - CXX=g++-4.9
       julia: release
     - os: osx
       compiler: "clang"
