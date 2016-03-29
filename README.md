@@ -28,6 +28,7 @@ Pkg.add("CxxWrap")
 To build on Windows, you need to comment [2 lines](https://github.com/barche/CxxWrap.jl/blob/master/deps/build.jl#L90-L91) from `deps/build.jl` to avoid the automatic binary download. The build prerequisites are:
 - Cmake in the path
 - Latest version of Visual Studio (Visual Studio 2015 Update 2 RC with MSVC 19.0.23824.1, it won't work on older versions due to internal compiler errors)
+
 ## Boost Python Hello World example
 Let's try to reproduce the example from the [Boost.Python tutorial](http://www.boost.org/doc/libs/1_59_0/libs/python/doc/tutorial/doc/html/index.html). Suppose we want to expose the following C++ function to Julia in a module called `CppHello`:
 ```c++
