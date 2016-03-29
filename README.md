@@ -20,12 +20,14 @@ Boost.Python also uses the latter (C++-only) approach, so translating existing P
 * Automatic wrapping of default and copy constructor (mapped to deepcopy) if defined on the wrapped C++ class
 
 ## Installation
-Just like any unregistered package:
+Just like any registered package:
 ```julia
-Pkg.clone("https://github.com/barche/CxxWrap.jl.git")
-Pkg.build("CxxWrap")
+Pkg.add("CxxWrap")
 ```
-
+### Building on Windows
+To build on Windows, you need to comment [2 lines](https://github.com/barche/CxxWrap.jl/blob/master/deps/build.jl#L90-L91) from `deps/build.jl` to avoid the automatic binary download. The build prerequisites are:
+- Cmake in the path
+- Latest version of Visual Studio (Visual Studio 2015 Update 2 RC with MSVC 19.0.23824.1, it won't work on older versions due to internal compiler errors)
 ## Boost Python Hello World example
 Let's try to reproduce the example from the [Boost.Python tutorial](http://www.boost.org/doc/libs/1_59_0/libs/python/doc/tutorial/doc/html/index.html). Suppose we want to expose the following C++ function to Julia in a module called `CppHello`:
 ```c++
@@ -142,6 +144,12 @@ p2 = TemplateType{P2, P1}()
 
 Full example and test including non-type parameters at: [`deps/src/examples/parametric.cpp`](deps/src/examples/parametric.cpp) and [`test/parametric.jl`](test/parametric.jl).
 
+## Constructors and destructors
+The default constructor and any manually added constructor using the `constructor` function will automatically create a Julia object that has a finalizer attached that calls delete to free the memory. To write a C++ function that returns a new object that can be garbage-collected in Julia, use the `cxx_wrap::create` function:
+```c++
+cxx_wrap::create<Class>(constructor_arg1, ...);
+```
+This will return the new C++ object wrapped in a `jl_value_t*` that has a finalizer.
 
 ## Linking with the C++ library
 The library (in [`deps/src/cxx_wrap`](deps/src/cxx_wrap)) is built using CMake, so it can be found from another CMake project using the following line in a `CMakeLists.txt`:
