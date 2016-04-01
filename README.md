@@ -152,6 +152,19 @@ cxx_wrap::create<Class>(constructor_arg1, ...);
 ```
 This will return the new C++ object wrapped in a `jl_value_t*` that has a finalizer.
 
+## Adding Julia code to the module
+Sometimes, you may want to write additional Julia code in the module that is built from C++. To do this, call the `wrap_module` method inside an appropriately named Julia module:
+```julia
+module ExtendedTypes
+
+using CxxWrap
+wrap_module(joinpath(Pkg.dir("CxxWrap"),"deps","usr","lib","libextended"))
+export ExtendedWorld, greet
+
+end
+```
+Here, `ExtendedTypes` is a name that matches the module name passed to `create_module` on the C++ side. The `wrap_module` call works as before, but now the functions and types are defined in the existing `ExtendedTypes` module, and additional Julia code such as exports and macros can be defined.
+
 ## Linking with the C++ library
 The library (in [`deps/src/cxx_wrap`](deps/src/cxx_wrap)) is built using CMake, so it can be found from another CMake project using the following line in a `CMakeLists.txt`:
 

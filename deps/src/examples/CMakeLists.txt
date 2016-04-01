@@ -24,7 +24,11 @@ target_link_libraries(inheritance CxxWrap::cxx_wrap)
 add_library(parametric SHARED parametric.cpp)
 target_link_libraries(parametric CxxWrap::cxx_wrap)
 
+add_library(extended SHARED extended.cpp)
+target_link_libraries(extended CxxWrap::cxx_wrap)
+
 install(TARGETS
+  extended
   functions
   hello
   inheritance

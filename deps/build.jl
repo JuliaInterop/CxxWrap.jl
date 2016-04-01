@@ -88,7 +88,7 @@ provides(BuildProcess,
 	end),examples)
 
 deps = [cxx_wrap, examples]
-provides(Binaries, Dict(URI("https://github.com/barche/CxxWrap.jl/releases/download/v0.1.0/CxxWrap.zip") => deps), os = :Windows)
+provides(Binaries, Dict(URI("https://github.com/barche/CxxWrap.jl/releases/download/v0.1.2/CxxWrap.zip") => deps), os = :Windows)
 
 @BinDeps.install
 

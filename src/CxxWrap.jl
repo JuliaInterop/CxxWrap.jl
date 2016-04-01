@@ -147,11 +147,6 @@ function wrap_functions(functions, julia_mod)
   end
 end
 
-# Wrap all functions, placing the wrapper in the current module
-function wrap_functions(functions)
-  wrap_functions(functions, current_module())
-end
-
 # Create modules defined in the given library, wrapping all their functions and types
 function wrap_modules(registry::Ptr{Void}, parent_mod=Main)
   module_names = get_module_names(registry)
@@ -180,6 +175,32 @@ function wrap_modules(so_path::AbstractString, parent_mod=Main)
   wrap_modules(registry, parent_mod)
 end
 
-export wrap_modules
+# Place the functions and types into the current module
+function wrap_module(so_path::AbstractString, parent_mod=Main)
+  registry = CxxWrap.load_modules(lib_path(so_path))
+  module_names = get_module_names(registry)
+  mod_idx = 0
+  wanted_name = string(module_name(current_module()))
+  for (i,mod_name) in enumerate(module_names)
+    if mod_name == wanted_name
+      bind_types(registry, current_module())
+      mod_idx = i
+      break
+    end
+  end
+
+  if mod_idx == 0
+    error("Module $wanted_name not found in C++")
+  end
+
+  module_functions = get_module_functions(registry)
+  wrap_functions(module_functions[mod_idx], current_module())
+
+  exps = [symbol(s) for s in exported_symbols(registry, wanted_name)]
+  current_module().eval(:(export $(exps...)))
+end
+
+
+export wrap_modules, wrap_module
 
 end # module
