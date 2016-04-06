@@ -337,6 +337,13 @@ template<> struct static_type_mapping<float>
 	template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
+template<> struct static_type_mapping<float*>
+{
+	typedef jl_array_t* type;
+	static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_array_type(jl_float32_type, 1); }
+	template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
+};
+
 template<> struct static_type_mapping<int>
 {
 	typedef int type;
@@ -729,6 +736,15 @@ struct ConvertToCpp<const char*, false, false, false>
 			throw std::runtime_error("Any type to convert to string is not a string");
 		}
 		return jl_bytestring_ptr(julia_string);
+	}
+};
+
+template<>
+struct ConvertToCpp<float*, false, false, false>
+{
+	float* operator()(jl_array_t* julia_array) const
+	{
+		return (float*)jl_array_data(julia_array);
 	}
 };
 

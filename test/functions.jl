@@ -21,6 +21,7 @@ wrap_modules(functions_lib_path)
 @test CppTestFunctions.concatenate_numbers(4, 2.) == "42"
 @test length(methods(CppTestFunctions.concatenate_numbers)) == 4 # due to overloads
 @test CppTestFunctions.concatenate_strings(2, "ho", "la") == "holahola"
+@test CppTestFunctions.test_float_array(Float32[1.,2.])
 
 # Performance tests
 const test_size = 50000000
