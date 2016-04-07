@@ -337,10 +337,31 @@ template<> struct static_type_mapping<float>
 	template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
+template<> struct static_type_mapping<int32_t*>
+{
+	typedef jl_array_t* type;
+	static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_array_type(jl_int32_type, 1); }
+	template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
+};
+
+template<> struct static_type_mapping<int64_t*>
+{
+	typedef jl_array_t* type;
+	static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_array_type(jl_int64_type, 1); }
+	template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
+};
+
 template<> struct static_type_mapping<float*>
 {
 	typedef jl_array_t* type;
 	static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_array_type(jl_float32_type, 1); }
+	template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
+};
+
+template<> struct static_type_mapping<double*>
+{
+	typedef jl_array_t* type;
+	static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_array_type(jl_float64_type, 1); }
 	template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
@@ -740,11 +761,38 @@ struct ConvertToCpp<const char*, false, false, false>
 };
 
 template<>
+struct ConvertToCpp<int32_t*, false, false, false>
+{
+	int32_t* operator()(jl_array_t* julia_array) const
+	{
+		return (int32_t*)jl_array_data(julia_array);
+	}
+};
+
+template<>
+struct ConvertToCpp<int64_t*, false, false, false>
+{
+	int64_t* operator()(jl_array_t* julia_array) const
+	{
+		return (int64_t*)jl_array_data(julia_array);
+	}
+};
+
+template<>
 struct ConvertToCpp<float*, false, false, false>
 {
 	float* operator()(jl_array_t* julia_array) const
 	{
 		return (float*)jl_array_data(julia_array);
+	}
+};
+
+template<>
+struct ConvertToCpp<double*, false, false, false>
+{
+	double* operator()(jl_array_t* julia_array) const
+	{
+		return (double*)jl_array_data(julia_array);
 	}
 };
 

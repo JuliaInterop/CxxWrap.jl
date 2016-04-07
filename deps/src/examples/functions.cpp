@@ -24,7 +24,22 @@ T half_template (const T x)
 	return x / static_cast<T>(2);
 }
 
+bool test_int32_array(int32_t* f)
+{
+  return f[0] == 1 && f[1] == 2;
+}
+
+bool test_int64_array(int64_t* f)
+{
+  return f[0] == 1 && f[1] == 2;
+}
+
 bool test_float_array(float* f)
+{
+  return f[0] == 1. && f[1] == 2.;
+}
+
+bool test_double_array(double* f)
 {
   return f[0] == 1. && f[1] == 2.;
 }
@@ -71,9 +86,10 @@ void init_test_module(cxx_wrap::Module& mod)
 {
   mod.method("concatenate_numbers", &concatenate_numbers);
   mod.method("concatenate_strings", &concatenate_strings);
+  mod.method("test_int32_array", test_int32_array);
+  mod.method("test_int64_array", test_int64_array);
   mod.method("test_float_array", test_float_array);
-
-  mod.export_symbols("test_float_array");
+  mod.method("test_double_array", test_double_array);
 }
 
 }
