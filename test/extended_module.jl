@@ -7,7 +7,7 @@ module ExtendedTypes
 
 using CxxWrap
 
-wrap_module(joinpath(Pkg.dir("CxxWrap"),"deps","usr","lib","libextended"))
+wrap_module(Pkg.dir("CxxWrap","deps","usr","lib","libextended"))
 
 export ExtendedWorld, greet
 

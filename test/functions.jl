@@ -5,7 +5,7 @@ println("Running functions.jl...")
 using CxxWrap
 using Base.Test
 
-const functions_lib_path = CxxWrap.lib_path(joinpath(Pkg.dir("CxxWrap"),"deps","usr","lib","libfunctions"))
+const functions_lib_path = CxxWrap.lib_path(Pkg.dir("CxxWrap","deps","usr","lib","libfunctions"))
 
 # Wrap the functions defined in C++
 wrap_modules(functions_lib_path)

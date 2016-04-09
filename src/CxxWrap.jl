@@ -14,7 +14,7 @@ function lib_path(so_path::AbstractString)
   return path_copy
 end
 
-const cxx_wrap_path = lib_path(joinpath(Pkg.dir("CxxWrap"),"deps","usr","lib","libcxx_wrap"))
+const cxx_wrap_path = lib_path(Pkg.dir("CxxWrap","deps","usr","lib","libcxx_wrap"))
 
 # Base type for wrapped C++ types
 abstract CppAny
@@ -30,7 +30,7 @@ end
 
 function __init__()
   ccall((:initialize, cxx_wrap_path), Void, (Any, Any, Any), CxxWrap, CppAny, CppFunctionInfo)
-  @windows_only ENV["Path"] *= ";"*joinpath(Pkg.dir("CxxWrap"),"deps","usr","lib")
+  @windows_only ENV["Path"] *= ";"*Pkg.dir("CxxWrap","deps","usr","lib")
 end
 
 # Load the modules in the shared library located at the given path
