@@ -23,8 +23,16 @@ w = World()
 println("Dumping type w...")
 xdump(w)
 @test CppTypes.greet(w) == "default hello"
+
 @show fw = CppTypes.world_factory()
 @test CppTypes.greet(fw) == "factory hello"
+
+@show swf = CppTypes.shared_world_factory()
+@test CppTypes.greet(swf) == "shared factory hello" # Uses the shared ptr overload
+@test CppTypes.greet(CppTypes.get(swf)) == "shared factory hello" # Explicitly get the shared ptr
+
+@show uwf = CppTypes.unique_world_factory()
+@test CppTypes.greet(CppTypes.get(uwf)) == "unique factory hello"
 
 CppTypes.set(w, "hello")
 @show CppTypes.greet(w)

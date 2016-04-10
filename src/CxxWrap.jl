@@ -19,6 +19,16 @@ const cxx_wrap_path = lib_path(Pkg.dir("CxxWrap","deps","usr","lib","libcxx_wrap
 # Base type for wrapped C++ types
 abstract CppAny
 
+# C++ std::shared_ptr
+type SharedPtr{T} <: CppAny
+  cpp_object::Ptr{Void}
+end
+
+# C++ std::unique_ptr
+type UniquePtr{T} <: CppAny
+  cpp_object::Ptr{Void}
+end
+
 # Encapsulate information about a function
 type CppFunctionInfo
   name::AbstractString

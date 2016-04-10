@@ -152,6 +152,31 @@ cxx_wrap::create<Class>(constructor_arg1, ...);
 ```
 This will return the new C++ object wrapped in a `jl_value_t*` that has a finalizer.
 
+## Smart pointers
+Currently, `std::shared_ptr` and `std::unique_ptr` are supported transparently. Returning one of these pointer types will return an object of type `SharedPtr{T}` (or `UniquePtr{T}`), and a `get` method is added automatically to the module that wraps `T` to extract the pointer. Example from the types test:
+```c++
+types.method("shared_world_factory", []()
+{
+  return std::shared_ptr<World>(new World("shared factory hello"));
+});
+```
+The shared pointer can then be used in a function taking an object of type `World` like this (the module is named `CppTypes` here):
+```julia
+swf = CppTypes.shared_world_factory()
+CppTypes.greet(CppTypes.get(swf))
+```
+To shorten this form, the `get` function may be exported of course. To avoid having to use the `get` function for common methods, functions taking the regular class can be overloaded in C++, like this for the `greet` method:
+```c++
+types.method("greet", [](const std::shared_ptr<World>& w)
+{
+  return w->greet();
+});
+```
+We can then call it directly on the shared pointer:
+```julia
+CppTypes.greet(swf)
+```
+
 ## Adding Julia code to the module
 Sometimes, you may want to write additional Julia code in the module that is built from C++. To do this, call the `wrap_module` method inside an appropriately named Julia module:
 ```julia

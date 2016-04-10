@@ -425,6 +425,31 @@ private:
 	template<class T> friend class TypeWrapper;
 };
 
+namespace detail
+{
+
+template<typename T>
+void add_smart_pointer_types(jl_datatype_t* dt, Module& mod)
+{
+	jl_datatype_t* sp_dt = (jl_datatype_t*)jl_apply_type(jl_get_global(get_cxxwrap_module(), jl_symbol("SharedPtr")), jl_svec1(static_type_mapping<T>::julia_type()));
+	static_type_mapping<std::shared_ptr<T>>::set_julia_type(sp_dt);
+	static_type_mapping<std::shared_ptr<T>*>::set_julia_type(sp_dt);
+	jl_datatype_t* up_dt = (jl_datatype_t*)jl_apply_type(jl_get_global(get_cxxwrap_module(), jl_symbol("UniquePtr")), jl_svec1(static_type_mapping<T>::julia_type()));
+	static_type_mapping<std::unique_ptr<T>>::set_julia_type(up_dt);
+	static_type_mapping<std::unique_ptr<T>*>::set_julia_type(up_dt);
+
+	mod.method("get", [](const std::shared_ptr<T>& ptr)
+	{
+		return ptr.get();
+	});
+	mod.method("get", [](const std::unique_ptr<T>& ptr)
+	{
+		return ptr.get();
+	});
+}
+
+}
+
 template<typename T>
 void Module::add_default_constructor(std::true_type, jl_datatype_t* dt)
 {
@@ -576,6 +601,7 @@ private:
 		{
 			m_module.add_copy_constructor<AppliedT>(std::is_copy_constructible<AppliedT>(), app_dt);
 			static_type_mapping<AppliedT*>::set_julia_type(app_dt);
+			detail::add_smart_pointer_types<AppliedT>(app_dt, m_module);
 		}
 
 		apply_ftor(TypeWrapper<AppliedT>(m_module, app_dt));
@@ -629,6 +655,7 @@ TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t*
 			if(!AddBits)
 			{
 				add_copy_constructor<T>(std::is_copy_constructible<T>());
+				detail::add_smart_pointer_types<T>(dt, *this);
 			}
 		}
 	}
@@ -704,6 +731,24 @@ private:
 	std::map<std::string, std::shared_ptr<Module>> m_modules;
 };
 
+// Smart pointers
+
+// Shared pointer
+template<typename T>
+struct ConvertToJulia<std::shared_ptr<T>, false, false, false>
+{
+  jl_value_t* operator()(const std::shared_ptr<T>& cpp_obj) const
+  {
+    return create<std::shared_ptr<T>>(cpp_obj);
+  }
+};
+
+// Unique Ptr
+template<typename T>
+inline jl_value_t* convert_to_julia(std::unique_ptr<T> cpp_val)
+{
+	return create<std::unique_ptr<T>>(std::move(cpp_val));
+}
 
 } // namespace cxx_wrap
 

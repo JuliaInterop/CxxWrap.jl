@@ -21,6 +21,11 @@ CXX_WRAP_EXPORT jl_datatype_t* get_any_type()
 	return g_any_type;
 }
 
+CXX_WRAP_EXPORT jl_module_t* get_cxxwrap_module()
+{
+	return g_cxx_wrap_module;
+}
+
 /// Create a new registry
 CXX_WRAP_EXPORT void* create_registry()
 {

@@ -302,6 +302,7 @@ template<typename T> using mapped_reference_type = typename static_type_mapping<
 
 // Needed for Visual C++, static members are different in each DLL
 extern "C" CXX_WRAP_EXPORT jl_datatype_t* get_any_type(); // Implemented in c_interface.cpp
+extern "C" CXX_WRAP_EXPORT jl_module_t* get_cxxwrap_module();
 template<> struct CXX_WRAP_EXPORT static_type_mapping<CppAny>
 {
 	typedef jl_value_t* type;
@@ -570,6 +571,9 @@ inline auto convert_to_julia(const T& cpp_val) -> decltype(julia_converter_type<
 {
 	return julia_converter_type<T>()(cpp_val);
 }
+
+template<typename T>
+inline jl_value_t* convert_to_julia(std::unique_ptr<T> cpp_val);
 
 // Fundamental type conversion
 template<typename CppT>
