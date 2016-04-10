@@ -4,12 +4,12 @@
 #include <julia.h>
 
 #include <map>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <typeinfo>
 #include <typeindex>
 #include <type_traits>
-
 #include <iostream>
 
 #ifdef _WIN32
