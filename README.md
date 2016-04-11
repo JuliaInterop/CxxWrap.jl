@@ -95,6 +95,9 @@ w = CppTypes.World()
 CppTypes.set(w, "hello")
 @test CppTypes.greet(w) == "hello"
 ```
+
+**Warning:** The ordering of the C++ code matters: types used as function arguments or return types must be added before they are used in a function.
+
 The full code for this example and more info on immutables and bits types can be found in [`deps/src/examples/types.cpp`](deps/src/examples/types.cpp) and [`test/types.jl`](test/types.jl).
 
 ## Inheritance
