@@ -44,6 +44,11 @@ bool test_double_array(double* f)
   return f[0] == 1. && f[1] == 2.;
 }
 
+void test_exception()
+{
+  throw std::runtime_error("This is an exception");
+}
+
 void init_half_module(cxx_wrap::Module& mod)
 {
 	// register a standard C++ function
@@ -90,6 +95,7 @@ void init_test_module(cxx_wrap::Module& mod)
   mod.method("test_int64_array", test_int64_array);
   mod.method("test_float_array", test_float_array);
   mod.method("test_double_array", test_double_array);
+  mod.method("test_exception", test_exception, true);
 }
 
 }

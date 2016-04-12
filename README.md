@@ -180,6 +180,13 @@ We can then call it directly on the shared pointer:
 CppTypes.greet(swf)
 ```
 
+## Exceptions
+When directly adding a regular free C++ function as a method, it will be called directly using ccall and any exception will abort the Julia program. To avoid this, you can force wrapping it in an `std::functor` to intercept the exception automatically by setting the `force_convert` argument to `method` to true:
+```c++
+mod.method("test_exception", test_exception, true);
+```
+Member functions and lambdas are automatically wrapped in an `std::functor` and so any exceptions thrown there are always intercepted and converted to a Julia exception.
+
 ## Adding Julia code to the module
 Sometimes, you may want to write additional Julia code in the module that is built from C++. To do this, call the `wrap_module` method inside an appropriately named Julia module:
 ```julia

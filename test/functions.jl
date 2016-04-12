@@ -25,6 +25,7 @@ wrap_modules(functions_lib_path)
 @test CppTestFunctions.test_int64_array([1,2])
 @test CppTestFunctions.test_float_array(Float32[1.,2.])
 @test CppTestFunctions.test_double_array([1.,2.])
+@test_throws ErrorException CppTestFunctions.test_exception()
 
 # Performance tests
 const test_size = 50000000

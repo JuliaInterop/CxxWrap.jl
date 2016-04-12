@@ -304,9 +304,9 @@ public:
 
 	/// Define a new function. Overload for pointers
 	template<typename R, typename... Args>
-	void method(const std::string& name,  R(*f)(Args...))
+	void method(const std::string& name,  R(*f)(Args...), const bool force_convert = false)
 	{
-		bool need_convert = !std::is_same<mapped_julia_type<R>,remove_const_ref<R>>::value || detail::NeedConvertHelper<Args...>()();
+		bool need_convert = force_convert || !std::is_same<mapped_julia_type<R>,remove_const_ref<R>>::value || detail::NeedConvertHelper<Args...>()();
 
 		// Conversion is automatic when using the std::function calling method, so if we need conversion we use that
 		if(need_convert)
