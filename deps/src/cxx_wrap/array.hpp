@@ -159,6 +159,21 @@ public:
     return (ValueT*)jl_array_data(m_array);
   }
 
+  std::size_t size() const
+  {
+    return jl_array_len(m_array);
+  }
+
+  ValueT& operator[](const std::size_t i)
+  {
+    return ((ValueT*)jl_array_data(m_array))[i];
+  }
+
+  ValueT operator[](const std::size_t i) const
+  {
+    return ((ValueT*)jl_array_data(m_array))[i];
+  }
+
 private:
   jl_array_t* m_array;
 };

@@ -187,6 +187,24 @@ mod.method("test_exception", test_exception, true);
 ```
 Member functions and lambdas are automatically wrapped in an `std::functor` and so any exceptions thrown there are always intercepted and converted to a Julia exception.
 
+## Working with arrays
+The `ArrayRef` type is provided to work conveniently with array data from Julia. Defining a function like this in C++:
+```c++
+void test_array_set(cxx_wrap::ArrayRef<double> a, const int64_t i, const double v)
+{
+  a[i] = v;
+}
+```
+This can be called from Julia as:
+```julia
+ta = [1.,2.]
+test_array_set(ta, 0, 3.)
+```
+The `ArrayRef` type provides basic functionality:
+* iterators
+* `size`
+* `[]` read-write accessor
+
 ## Adding Julia code to the module
 Sometimes, you may want to write additional Julia code in the module that is built from C++. To do this, call the `wrap_module` method inside an appropriately named Julia module:
 ```julia

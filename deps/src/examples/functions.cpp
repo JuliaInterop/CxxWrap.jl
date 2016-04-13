@@ -44,6 +44,21 @@ bool test_double_array(double* f)
   return f[0] == 1. && f[1] == 2.;
 }
 
+std::size_t test_array_len(cxx_wrap::ArrayRef<double> a)
+{
+  return a.size();
+}
+
+double test_array_get(cxx_wrap::ArrayRef<double> a, const int64_t i)
+{
+  return a[i];
+}
+
+void test_array_set(cxx_wrap::ArrayRef<double> a, const int64_t i, const double v)
+{
+  a[i] = v;
+}
+
 void test_exception()
 {
   throw std::runtime_error("This is an exception");
@@ -96,6 +111,9 @@ void init_test_module(cxx_wrap::Module& mod)
   mod.method("test_float_array", test_float_array);
   mod.method("test_double_array", test_double_array);
   mod.method("test_exception", test_exception, true);
+  mod.method("test_array_len", test_array_len);
+  mod.method("test_array_set", test_array_set);
+  mod.method("test_array_get", test_array_get);
 }
 
 }

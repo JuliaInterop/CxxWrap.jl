@@ -26,6 +26,14 @@ wrap_modules(functions_lib_path)
 @test CppTestFunctions.test_float_array(Float32[1.,2.])
 @test CppTestFunctions.test_double_array([1.,2.])
 @test_throws ErrorException CppTestFunctions.test_exception()
+ta = [1.,2.]
+@test CppTestFunctions.test_array_len(ta) == 2
+@test CppTestFunctions.test_array_get(ta, 0) == 1.
+@test CppTestFunctions.test_array_get(ta, 1) == 2.
+CppTestFunctions.test_array_set(ta, 0, 3.)
+CppTestFunctions.test_array_set(ta, 1, 4.)
+@test ta[1] == 3.
+@test ta[2] == 4.
 
 # Performance tests
 const test_size = 50000000
