@@ -34,6 +34,7 @@ CppTestFunctions.test_array_set(ta, 0, 3.)
 CppTestFunctions.test_array_set(ta, 1, 4.)
 @test ta[1] == 3.
 @test ta[2] == 4.
+@test CppTestFunctions.test_type_name("IO") == "IO"
 
 # Performance tests
 const test_size = 50000000

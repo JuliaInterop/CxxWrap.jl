@@ -64,6 +64,11 @@ void test_exception()
   throw std::runtime_error("This is an exception");
 }
 
+std::string test_type_name(const std::string& name)
+{
+  return cxx_wrap::julia_type_name(cxx_wrap::julia_type(name));
+}
+
 void init_half_module(cxx_wrap::Module& mod)
 {
 	// register a standard C++ function
@@ -114,6 +119,7 @@ void init_test_module(cxx_wrap::Module& mod)
   mod.method("test_array_len", test_array_len);
   mod.method("test_array_set", test_array_set);
   mod.method("test_array_get", test_array_get);
+  mod.method("test_type_name", test_type_name);
 }
 
 }

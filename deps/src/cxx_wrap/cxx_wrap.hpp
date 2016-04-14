@@ -750,6 +750,9 @@ inline jl_value_t* convert_to_julia(std::unique_ptr<T> cpp_val)
 	return create<std::unique_ptr<T>>(std::move(cpp_val));
 }
 
+/// Get the type from a global symbol
+jl_datatype_t* julia_type(const std::string& name);
+
 } // namespace cxx_wrap
 
 /// Register a new module

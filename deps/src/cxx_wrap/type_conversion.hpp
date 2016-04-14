@@ -368,6 +368,7 @@ template<> struct static_type_mapping<double*>
 
 template<> struct static_type_mapping<int>
 {
+  static_assert(sizeof(int) == 4, "int is expected to be 32 bits");
 	typedef int type;
 	static jl_datatype_t* julia_type() { return jl_int32_type; }
 	template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
@@ -375,10 +376,33 @@ template<> struct static_type_mapping<int>
 
 template<> struct static_type_mapping<unsigned int>
 {
+  static_assert(sizeof(unsigned int) == 4, "unsigned int is expected to be 32 bits");
 	typedef unsigned int type;
 	static jl_datatype_t* julia_type() { return jl_uint32_type; }
 	template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
+
+namespace detail
+{
+  template<typename T>
+  struct unused_type
+  {
+  };
+
+  template<typename T1, typename T2>
+  struct DefineIfDifferent
+  {
+    typedef T1 type;
+  };
+
+  template<typename T>
+  struct DefineIfDifferent<T,T>
+  {
+    typedef unused_type<T> type;
+  };
+
+template<typename T1, typename T2> using define_if_different = typename DefineIfDifferent<T1,T2>::type;
+}
 
 template<> struct static_type_mapping<int64_t>
 {
@@ -390,6 +414,20 @@ template<> struct static_type_mapping<int64_t>
 template<> struct static_type_mapping<uint64_t>
 {
 	typedef uint64_t type;
+	static jl_datatype_t* julia_type() { return jl_uint64_type; }
+	template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
+};
+
+template<> struct static_type_mapping<detail::define_if_different<long, int64_t>>
+{
+	typedef long type;
+	static jl_datatype_t* julia_type() { return jl_int64_type; }
+	template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
+};
+
+template<> struct static_type_mapping<detail::define_if_different<unsigned long, uint64_t>>
+{
+	typedef unsigned long type;
 	static jl_datatype_t* julia_type() { return jl_uint64_type; }
 	template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
