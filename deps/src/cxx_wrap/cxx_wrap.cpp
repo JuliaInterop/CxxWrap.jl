@@ -35,16 +35,15 @@ Module& ModuleRegistry::create_module(const std::string &name)
 
 jl_datatype_t* julia_type(const std::string& name)
 {
-	jl_value_t* gval = jl_get_global(jl_base_module, jl_symbol(name.c_str()));
-	if(gval == nullptr)
+	for(jl_module_t* mod : {jl_base_module, g_cxx_wrap_module, jl_current_module})
 	{
-		throw std::runtime_error("Symbol " + name + " was not found");
+		jl_value_t* gval = jl_get_global(mod, jl_symbol(name.c_str()));
+		if(gval != nullptr && jl_is_datatype(gval))
+		{
+			return (jl_datatype_t*)gval;
+		}
 	}
-	if(!jl_is_datatype(gval))
-	{
-		throw std::runtime_error("Symbol " + name + " is not a type");
-	}
-	return (jl_datatype_t*)gval;
+	throw std::runtime_error("Symbol for type " + name + " was not found");
 }
 
 } // End namespace Julia

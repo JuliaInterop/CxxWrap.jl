@@ -352,6 +352,20 @@ template<> struct static_type_mapping<int64_t*>
 	template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
+template<> struct static_type_mapping<char*>
+{
+	typedef jl_array_t* type;
+	static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_array_type(jl_uint8_type, 1); }
+	template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
+};
+
+template<> struct static_type_mapping<unsigned char*>
+{
+	typedef jl_array_t* type;
+	static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_array_type(jl_uint8_type, 1); }
+	template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
+};
+
 template<> struct static_type_mapping<float*>
 {
 	typedef jl_array_t* type;
@@ -379,6 +393,13 @@ template<> struct static_type_mapping<unsigned int>
   static_assert(sizeof(unsigned int) == 4, "unsigned int is expected to be 32 bits");
 	typedef unsigned int type;
 	static jl_datatype_t* julia_type() { return jl_uint32_type; }
+	template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
+};
+
+template<> struct static_type_mapping<unsigned char>
+{
+	typedef unsigned char type;
+	static jl_datatype_t* julia_type() { return jl_uint8_type; }
 	template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
@@ -799,6 +820,24 @@ struct ConvertToCpp<const char*, false, false, false>
 			throw std::runtime_error("Any type to convert to string is not a string");
 		}
 		return jl_bytestring_ptr(julia_string);
+	}
+};
+
+template<>
+struct ConvertToCpp<char*, false, false, false>
+{
+	char* operator()(jl_array_t* julia_array) const
+	{
+		return (char*)jl_array_data(julia_array);
+	}
+};
+
+template<>
+struct ConvertToCpp<unsigned char*, false, false, false>
+{
+	unsigned char* operator()(jl_array_t* julia_array) const
+	{
+		return (unsigned char*)jl_array_data(julia_array);
 	}
 };
 

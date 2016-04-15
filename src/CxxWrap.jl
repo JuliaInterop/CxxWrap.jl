@@ -18,6 +18,7 @@ const cxx_wrap_path = lib_path(Pkg.dir("CxxWrap","deps","usr","lib","libcxx_wrap
 
 # Base type for wrapped C++ types
 abstract CppAny
+abstract CppDisplay <: Display
 
 # C++ std::shared_ptr
 type SharedPtr{T} <: CppAny
@@ -83,7 +84,7 @@ function build_function_expression(func::CppFunctionInfo)
   # Thunk
   thunk = func.thunk_pointer
 
-  map_arg_type(t::DataType) = (t <: CppAny) ? Any : t
+  map_arg_type(t::DataType) = ((t <: CppAny) || (t <: CppDisplay)) ? Any : t
 
   # Build the types for the ccall argument list
   c_arg_types = [map_arg_type(t) for t in argtypes]
