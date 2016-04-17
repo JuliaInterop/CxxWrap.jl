@@ -1,5 +1,30 @@
 using BinDeps
 
+base_lib_dir = Pkg.dir("CxxWrap","deps","usr","lib")
+@windows_only begin
+	for libpath in [joinpath(base_lib_dir,"cxx_wrap.dll"), joinpath(base_lib_dir, "functions.dll")]
+		if isfile(libpath)
+			rm(libpath)
+		end
+	end
+end
+
+@linux_only begin
+	for libpath in [joinpath(base_lib_dir,"libcxx_wrap.so"), joinpath(base_lib_dir, "libfunctions.so")]
+		if isfile(libpath)
+			rm(libpath)
+		end
+	end
+end
+
+@osx_only begin
+	for libpath in [joinpath(base_lib_dir,"libcxx_wrap.dylib"), joinpath(base_lib_dir, "libfunctions.dylib")]
+		if isfile(libpath)
+			rm(libpath)
+		end
+	end
+end
+
 
 @windows_only push!(BinDeps.defaults, SimpleBuild)
 
@@ -88,7 +113,7 @@ provides(BuildProcess,
 	end),examples)
 
 deps = [cxx_wrap, examples]
-provides(Binaries, Dict(URI("https://github.com/barche/CxxWrap.jl/releases/download/v0.1.2/CxxWrap.zip") => deps), os = :Windows)
+provides(Binaries, Dict(URI("https://github.com/barche/CxxWrap.jl/releases/download/v0.1.3/CxxWrap-julia$VERSION.zip") => deps), os = :Windows)
 
 @BinDeps.install
 
