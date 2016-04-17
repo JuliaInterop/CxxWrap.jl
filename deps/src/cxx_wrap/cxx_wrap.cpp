@@ -33,7 +33,7 @@ Module& ModuleRegistry::create_module(const std::string &name)
 	return *mod;
 }
 
-jl_datatype_t* julia_type(const std::string& name)
+CXX_WRAP_EXPORT jl_datatype_t* julia_type(const std::string& name)
 {
 	for(jl_module_t* mod : {jl_base_module, g_cxx_wrap_module, jl_current_module})
 	{
