@@ -1,6 +1,9 @@
 using BinDeps
 
-base_lib_dir = Pkg.dir("CxxWrap","deps","usr","lib")
+libdir_opt = ""
+@windows_only libdir_opt = WORD_SIZE==32 ? "32" : ""
+
+base_lib_dir = joinpath(dirname(@__FILE__),"usr","lib"*libdir_opt)
 @windows_only begin
 	for libpath in [joinpath(base_lib_dir,"cxx_wrap.dll"), joinpath(base_lib_dir, "functions.dll")]
 		if isfile(libpath)
@@ -75,13 +78,11 @@ end
 
 # Set generator if on windows
 genopt = "Unix Makefiles"
-libdir_opt = ""
 @windows_only begin
 	if WORD_SIZE == 64
 		genopt = "Visual Studio 14 2015 Win64"
 	else
 		genopt = "Visual Studio 14 2015"
-		libdir_opt = "32"
 	end
 end
 
@@ -115,7 +116,7 @@ provides(BuildProcess,
 	end),examples)
 
 deps = [cxx_wrap, examples]
-provides(Binaries, Dict(URI("https://github.com/barche/CxxWrap.jl/releases/download/v0.1.3/CxxWrap-julia-$(VERSION.major).$(VERSION.minor)-win$(WORD_SIZE).zip") => deps), os = :Windows)
+#provides(Binaries, Dict(URI("https://github.com/barche/CxxWrap.jl/releases/download/v0.1.3/CxxWrap-julia-$(VERSION.major).$(VERSION.minor)-win$(WORD_SIZE).zip") => deps), os = :Windows)
 
 @BinDeps.install
 
