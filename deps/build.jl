@@ -116,7 +116,7 @@ provides(BuildProcess,
 	end),examples)
 
 deps = [cxx_wrap, examples]
-#provides(Binaries, Dict(URI("https://github.com/barche/CxxWrap.jl/releases/download/v0.1.3/CxxWrap-julia-$(VERSION.major).$(VERSION.minor)-win$(WORD_SIZE).zip") => deps), os = :Windows)
+provides(Binaries, Dict(URI("https://github.com/barche/CxxWrap.jl/releases/download/v0.1.3/CxxWrap-julia-$(VERSION.major).$(VERSION.minor)-win$(WORD_SIZE).zip") => deps), os = :Windows)
 
 @BinDeps.install
 
