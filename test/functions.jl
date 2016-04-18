@@ -19,19 +19,19 @@ wrap_modules(functions_lib_path)
 
 # Test functions from the CppTestFunctions module
 @test CppTestFunctions.concatenate_numbers(4, 2.) == "42"
-@test length(methods(CppTestFunctions.concatenate_numbers)) == 4 # due to overloads
+@test length(methods(CppTestFunctions.concatenate_numbers)) == (WORD_SIZE == 64 ? 4 : 2) # due to overloads
 @test CppTestFunctions.concatenate_strings(2, "ho", "la") == "holahola"
 @test CppTestFunctions.test_int32_array(Int32[1,2])
-@test CppTestFunctions.test_int64_array([1,2])
+@test CppTestFunctions.test_int64_array(Int64[1,2])
 @test CppTestFunctions.test_float_array(Float32[1.,2.])
 @test CppTestFunctions.test_double_array([1.,2.])
 @test_throws ErrorException CppTestFunctions.test_exception()
 ta = [1.,2.]
 @test CppTestFunctions.test_array_len(ta) == 2
-@test CppTestFunctions.test_array_get(ta, 0) == 1.
-@test CppTestFunctions.test_array_get(ta, 1) == 2.
-CppTestFunctions.test_array_set(ta, 0, 3.)
-CppTestFunctions.test_array_set(ta, 1, 4.)
+@test CppTestFunctions.test_array_get(ta, Int64(0)) == 1.
+@test CppTestFunctions.test_array_get(ta, Int64(1)) == 2.
+CppTestFunctions.test_array_set(ta, Int64(0), 3.)
+CppTestFunctions.test_array_set(ta, Int64(1), 4.)
 @test ta[1] == 3.
 @test ta[2] == 4.
 @test CppTestFunctions.test_type_name("IO") == "IO"

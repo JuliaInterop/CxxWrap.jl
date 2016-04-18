@@ -75,11 +75,13 @@ end
 
 # Set generator if on windows
 genopt = "Unix Makefiles"
+libdir_opt = ""
 @windows_only begin
 	if WORD_SIZE == 64
 		genopt = "Visual Studio 14 2015 Win64"
 	else
 		genopt = "Visual Studio 14 2015"
+		libdir_opt = "32"
 	end
 end
 
@@ -88,8 +90,8 @@ provides(BuildProcess,
 		CreateDirectory(cxx_wrap_builddir)
 		@build_steps begin
 			ChangeDirectory(cxx_wrap_builddir)
-			FileRule(joinpath(prefix,"lib", "$(lib_prefix)cxx_wrap.$lib_suffix"),@build_steps begin
-				`cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="Release"  -DJULIA_INCLUDE_DIRECTORY="$julia_include_dir" -DJULIA_LIBRARY="$julia_lib" $cxx_wrap_srcdir`
+			FileRule(joinpath(prefix,"lib$libdir_opt", "$(lib_prefix)cxx_wrap.$lib_suffix"),@build_steps begin
+				`cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="Release"  -DJULIA_INCLUDE_DIRECTORY="$julia_include_dir" -DJULIA_LIBRARY="$julia_lib" -DLIBDIR_SUFFIX=$libdir_opt $cxx_wrap_srcdir`
 				`cmake --build . --config Release --target install`
 			end)
 		end
@@ -105,15 +107,15 @@ provides(BuildProcess,
 		CreateDirectory(examples_builddir)
 		@build_steps begin
 			ChangeDirectory(examples_builddir)
-			FileRule(joinpath(prefix,"lib", "$(lib_prefix)functions.$lib_suffix"),@build_steps begin
-				`cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="Release" $examples_srcdir`
+			FileRule(joinpath(prefix,"lib$libdir_opt", "$(lib_prefix)functions.$lib_suffix"),@build_steps begin
+				`cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="Release" -DLIBDIR_SUFFIX=$libdir_opt $examples_srcdir`
 				`cmake --build . --config Release --target install`
 			end)
 		end
 	end),examples)
 
 deps = [cxx_wrap, examples]
-provides(Binaries, Dict(URI("https://github.com/barche/CxxWrap.jl/releases/download/v0.1.3/CxxWrap-julia$VERSION.zip") => deps), os = :Windows)
+provides(Binaries, Dict(URI("https://github.com/barche/CxxWrap.jl/releases/download/v0.1.3/CxxWrap-julia-$(VERSION.major).$(VERSION.minor)-win$(WORD_SIZE).zip") => deps), os = :Windows)
 
 @BinDeps.install
 

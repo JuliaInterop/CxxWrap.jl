@@ -61,16 +61,16 @@ import CppTypes.ImmutableInt64
 @test sizeof(ImmutableInt64) == 8
 @test isbits(ImmutableInt64)
 @test length(fieldnames(ImmutableInt64)) == 1
-bitsint1 = ImmutableInt64(1)
+bitsint1 = ImmutableInt64(Int64(1))
 @test bitsint1.value == 1
 @test Int64(bitsint1) == 1
 @test CppTypes.getvalue(bitsint1) == 1
-bitsint2 = CppTypes.ImmutableInt64(2)
-@test bitsint2 == 2
+bitsint2 = CppTypes.ImmutableInt64(Int64(2))
+@test bitsint2 == Int64(2)
 @test typeof(bitsint1 + bitsint2) == CppTypes.ImmutableInt64
-@test (bitsint1 + bitsint2) == 3
+@test (bitsint1 + bitsint2) == Int64(3)
 
-bc = make_bits(1, 2)
+bc = make_bits(1, Int64(2))
 @test sizeof(bc)==16
 @test get_bits_a(bc)==1
 @test get_bits_b(bc)==2

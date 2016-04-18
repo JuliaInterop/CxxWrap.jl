@@ -7,8 +7,9 @@ function lib_path(so_path::AbstractString)
   path_copy = so_path
   @windows_only begin
     basedir, libname = splitdir(so_path)
+    libdir_suffix = WORD_SIZE == 32 ? "32" : ""
     if startswith(libname, "lib") && !isfile(so_path)
-      path_copy = joinpath(basedir, libname[4:end])
+      path_copy = joinpath(basedir*libdir_suffix, libname[4:end])
     end
   end
   return path_copy
@@ -40,8 +41,8 @@ type CppFunctionInfo
 end
 
 function __init__()
+  @windows_only Libdl.dlopen(cxx_wrap_path, Libdl.RTLD_GLOBAL)
   ccall((:initialize, cxx_wrap_path), Void, (Any, Any, Any), CxxWrap, CppAny, CppFunctionInfo)
-  @windows_only ENV["Path"] *= ";"*Pkg.dir("CxxWrap","deps","usr","lib")
 end
 
 # Load the modules in the shared library located at the given path
