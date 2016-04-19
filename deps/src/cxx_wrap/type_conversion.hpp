@@ -82,6 +82,12 @@ inline CppT convert_to_cpp(const JuliaT& julia_val)
 
 namespace detail
 {
+  /// Equivalent of the basic C++ type layout in Julia
+  struct WrappedCppPtr {
+    JL_DATA_TYPE
+    jl_value_t* voidptr;
+  };
+
 	template<bool, typename T1, typename T2>
 	struct DispatchBits;
 
@@ -109,7 +115,7 @@ namespace detail
 			delete stored_obj;
 		}
 
-		jl_set_nth_field(to_delete, 0, jl_box_voidpointer(nullptr));
+		reinterpret_cast<WrappedCppPtr*>(to_delete)->voidptr = nullptr;
 	}
 
 	// Julia 0.4 version
@@ -704,12 +710,6 @@ struct DoUnpack<std::false_type, std::false_type>
 
 		return *ptr;
 	}
-};
-
-/// Equivalent of the basic C++ type layout in Julia
-struct WrappedCppPtr {
-    JL_DATA_TYPE
-    jl_value_t* voidptr;
 };
 
 /// Helper class to unpack a julia type
