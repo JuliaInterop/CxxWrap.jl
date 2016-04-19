@@ -26,46 +26,45 @@ struct NonCopyable
   NonCopyable(const NonCopyable&) = delete;
 };
 
-class ImmutableInt64
+class ImmutableDouble
 {
 public:
-  ImmutableInt64(const int64_t value = 0) : m_value(value)
+  ImmutableDouble(const double value = 0) : m_value(value)
   {
   }
 
-  int64_t get_value() const
+  double get_value() const
   {
     return m_value;
   }
 
 private:
-  int64_t m_value;
+  double m_value;
 };
 
 struct BitsClass
 {
   double a;
-  int64_t b;
+  double b;
 
-  int64_t get_b() const
+  double get_b() const
   {
     return b;
   }
 
-  void set_b(const int64_t x)
+  void set_b(const double x)
   {
     b = x;
   }
 
   ~BitsClass() {}
-
 };
 
 } // namespace cpp_types
 
 namespace cxx_wrap
 {
-  template<> struct IsImmutable<cpp_types::ImmutableInt64> : std::true_type {};
+  template<> struct IsImmutable<cpp_types::ImmutableDouble> : std::true_type {};
   template<> struct IsBits<cpp_types::BitsClass> : std::true_type {};
 }
 
@@ -102,17 +101,17 @@ JULIA_CPP_MODULE_BEGIN(registry)
 
   types.add_type<NonCopyable>("NonCopyable");
 
-  // ImmutableInt64
-  types.add_immutable<ImmutableInt64>("ImmutableInt64", cxx_wrap::FieldList<int64_t>("value"))
-    .constructor<int64_t>()
-    .method("getvalue", &ImmutableInt64::get_value);
-  types.method("convert", [](cxx_wrap::SingletonType<int64_t>, const ImmutableInt64& a) { return a.get_value(); });
-  types.method("+", [](const ImmutableInt64& a, const ImmutableInt64& b) { return ImmutableInt64(a.get_value() + b.get_value()); });
-  types.method("==", [](const ImmutableInt64& a, const int64_t b) { return a.get_value() == b; } );
-  types.method("==", [](const int64_t b, const ImmutableInt64& a) { return a.get_value() == b; } );
+  // ImmutableDouble
+  types.add_immutable<ImmutableDouble>("ImmutableDouble", cxx_wrap::FieldList<double>("value"))
+    .constructor<double>()
+    .method("getvalue", &ImmutableDouble::get_value);
+  types.method("convert", [](cxx_wrap::SingletonType<double>, const ImmutableDouble& a) { return a.get_value(); });
+  types.method("+", [](const ImmutableDouble& a, const ImmutableDouble& b) { return ImmutableDouble(a.get_value() + b.get_value()); });
+  types.method("==", [](const ImmutableDouble& a, const double b) { return a.get_value() == b; } );
+  types.method("==", [](const double b, const ImmutableDouble& a) { return a.get_value() == b; } );
 
   types.add_bits<BitsClass>("BitsClass");
-  types.method("make_bits", [](const double a, const int64_t b)
+  types.method("make_bits", [](const double a, const double b)
   {
     BitsClass result;
     result.a = a;
