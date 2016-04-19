@@ -15,7 +15,7 @@ function lib_path(so_path::AbstractString)
   return path_copy
 end
 
-const cxx_wrap_path = lib_path(Pkg.dir("CxxWrap","deps","usr","lib","libcxx_wrap"))
+const cxx_wrap_path = lib_path(joinpath(dirname(dirname(@__FILE__)),"deps","usr","lib","libcxx_wrap"))
 
 # Base type for wrapped C++ types
 abstract CppAny

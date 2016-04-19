@@ -211,7 +211,7 @@ Sometimes, you may want to write additional Julia code in the module that is bui
 module ExtendedTypes
 
 using CxxWrap
-wrap_module(Pkg.dir("CxxWrap","deps","usr","lib","libextended"))
+wrap_module("libextended")
 export ExtendedWorld, greet
 
 end

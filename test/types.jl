@@ -6,7 +6,7 @@ using CxxWrap
 using Base.Test
 
 # Wrap the functions defined in C++
-wrap_modules(Pkg.dir("CxxWrap","deps","usr","lib","libtypes"))
+wrap_modules(joinpath(dirname(dirname(@__FILE__)),"deps","usr","lib","libtypes"))
 
 using CppTypes
 using CppTypes.World
