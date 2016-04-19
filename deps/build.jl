@@ -29,7 +29,12 @@ end
 end
 
 
-@windows_only push!(BinDeps.defaults, SimpleBuild)
+@windows_only begin
+	# prefer building if possible
+	saved_defaults = BinDeps.defaults
+	empty!(BinDeps.defaults)
+	append!(BinDeps.defaults, [SimpleBuild, Binaries])
+end
 
 @BinDeps.setup
 
@@ -116,8 +121,11 @@ provides(BuildProcess,
 	end),examples)
 
 deps = [cxx_wrap, examples]
-provides(Binaries, Dict(URI("https://github.com/barche/CxxWrap.jl/releases/download/v0.1.3/CxxWrap-julia-$(VERSION.major).$(VERSION.minor)-win$(WORD_SIZE).zip") => deps), os = :Windows)
+provides(Binaries, Dict(URI("https://github.com/barche/CxxWrap.jl/releases/download/v0.1.4/CxxWrap-julia-$(VERSION.major).$(VERSION.minor)-win$(WORD_SIZE).zip") => deps), os = :Windows)
 
 @BinDeps.install
 
-@windows_only pop!(BinDeps.defaults)
+@windows_only begin
+	empty!(BinDeps.defaults)
+	append!(BinDeps.defaults, saved_defaults)
+end
