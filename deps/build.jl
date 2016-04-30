@@ -31,7 +31,7 @@ end
 
 @windows_only begin
 	# prefer building if possible
-	saved_defaults = BinDeps.defaults
+	saved_defaults = deepcopy(BinDeps.defaults)
 	empty!(BinDeps.defaults)
 	append!(BinDeps.defaults, [SimpleBuild, Binaries])
 end
@@ -91,36 +91,41 @@ genopt = "Unix Makefiles"
 	end
 end
 
+function try_cmake(c::Cmd)
+	try
+		run(c)
+	catch
+		println("CMake command failed, not building")
+	end
+	0
+end
+
+# Functions library for testing
+examples = library_dependency("functions", aliases=["libfunctions"])
+examples_srcdir = joinpath(BinDeps.depsdir(examples),"src","examples")
+examples_builddir = joinpath(BinDeps.depsdir(examples),"builds","examples")
+deps = [cxx_wrap, examples]
+
 provides(BuildProcess,
-	(@build_steps begin
+	Dict((@build_steps begin
 		CreateDirectory(cxx_wrap_builddir)
 		@build_steps begin
 			ChangeDirectory(cxx_wrap_builddir)
 			FileRule(joinpath(prefix,"lib$libdir_opt", "$(lib_prefix)cxx_wrap.$lib_suffix"),@build_steps begin
-				`cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="Release"  -DJULIA_INCLUDE_DIRECTORY="$julia_include_dir" -DJULIA_LIBRARY="$julia_lib" -DLIBDIR_SUFFIX=$libdir_opt $cxx_wrap_srcdir`
-				`cmake --build . --config Release --target install`
+				() -> try_cmake(`cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="Release"  -DJULIA_INCLUDE_DIRECTORY="$julia_include_dir" -DJULIA_LIBRARY="$julia_lib" -DLIBDIR_SUFFIX=$libdir_opt $cxx_wrap_srcdir`)
+				() -> try_cmake(`cmake --build . --config Release --target install`)
 			end)
 		end
-	end),cxx_wrap)
-
-# Functions library for testing
-examples = library_dependency("functions", aliases=["libfunctions"])
-
-examples_srcdir = joinpath(BinDeps.depsdir(examples),"src","examples")
-examples_builddir = joinpath(BinDeps.depsdir(examples),"builds","examples")
-provides(BuildProcess,
-	(@build_steps begin
 		CreateDirectory(examples_builddir)
 		@build_steps begin
 			ChangeDirectory(examples_builddir)
 			FileRule(joinpath(prefix,"lib$libdir_opt", "$(lib_prefix)functions.$lib_suffix"),@build_steps begin
-				`cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="Release" -DLIBDIR_SUFFIX=$libdir_opt $examples_srcdir`
-				`cmake --build . --config Release --target install`
+				() -> try_cmake(`cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="Release" -DLIBDIR_SUFFIX=$libdir_opt $examples_srcdir`)
+				() -> try_cmake(`cmake --build . --config Release --target install`)
 			end)
 		end
-	end),examples)
+	end) => deps))
 
-deps = [cxx_wrap, examples]
 provides(Binaries, Dict(URI("https://github.com/barche/CxxWrap.jl/releases/download/v0.1.4/CxxWrap-julia-$(VERSION.major).$(VERSION.minor)-win$(WORD_SIZE).zip") => deps), os = :Windows)
 
 @BinDeps.install
