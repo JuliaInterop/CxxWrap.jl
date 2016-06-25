@@ -1,8 +1,9 @@
 project(Examples)
 
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 2.8.12)
 
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+set(CMAKE_MACOSX_RPATH 1)
 
 list(APPEND CMAKE_CXX_FLAGS "-std=c++11")
 
