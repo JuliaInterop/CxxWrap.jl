@@ -8,7 +8,7 @@ end
 
 @static if is_windows()
   # prefer building if requested
-  if(ENV["BUILD_ON_WINDOWS"] == "1")
+  if haskey(ENV, "BUILD_ON_WINDOWS") && ENV["BUILD_ON_WINDOWS"] == "1"
     saved_defaults = deepcopy(BinDeps.defaults)
     empty!(BinDeps.defaults)
     append!(BinDeps.defaults, [BuildProcess])
@@ -149,7 +149,7 @@ provides(Binaries, Dict(URI("https://github.com/barche/CxxWrap.jl/releases/downl
                        (:types, :_l_types)])
 
 @static if is_windows()
-  if(ENV["BUILD_ON_WINDOWS"] == "1")
+  if haskey(ENV, "BUILD_ON_WINDOWS") && ENV["BUILD_ON_WINDOWS"] == "1"
     empty!(BinDeps.defaults)
     append!(BinDeps.defaults, saved_defaults)
   end
