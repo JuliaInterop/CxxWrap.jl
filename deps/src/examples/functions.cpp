@@ -15,13 +15,13 @@ namespace functions
 
 double half_function(const double d)
 {
-	return 0.5*d;
+  return 0.5*d;
 }
 
 template<typename T>
 T half_template (const T x)
 {
-	return x / static_cast<T>(2);
+  return x / static_cast<T>(2);
 }
 
 bool test_int32_array(int32_t* f)
@@ -71,14 +71,14 @@ std::string test_type_name(const std::string& name)
 
 void init_half_module(cxx_wrap::Module& mod)
 {
-	// register a standard C++ function
-	mod.method("half_d", half_function);
+  // register a standard C++ function
+  mod.method("half_d", half_function);
 
-	// register some template instantiations
-	mod.method("half_i", half_template<int>);
-	mod.method("half_u", half_template<unsigned int>);
+  // register some template instantiations
+  mod.method("half_i", half_template<int>);
+  mod.method("half_u", half_template<unsigned int>);
 
-	// Register a lambda
+  // Register a lambda
   mod.method("half_lambda", [](const double a) {return a*0.5;});
 
   // Looping function

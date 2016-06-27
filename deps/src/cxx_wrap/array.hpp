@@ -26,16 +26,16 @@ public:
   {
   }
 
-	explicit array_iterator_base(PointedT* p) : m_ptr(p)
-	{
-	}
+  explicit array_iterator_base(PointedT* p) : m_ptr(p)
+  {
+  }
 
   template <class OtherPointedT>
-	array_iterator_base(array_iterator_base<OtherPointedT, OtherPointedT> const& other) : m_ptr(other.m_ptr) {}
+  array_iterator_base(array_iterator_base<OtherPointedT, OtherPointedT> const& other) : m_ptr(other.m_ptr) {}
 
   PointedT& operator*()
   {
-		return *m_ptr;
+    return *m_ptr;
   }
 
   array_iterator_base<PointedT, PointedT>& operator++()
@@ -76,33 +76,33 @@ template<typename ValueT>
 class Array
 {
 public:
-	Array(const size_t n = 0)
-	{
-		jl_value_t* array_type = jl_apply_array_type(static_type_mapping<ValueT>::julia_type(), 1);
-		m_array = jl_alloc_array_1d(array_type, n);
-	}
+  Array(const size_t n = 0)
+  {
+    jl_value_t* array_type = jl_apply_array_type(static_type_mapping<ValueT>::julia_type(), 1);
+    m_array = jl_alloc_array_1d(array_type, n);
+  }
 
   Array(jl_datatype_t* applied_type, const size_t n = 0)
-	{
-		jl_value_t* array_type = jl_apply_array_type(applied_type, 1);
-		m_array = jl_alloc_array_1d(array_type, n);
-	}
+  {
+    jl_value_t* array_type = jl_apply_array_type(applied_type, 1);
+    m_array = jl_alloc_array_1d(array_type, n);
+  }
 
-	/// Overload for void pointer
-	void push_back(const ValueT& val)
-	{
-		JL_GC_PUSH1(&m_array);
-		const size_t pos = jl_array_len(m_array);
-		jl_array_grow_end(m_array, 1);
-		jl_arrayset(m_array, (jl_value_t*)(convert_to_julia(val)), pos);
-		JL_GC_POP();
-	}
+  /// Overload for void pointer
+  void push_back(const ValueT& val)
+  {
+    JL_GC_PUSH1(&m_array);
+    const size_t pos = jl_array_len(m_array);
+    jl_array_grow_end(m_array, 1);
+    jl_arrayset(m_array, (jl_value_t*)(convert_to_julia(val)), pos);
+    JL_GC_POP();
+  }
 
-	/// Access to the wrapped array
-	jl_array_t* wrapped()
-	{
-		return m_array;
-	}
+  /// Access to the wrapped array
+  jl_array_t* wrapped()
+  {
+    return m_array;
+  }
 
   // access to the pointer for GC macros
   jl_array_t** gc_pointer()
@@ -111,7 +111,7 @@ public:
   }
 
 private:
-	jl_array_t* m_array;
+  jl_array_t* m_array;
 };
 
 /// Reference a Julia array in an STL-compatible wrapper
@@ -120,42 +120,42 @@ class ArrayRef
 {
 public:
   ArrayRef(jl_array_t* arr) : m_array(arr)
-	{
+  {
     assert(m_array != nullptr);
-	}
+  }
 
   /// Convert from existing C-array
   ArrayRef(ValueT* ptr, const int rows, const int cols);
 
   jl_array_t* wrapped()
-	{
-		return m_array;
-	}
+  {
+    return m_array;
+  }
 
-	typedef mapped_julia_type<ValueT> julia_t;
+  typedef mapped_julia_type<ValueT> julia_t;
 
-	typedef array_iterator_base<julia_t, ValueT> iterator;
+  typedef array_iterator_base<julia_t, ValueT> iterator;
   typedef array_iterator_base<julia_t const, ValueT const> const_iterator;
 
-	iterator begin()
-	{
+  iterator begin()
+  {
     return iterator(static_cast<julia_t*>(jl_array_data(m_array)));
-	}
+  }
 
-	const_iterator begin() const
-	{
+  const_iterator begin() const
+  {
     return const_iterator(static_cast<julia_t*>(jl_array_data(m_array)));
-	}
+  }
 
-	iterator end()
-	{
+  iterator end()
+  {
     return iterator(static_cast<julia_t*>(jl_array_data(m_array)) + jl_array_len(m_array));
-	}
+  }
 
-	const_iterator end() const
-	{
+  const_iterator end() const
+  {
     return const_iterator(static_cast<julia_t*>(jl_array_data(m_array)) + jl_array_len(m_array));
-	}
+  }
 
   const ValueT* data() const
   {
@@ -200,19 +200,19 @@ template<typename T, int Dim>
 struct ConvertToJulia<ArrayRef<T,Dim>, false, false, false>
 {
   template<typename ArrayRefT>
-	jl_array_t* operator()(ArrayRefT&& arr) const
-	{
-		return arr.wrapped();
-	}
+  jl_array_t* operator()(ArrayRefT&& arr) const
+  {
+    return arr.wrapped();
+  }
 };
 
 template<typename T, int Dim>
 struct ConvertToCpp<ArrayRef<T,Dim>, false, false, false>
 {
-	ArrayRef<T,Dim> operator()(jl_array_t* arr) const
-	{
-		return ArrayRef<T,Dim>(arr);
-	}
+  ArrayRef<T,Dim> operator()(jl_array_t* arr) const
+  {
+    return ArrayRef<T,Dim>(arr);
+  }
 };
 
 // Iterator operator implementation
@@ -282,22 +282,22 @@ struct JuliaMatrix {};
 template<> struct static_type_mapping<JuliaMatrix>
 {
   typedef jl_datatype_t* type;
-	static jl_datatype_t* julia_type()
+  static jl_datatype_t* julia_type()
   {
     static jl_tvar_t* this_tvar = jl_new_typevar(jl_symbol("T"), (jl_value_t*)jl_bottom_type, (jl_value_t*)jl_any_type);
     return (jl_datatype_t*)jl_apply_type((jl_value_t*)jl_type_type,
                                               jl_svec1(jl_apply_type((jl_value_t*)jl_array_type, jl_svec2(this_tvar, jl_box_long(2)))));
   }
-	template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
+  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 template<>
 struct ConvertToCpp<JuliaMatrix, false, false, false>
 {
-	JuliaMatrix operator()(jl_datatype_t* julia_value) const
-	{
-		return JuliaMatrix();
-	}
+  JuliaMatrix operator()(jl_datatype_t* julia_value) const
+  {
+    return JuliaMatrix();
+  }
 };
 
 }
