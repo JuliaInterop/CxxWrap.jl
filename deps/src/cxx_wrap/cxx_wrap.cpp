@@ -17,7 +17,8 @@ CXX_WRAP_EXPORT jl_array_t* gc_protected()
   if (m_arr == nullptr)
   {
 #if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR > 4
-    m_arr = jl_alloc_array_1d((jl_value_t*)jl_any_type, 0);//jl_alloc_cell_1d(0);
+    jl_value_t* array_type = jl_apply_array_type(jl_any_type, 1);
+    m_arr = jl_alloc_array_1d(array_type, 0);
 #else
     m_arr = jl_alloc_cell_1d(0);
 #endif
