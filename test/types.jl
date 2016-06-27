@@ -4,6 +4,7 @@ println("Running types.jl...")
 
 using CxxWrap
 using Base.Test
+using Compat
 
 # Wrap the functions defined in C++
 wrap_modules(joinpath(dirname(dirname(@__FILE__)),"deps","usr","lib","libtypes"))
@@ -18,10 +19,10 @@ end
 
 # Default constructor
 @test World <: CxxWrap.CppAny
-@test super(World) == CxxWrap.CppAny
+@test supertype(World) == CxxWrap.CppAny
 w = World()
 println("Dumping type w...")
-xdump(w)
+dump(w)
 @test CppTypes.greet(w) == "default hello"
 
 @show fw = CppTypes.world_factory()

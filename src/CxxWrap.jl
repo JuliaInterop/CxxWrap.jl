@@ -2,12 +2,14 @@ isdefined(Base, :__precompile__) && __precompile__()
 
 module CxxWrap
 
+using Compat
+
 # Convert path if it contains lib prefix on windows
 function lib_path(so_path::AbstractString)
   path_copy = so_path
-  @windows_only begin
+  @static if is_windows()
     basedir, libname = splitdir(so_path)
-    libdir_suffix = WORD_SIZE == 32 ? "32" : ""
+    libdir_suffix = Sys.WORD_SIZE == 32 ? "32" : ""
     if startswith(libname, "lib") && !isfile(so_path)
       path_copy = joinpath(basedir*libdir_suffix, libname[4:end])
     end
@@ -46,7 +48,9 @@ type CppFunctionInfo
 end
 
 function __init__()
-  @windows_only Libdl.dlopen(cxx_wrap_path, Libdl.RTLD_GLOBAL)
+  @static if is_windows()
+    Libdl.dlopen(cxx_wrap_path, Libdl.RTLD_GLOBAL)
+  end
   ccall((:initialize, cxx_wrap_path), Void, (Any, Any, Any), CxxWrap, CppAny, CppFunctionInfo)
 end
 
@@ -77,11 +81,11 @@ end
 # Build the expression to wrap the given function
 function build_function_expression(func::CppFunctionInfo)
   # Name of the function
-  fname = symbol(func.name)
+  fname = Symbol(func.name)
 
   # Arguments and types
   argtypes = func.argument_types
-  argsymbols = map((i) -> symbol(:arg,i[1]), enumerate(argtypes))
+  argsymbols = map((i) -> Symbol(:arg,i[1]), enumerate(argtypes))
 
   # Function pointer
   fpointer = func.function_pointer
@@ -169,7 +173,7 @@ function wrap_modules(registry::Ptr{Void}, parent_mod=Main)
   module_names = get_module_names(registry)
   jl_modules = Module[]
   for mod_name in module_names
-    modsym = symbol(mod_name)
+    modsym = Symbol(mod_name)
     jl_mod = parent_mod.eval(:(module $modsym end))
     push!(jl_modules, jl_mod)
     bind_types(registry, jl_mod)
@@ -181,7 +185,7 @@ function wrap_modules(registry::Ptr{Void}, parent_mod=Main)
   end
 
   for (jl_mod, mod_name) in zip(jl_modules, module_names)
-    exps = [symbol(s) for s in exported_symbols(registry, mod_name)]
+    exps = [Symbol(s) for s in exported_symbols(registry, mod_name)]
     jl_mod.eval(:(export $(exps...)))
   end
 end
@@ -213,7 +217,7 @@ function wrap_module(so_path::AbstractString, parent_mod=Main)
   module_functions = get_module_functions(registry)
   wrap_functions(module_functions[mod_idx], current_module())
 
-  exps = [symbol(s) for s in exported_symbols(registry, wanted_name)]
+  exps = [Symbol(s) for s in exported_symbols(registry, wanted_name)]
   current_module().eval(:(export $(exps...)))
 end
 

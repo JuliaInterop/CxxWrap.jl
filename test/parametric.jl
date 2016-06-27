@@ -4,6 +4,7 @@ println("Running parametric.jl...")
 
 using CxxWrap
 using Base.Test
+using Compat
 
 # Wrap the functions defined in C++
 wrap_modules(joinpath(dirname(dirname(@__FILE__)),"deps","usr","lib","libparametric"))
@@ -14,7 +15,7 @@ p1 = TemplateType{ParametricTypes.P1, ParametricTypes.P2}()
 p2 = TemplateType{ParametricTypes.P2, ParametricTypes.P1}()
 
 println("Dumping object p1:")
-xdump(p1)
+dump(p1)
 
 @test ParametricTypes.get_first(p1) == 1
 @test ParametricTypes.get_second(p2) == 1

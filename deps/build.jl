@@ -1,9 +1,12 @@
+using Compat
 using BinDeps
 
 libdir_opt = ""
-@windows_only libdir_opt = WORD_SIZE==32 ? "32" : ""
+@static if is_windows()
+  libdir_opt = Sys.WORD_SIZE==32 ? "32" : ""
+end
 
-@windows_only begin
+@static if is_windows()
   # prefer building if requested
   if(ENV["BUILD_ON_WINDOWS"] == "1")
     saved_defaults = deepcopy(BinDeps.defaults)
@@ -34,13 +37,14 @@ cxx_wrap = library_dependency("cxx_wrap", aliases=["libcxx_wrap"])
 prefix=joinpath(BinDeps.depsdir(cxx_wrap),"usr")
 cxx_wrap_srcdir = joinpath(BinDeps.depsdir(cxx_wrap),"src","cxx_wrap")
 cxx_wrap_builddir = joinpath(BinDeps.depsdir(cxx_wrap),"builds","cxx_wrap")
-lib_prefix = @windows ? "" : "lib"
-lib_suffix = @windows ? "dll" : (@osx? "dylib" : "so")
+lib_prefix = @static is_windows() ? "" : "lib"
+lib_suffix = @static is_windows() ? "dll" : (@static is_apple() ? "dylib" : "so")
 julia_base_dir = splitdir(JULIA_HOME)[1]
 julia_lib = ""
 for suff in ["dll", "dll.a", "dylib", "so"]
   julia_lib = find_julia_lib(suff, julia_base_dir)
   if isfile(julia_lib)
+    println("Found Julia library at ", julia_lib)
     break
   end
 end
@@ -59,8 +63,8 @@ end
 
 # Set generator if on windows
 genopt = "Unix Makefiles"
-@windows_only begin
-  if WORD_SIZE == 64
+@static if is_windows()
+  if Sys.WORD_SIZE == 64
     genopt = "Visual Studio 14 2015 Win64"
   else
     genopt = "Visual Studio 14 2015"
@@ -134,7 +138,7 @@ provides(BuildProcess,
     end
   end), examples)
 
-provides(Binaries, Dict(URI("https://github.com/barche/CxxWrap.jl/releases/download/v0.1.4/CxxWrap-julia-$(VERSION.major).$(VERSION.minor)-win$(WORD_SIZE).zip") => deps), os = :Windows)
+provides(Binaries, Dict(URI("https://github.com/barche/CxxWrap.jl/releases/download/v0.1.4/CxxWrap-julia-$(VERSION.major).$(VERSION.minor)-win$(Sys.WORD_SIZE).zip") => deps), os = :Windows)
 
 @BinDeps.install Dict([(:cxx_wrap, :_l_cxx_wrap),
                        (:extended, :_l_extended),
@@ -144,7 +148,7 @@ provides(Binaries, Dict(URI("https://github.com/barche/CxxWrap.jl/releases/downl
                        (:parametric, :_l_parametric),
                        (:types, :_l_types)])
 
-@windows_only begin
+@static if is_windows()
   if(ENV["BUILD_ON_WINDOWS"] == "1")
     empty!(BinDeps.defaults)
     append!(BinDeps.defaults, saved_defaults)

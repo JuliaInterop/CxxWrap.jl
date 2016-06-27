@@ -11,6 +11,7 @@ set(CxxWrap_VERSION 0.1)
 include(GenerateExportHeader)
 
 list(APPEND CMAKE_CXX_FLAGS "-std=c++11")
+add_definitions(-DJULIA_ENABLE_THREADING)
 
 # TODO Figure out why this doesn't work on OS X:
 #set(CMAKE_CXX_STANDARD 11)

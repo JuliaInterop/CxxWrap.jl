@@ -2,6 +2,9 @@
 #define ARRAY_HPP
 
 #include <julia.h>
+#if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR > 4
+#include <julia_threads.h>
+#endif
 
 #include "type_conversion.hpp"
 
