@@ -50,13 +50,16 @@ w_deep = deepcopy(w)
 
 # Destroy w: w and w_assigned should be dead, w_deep alive
 finalize(w)
+println("finalized w")
 @test_throws ErrorException CppTypes.greet(w)
+println("throw test 1 passed")
 @test_throws ErrorException CppTypes.greet(w_assigned)
+println("throw test 2 passed")
 @test CppTypes.greet(w_deep) == "constructed"
-
 println("completed deepcopy test")
 
 noncopyable = CppTypes.NonCopyable()
+println("noncopyable constructed")
 @test_throws ErrorException other_noncopyable = deepcopy(noncopyable)
 
 println("completed noncopyable test")
