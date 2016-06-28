@@ -54,15 +54,21 @@ finalize(w)
 @test_throws ErrorException CppTypes.greet(w_assigned)
 @test CppTypes.greet(w_deep) == "constructed"
 
+println("completed deepcopy test")
+
 noncopyable = CppTypes.NonCopyable()
 @test_throws ErrorException other_noncopyable = deepcopy(noncopyable)
+
+println("completed noncopyable test")
 
 import CppTypes.ImmutableDouble
 
 @test sizeof(ImmutableDouble) == 8
 @test isbits(ImmutableDouble)
 @test length(fieldnames(ImmutableDouble)) == 1
+println("creating bitsval1")
 bitsval1 = ImmutableDouble(1)
+println("created bitsval1")
 @test bitsval1.value == 1.
 @test bitsval1 == 1.
 @test CppTypes.getvalue(bitsval1) == 1
@@ -71,7 +77,9 @@ bitsval2 = CppTypes.ImmutableDouble(2)
 @test typeof(bitsval1 + bitsval2) == CppTypes.ImmutableDouble
 @test (bitsval1 + bitsval2) == 3.
 
+println("creating bc")
 bc = make_bits(1, 2)
+println("created bc")
 @test sizeof(bc)==16
 @test get_bits_a(bc)==1
 @test get_bits_b(bc)==2
