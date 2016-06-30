@@ -68,7 +68,7 @@ inline const char* julia_string(jl_value_t* v)
 
 inline std::string julia_type_name(jl_datatype_t* dt)
 {
-  return symbol_name(dt->name->name);
+  return jl_typename_str((jl_value_t*)dt);
 }
 
 /// Helper to easily remove a ref to a const
@@ -707,7 +707,10 @@ struct DoUnpack<std::true_type, std::false_type>
   CppT& operator()(CppT* ptr)
   {
     if(ptr == nullptr)
+    {
+      std::cout << "Throwing nullptr exception..." << std::endl;
       throw std::runtime_error("C++ object was deleted");
+    }
 
     return *ptr;
   }
@@ -732,7 +735,10 @@ struct DoUnpack<std::false_type, std::false_type>
   CppT operator()(CppT* ptr)
   {
     if(ptr == nullptr)
+    {
+      std::cout << "Throwing nullptr exception..." << std::endl;
       throw std::runtime_error("C++ object was deleted");
+    }
 
     return *ptr;
   }

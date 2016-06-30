@@ -53,6 +53,7 @@ mapped_julia_type<remove_const_ref<R>> call_functor(const void* functor, mapped_
   }
   catch(const std::runtime_error& err)
   {
+    std::cout << "caught exception: " << err.what() << std::endl;
     jl_error(err.what());
     return mapped_julia_type<remove_const_ref<R>>();
   }
@@ -158,18 +159,19 @@ public:
 
   virtual ~FunctionWrapperBase() {}
 
-  inline void set_name(const std::string& name)
+  inline void set_name(jl_value_t* name)
   {
+    protect_from_gc(name);
     m_name = name;
   }
 
-  inline const std::string& name() const
+  inline jl_value_t* name() const
   {
     return m_name;
   }
 
 private:
-  std::string m_name;
+  jl_value_t* m_name;
 };
 
 /// Implementation of function storage, case of std::function
@@ -292,14 +294,19 @@ public:
 
   Module(const std::string& name);
 
+  void append_function(FunctionWrapperBase* f)
+  {
+    m_functions.resize(m_functions.size()+1);
+    m_functions.back().reset(f);
+  }
+
   /// Define a new function
   template<typename R, typename... Args>
   void method(const std::string& name,  std::function<R(Args...)> f)
   {
     auto* new_wrapper = new FunctionWrapper<R, Args...>(f);
-    new_wrapper->set_name(name);
-    m_functions.resize(m_functions.size()+1);
-    m_functions.back().reset(new_wrapper);
+    new_wrapper->set_name((jl_value_t*)jl_symbol(name.c_str()));
+    append_function(new_wrapper);
   }
 
   /// Define a new function. Overload for pointers
@@ -317,9 +324,8 @@ public:
 
     // No conversion needed -> call can be through a naked function pointer
     auto* new_wrapper = new FunctionPtrWrapper<R, Args...>(f);
-    new_wrapper->set_name(name);
-    m_functions.resize(m_functions.size()+1);
-    m_functions.back().reset(new_wrapper);
+    new_wrapper->set_name((jl_value_t*)jl_symbol(name.c_str()));
+    append_function(new_wrapper);
   }
 
   /// Define a new function. Overload for lambda
@@ -382,7 +388,7 @@ public:
 private:
 
   template<typename T>
-  void add_default_constructor(std::true_type, jl_datatype_t* dt = nullptr);
+  void add_default_constructor(std::true_type, jl_datatype_t* dt);
 
   template<typename T>
   void add_default_constructor(std::false_type, jl_datatype_t* dt = nullptr)
@@ -390,7 +396,7 @@ private:
   }
 
   template<typename T>
-  void add_copy_constructor(std::true_type, jl_datatype_t* dt = nullptr)
+  void add_copy_constructor(std::true_type, jl_datatype_t* dt)
   {
     method("deepcopy_internal", [this](const T& other, ObjectIdDict)
     {
@@ -552,7 +558,14 @@ public:
   template<typename... ArgsT>
   TypeWrapper<T>& constructor()
   {
+#if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 5
     m_module.method("call", [](SingletonType<T>, ArgsT... args) { return create<T>(args...); });
+#else
+    auto* new_wrapper = new FunctionWrapper<jl_value_t*, ArgsT...>(std::function<jl_value_t*(ArgsT...)>(static_cast<jl_value_t*(*)(ArgsT&&...)>(create<T>)));
+    new_wrapper->set_name((jl_value_t*)julia_type<SingletonType<T>>());
+    m_module.append_function(new_wrapper);
+#endif
+
     return *this;
   }
 
@@ -651,10 +664,10 @@ TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t*
     }
     if(!abstract)
     {
-      add_default_constructor<T>(std::is_default_constructible<T>());
+      add_default_constructor<T>(std::is_default_constructible<T>(), dt);
       if(!AddBits)
       {
-        add_copy_constructor<T>(std::is_copy_constructible<T>());
+        add_copy_constructor<T>(std::is_copy_constructible<T>(), dt);
         detail::add_smart_pointer_types<T>(dt, *this);
       }
     }

@@ -81,7 +81,7 @@ CXX_WRAP_EXPORT jl_array_t* get_module_functions(void* void_registry)
       }
 
       function_array.push_back(jl_new_struct(g_cppfunctioninfo_type,
-        convert_to_julia(f.name()),
+        f.name(),
         arg_types_array.wrapped(),
         f.return_type(),
         jl_box_voidpointer(f.pointer()),

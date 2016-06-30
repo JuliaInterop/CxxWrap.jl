@@ -40,7 +40,7 @@ end
 
 # Encapsulate information about a function
 type CppFunctionInfo
-  name::AbstractString
+  name::Any
   argument_types::Array{DataType,1}
   return_type::DataType
   function_pointer::Ptr{Void}
@@ -80,9 +80,6 @@ end
 
 # Build the expression to wrap the given function
 function build_function_expression(func::CppFunctionInfo)
-  # Name of the function
-  fname = Symbol(func.name)
-
   # Arguments and types
   argtypes = func.argument_types
   argsymbols = map((i) -> Symbol(:arg,i[1]), enumerate(argtypes))
@@ -141,7 +138,7 @@ function build_function_expression(func::CppFunctionInfo)
     for (t, s) in zip(overloaded_signature, argsymbols)
       push!(argmap, :($s::$t))
     end
-
+    fname = isa(func.name, DataType) ? :(::$(func.name)) : func.name
     func_declaration = :($fname($(argmap...)))
     push!(function_expressions.args, :($func_declaration = $call_exp))
   end
@@ -151,16 +148,16 @@ end
 # Wrap functions from the cpp module to the passed julia module
 function wrap_functions(functions, julia_mod)
   basenames = Set([
-    "getindex",
-    "setindex!",
-    "convert",
-    "deepcopy_internal",
-    "+",
-    "*",
-    "=="
+    :getindex,
+    :setindex!,
+    :convert,
+    :deepcopy_internal,
+    :+,
+    :*,
+    :(==)
   ])
   for func in functions
-    if(in(func.name, basenames))
+    if in(func.name, basenames)
       Base.eval(build_function_expression(func))
     else
       julia_mod.eval(build_function_expression(func))
