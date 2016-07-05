@@ -66,8 +66,10 @@ genopt = "Unix Makefiles"
 @static if is_windows()
   if Sys.WORD_SIZE == 64
     genopt = "Visual Studio 14 2015 Win64"
-  else
+  elseif !(haskey(ENV, "MINGW_CHOST") && ENV["MINGW_CHOST"] == "i686-w64-mingw32")
     genopt = "Visual Studio 14 2015"
+  else
+    lib_prefix = "lib" #Makefiles on windows do keep the lib prefix
   end
 end
 
@@ -81,7 +83,7 @@ function try_cmake(c::Cmd)
 end
 
 # Functions library for testing
-example_labels = [:extended, :functions, :hello, :inheritance, :parametric, :types]
+example_labels = [:except, :extended, :functions, :hello, :inheritance, :parametric, :types]
 examples = BinDeps.LibraryDependency[]
 for l in example_labels
   @eval $l = $(library_dependency(string(l), aliases=["lib"*string(l)]))
@@ -138,9 +140,10 @@ provides(BuildProcess,
     end
   end), examples)
 
-provides(Binaries, Dict(URI("https://github.com/barche/CxxWrap.jl/releases/download/v0.1.4/CxxWrap-julia-$(VERSION.major).$(VERSION.minor)-win$(Sys.WORD_SIZE).zip") => deps), os = :Windows)
+provides(Binaries, Dict(URI("https://github.com/barche/CxxWrap.jl/releases/download/v0.1.5/CxxWrap-julia-$(VERSION.major).$(VERSION.minor)-win$(Sys.WORD_SIZE).zip") => deps), os = :Windows)
 
 @BinDeps.install Dict([(:cxx_wrap, :_l_cxx_wrap),
+                       (:except, :_l_except),
                        (:extended, :_l_extended),
                        (:functions, :_l_functions),
                        (:hello, :_l_hello),

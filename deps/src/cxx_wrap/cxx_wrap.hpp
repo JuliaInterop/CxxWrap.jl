@@ -53,10 +53,10 @@ mapped_julia_type<remove_const_ref<R>> call_functor(const void* functor, mapped_
   }
   catch(const std::runtime_error& err)
   {
-    std::cout << "caught exception: " << err.what() << std::endl;
     jl_error(err.what());
-    return mapped_julia_type<remove_const_ref<R>>();
   }
+
+  return mapped_julia_type<remove_const_ref<R>>();
 }
 
 /// Make a vector with the types in the variadic template parameter pack

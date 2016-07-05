@@ -7,7 +7,7 @@ using Base.Test
 using Compat
 
 # Wrap the functions defined in C++
-wrap_modules(joinpath(dirname(dirname(@__FILE__)),"deps","usr","lib","libparametric"))
+wrap_modules(CxxWrap._l_parametric)
 
 import ParametricTypes.TemplateType, ParametricTypes.NonTypeParam
 

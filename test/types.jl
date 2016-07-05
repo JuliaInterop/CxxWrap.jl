@@ -7,7 +7,7 @@ using Base.Test
 using Compat
 
 # Wrap the functions defined in C++
-wrap_modules(joinpath(dirname(dirname(@__FILE__)),"deps","usr","lib","libtypes"))
+wrap_modules(CxxWrap._l_types)
 
 using CppTypes
 using CppTypes.World

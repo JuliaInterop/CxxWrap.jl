@@ -6,7 +6,7 @@ using CxxWrap
 using Base.Test
 
 # Wrap the functions defined in C++
-wrap_modules(joinpath(dirname(dirname(@__FILE__)),"deps","usr","lib","libinheritance"))
+wrap_modules(CxxWrap._l_inheritance)
 
 using CppInheritance.A, CppInheritance.B
 

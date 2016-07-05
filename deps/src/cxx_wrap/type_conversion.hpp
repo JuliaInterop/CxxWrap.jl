@@ -708,7 +708,6 @@ struct DoUnpack<std::true_type, std::false_type>
   {
     if(ptr == nullptr)
     {
-      std::cout << "Throwing nullptr exception..." << std::endl;
       throw std::runtime_error("C++ object was deleted");
     }
 
@@ -736,7 +735,6 @@ struct DoUnpack<std::false_type, std::false_type>
   {
     if(ptr == nullptr)
     {
-      std::cout << "Throwing nullptr exception..." << std::endl;
       throw std::runtime_error("C++ object was deleted");
     }
 

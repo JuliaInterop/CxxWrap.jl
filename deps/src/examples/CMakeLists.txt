@@ -8,6 +8,10 @@ set(CMAKE_MACOSX_RPATH 1)
 list(APPEND CMAKE_CXX_FLAGS "-std=c++11")
 add_definitions(-DJULIA_ENABLE_THREADING)
 
+if(WIN32 AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=pentium4")
+endif()
+
 set(CxxWrap_DIR "${CMAKE_CURRENT_BINARY_DIR}/../../usr/lib/cmake")
 find_package(CxxWrap)
 
@@ -29,7 +33,14 @@ target_link_libraries(parametric CxxWrap::cxx_wrap)
 add_library(extended SHARED extended.cpp)
 target_link_libraries(extended CxxWrap::cxx_wrap)
 
+get_property(JULIA_LIBRARY TARGET CxxWrap::cxx_wrap PROPERTY INTERFACE_LINK_LIBRARIES)
+get_property(JULIA_INCLUDES TARGET CxxWrap::cxx_wrap PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
+add_library(except SHARED except.cpp)
+target_include_directories(except PRIVATE ${JULIA_INCLUDES})
+target_link_libraries(except ${JULIA_LIBRARY})
+
 install(TARGETS
+  except
   extended
   functions
   hello
