@@ -2,7 +2,13 @@
 #include <stdexcept>
 #include <julia.h>
 
-extern "C" __declspec(dllexport) int internalthrow(int i);
+#ifdef _WIN32
+  #define CXX_WRAP_EXCEPT_EXPORT __declspec(dllexport)
+#else
+  #define CXX_WRAP_EXCEPT_EXPORT
+#endif
+
+extern "C" CXX_WRAP_EXCEPT_EXPORT int internalthrow(int i);
 
 int internalthrow(int i)
 {
