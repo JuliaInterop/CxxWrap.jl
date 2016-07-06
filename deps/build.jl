@@ -73,15 +73,6 @@ genopt = "Unix Makefiles"
   end
 end
 
-function try_cmake(c::Cmd)
-  try
-    run(c)
-  catch
-    println("CMake command failed, not building")
-  end
-  0
-end
-
 # Functions library for testing
 example_labels = [:except, :extended, :functions, :hello, :inheritance, :parametric, :types]
 examples = BinDeps.LibraryDependency[]
