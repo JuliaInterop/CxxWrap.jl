@@ -59,6 +59,11 @@ void test_array_set(cxx_wrap::ArrayRef<double> a, const int64_t i, const double 
   a[i] = v;
 }
 
+long long int test_long_long()
+{
+  return 42;
+}
+
 void test_exception()
 {
   throw std::runtime_error("This is an exception");
@@ -120,6 +125,7 @@ void init_test_module(cxx_wrap::Module& mod)
   mod.method("test_array_set", test_array_set);
   mod.method("test_array_get", test_array_get);
   mod.method("test_type_name", test_type_name);
+  mod.method("test_long_long", test_long_long);
 }
 
 }

@@ -478,6 +478,13 @@ template<> struct static_type_mapping<detail::define_if_different<long, int64_t>
   template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
+template<> struct static_type_mapping<detail::define_if_different<long long, int64_t>>
+{
+  typedef long long type;
+  static jl_datatype_t* julia_type() { return jl_int64_type; }
+  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
+};
+
 template<> struct static_type_mapping<detail::define_if_different<unsigned long, uint64_t>>
 {
   typedef unsigned long type;
