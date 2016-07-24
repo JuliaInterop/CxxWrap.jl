@@ -596,13 +596,13 @@ struct ConvertToJulia<T*, false, false, false>
 {
   jl_value_t* operator()(T* cpp_obj) const
   {
-    jl_datatype_t* dt = static_type_mapping<T>::julia_type();
+    jl_datatype_t* dt = static_type_mapping<typename std::remove_const<T>::type>::julia_type();
     assert(!jl_isbits(dt));
 
     jl_value_t* result = nullptr;
     jl_value_t* void_ptr = nullptr;
     JL_GC_PUSH2(&result, &void_ptr);
-    void_ptr = jl_box_voidpointer(static_cast<void*>(cpp_obj));
+    void_ptr = jl_box_voidpointer(static_cast<void*>(const_cast<typename std::remove_const<T>::type*>(cpp_obj)));
     result = jl_new_struct(dt, void_ptr);
     assert(convert_to_cpp<T*>(result) == cpp_obj);
     JL_GC_POP();

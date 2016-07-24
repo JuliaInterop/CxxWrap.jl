@@ -60,6 +60,24 @@ struct BitsClass
   ~BitsClass() {}
 };
 
+struct AConstRef
+{
+  int value() const
+  {
+    return 42;
+  }
+};
+
+struct ReturnConstRef
+{
+  const AConstRef& operator()()
+  {
+    return m_val;
+  }
+
+  AConstRef m_val;
+};
+
 } // namespace cpp_types
 
 namespace cxx_wrap
@@ -129,6 +147,9 @@ JULIA_CPP_MODULE_BEGIN(registry)
     return bits.get_b();
   });
 
+  types.add_type<AConstRef>("AConstRef").method("value", &AConstRef::value);
+  types.add_type<ReturnConstRef>("ReturnConstRef").method("value", &ReturnConstRef::operator());
+
   types.export_symbols("get_bits_a", "get_bits_b", "make_bits");
-  types.export_symbols("BitsClass");
+  types.export_symbols("BitsClass", "AConstRef", "ReturnConstRef", "value");
 JULIA_CPP_MODULE_END

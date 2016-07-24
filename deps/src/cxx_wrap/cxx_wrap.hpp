@@ -32,6 +32,19 @@ struct ReturnTypeAdapter
   }
 };
 
+// Reference return type
+template<typename R, typename... Args>
+struct ReturnTypeAdapter<R&, Args...>
+{
+  inline mapped_julia_type<remove_const_ref<R>> operator()(const void* functor, mapped_julia_type<mapped_reference_type<Args>>... args)
+  {
+    auto std_func = reinterpret_cast<const std::function<R(Args...)>*>(functor);
+    assert(std_func != nullptr);
+    R& result = (*std_func)(convert_to_cpp<mapped_reference_type<Args>>(args)...);
+    return convert_to_julia(&result);
+  }
+};
+
 template<typename... Args>
 struct ReturnTypeAdapter<void, Args...>
 {
@@ -202,7 +215,7 @@ public:
 
   virtual jl_datatype_t* return_type() const
   {
-    return static_type_mapping<R>::julia_type();
+    return static_type_mapping<remove_const_ref<R>>::julia_type();
   }
 
 private:
@@ -330,7 +343,7 @@ public:
 
   /// Define a new function. Overload for lambda
   template<typename LambdaT>
-  void method(const std::string& name,  LambdaT&& lambda)
+  void method(const std::string& name, LambdaT&& lambda)
   {
     add_lambda(name, lambda, &LambdaT::operator());
   }
@@ -573,7 +586,7 @@ public:
   template<typename R, typename CT, typename... ArgsT>
   TypeWrapper<T>& method(const std::string& name, R(CT::*f)(ArgsT...))
   {
-    m_module.method(name, [f](T& obj, ArgsT... args) { return (obj.*f)(args...); } );
+    m_module.method(name, [f](T& obj, ArgsT... args) -> R { return (obj.*f)(args...); } );
     return *this;
   }
 
@@ -581,7 +594,7 @@ public:
   template<typename R, typename CT, typename... ArgsT>
   TypeWrapper<T>& method(const std::string& name, R(CT::*f)(ArgsT...) const)
   {
-    m_module.method(name, [f](const T& obj, ArgsT... args) { return (obj.*f)(args...); } );
+    m_module.method(name, [f](const T& obj, ArgsT... args) -> R { return (obj.*f)(args...); } );
     return *this;
   }
 

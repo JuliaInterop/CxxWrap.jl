@@ -86,3 +86,5 @@ println("created bc")
 @test sizeof(bc)==16
 @test get_bits_a(bc)==1
 @test get_bits_b(bc)==2
+
+@test value(value(ReturnConstRef())) == 42
