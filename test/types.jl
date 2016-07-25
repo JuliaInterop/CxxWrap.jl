@@ -88,3 +88,5 @@ println("created bc")
 @test get_bits_b(bc)==2
 
 @test value(value(ReturnConstRef())) == 42
+
+@test CppTypes.greet(ConstPtrConstruct(World())) == "default hello"

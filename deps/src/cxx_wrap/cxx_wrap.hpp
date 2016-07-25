@@ -451,11 +451,9 @@ template<typename T>
 void add_smart_pointer_types(jl_datatype_t* dt, Module& mod)
 {
   jl_datatype_t* sp_dt = (jl_datatype_t*)jl_apply_type(jl_get_global(get_cxxwrap_module(), jl_symbol("SharedPtr")), jl_svec1(static_type_mapping<T>::julia_type()));
-  static_type_mapping<std::shared_ptr<T>>::set_julia_type(sp_dt);
-  static_type_mapping<std::shared_ptr<T>*>::set_julia_type(sp_dt);
+  set_julia_type<std::shared_ptr<T>>(sp_dt);
   jl_datatype_t* up_dt = (jl_datatype_t*)jl_apply_type(jl_get_global(get_cxxwrap_module(), jl_symbol("UniquePtr")), jl_svec1(static_type_mapping<T>::julia_type()));
-  static_type_mapping<std::unique_ptr<T>>::set_julia_type(up_dt);
-  static_type_mapping<std::unique_ptr<T>*>::set_julia_type(up_dt);
+  set_julia_type<std::unique_ptr<T>>(up_dt);
 
   mod.method("get", [](const std::shared_ptr<T>& ptr)
   {
@@ -621,12 +619,11 @@ private:
     static_assert(parameter_list<AppliedT>::nb_parameters == parameter_list<T>::nb_parameters, "Parametric type applied to wrong number of parameters.");
     jl_datatype_t* app_dt = (jl_datatype_t*)jl_apply_type((jl_value_t*)m_dt, parameter_list<AppliedT>()());
 
-    static_type_mapping<AppliedT>::set_julia_type(app_dt);
+    set_julia_type<AppliedT>(app_dt);
     m_module.add_default_constructor<AppliedT>(std::is_default_constructible<AppliedT>(), app_dt);
     if(!IsImmutable<AppliedT>::value)
     {
       m_module.add_copy_constructor<AppliedT>(std::is_copy_constructible<AppliedT>(), app_dt);
-      static_type_mapping<AppliedT*>::set_julia_type(app_dt);
       detail::add_smart_pointer_types<AppliedT>(app_dt, m_module);
     }
 
@@ -670,11 +667,7 @@ TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t*
   // Register the type
   if(!is_parametric)
   {
-    static_type_mapping<T>::set_julia_type(dt);
-    if(!AddBits)
-    {
-      static_type_mapping<T*>::set_julia_type(dt);
-    }
+    set_julia_type<T>(dt);
     if(!abstract)
     {
       add_default_constructor<T>(std::is_default_constructible<T>(), dt);
@@ -720,7 +713,7 @@ TypeWrapper<T> Module::add_bits(const std::string& name, jl_datatype_t* super)
   static_assert(std::is_standard_layout<T>::value, "Bits types must be standard layout");
   jl_datatype_t* dt = jl_new_bitstype((jl_value_t*)jl_symbol(name.c_str()), super, jl_emptysvec, 8*sizeof(T));
   protect_from_gc(dt);
-  static_type_mapping<T>::set_julia_type(dt);
+  set_julia_type<T>(dt);
   m_jl_datatypes[name] = dt;
   return TypeWrapper<T>(*this, dt);
 }

@@ -273,16 +273,30 @@ template<typename SourceT> struct CXX_WRAP_EXPORT static_type_mapping
       throw std::runtime_error("Type " + std::string(typeid(SourceT).name()) + " was already registered");
     }
     type_pointer() = dt;
-    if(!std::is_pointer<SourceT>())
-    {
-#if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 5
-      finalizer_pointer() = jl_new_closure(detail::finalizer_closure<SourceT>, (jl_value_t*)jl_emptysvec, NULL);
-#else
-      finalizer_pointer() = jl_box_voidpointer((void*)detail::finalizer<SourceT>);
-#endif
-      protect_from_gc(finalizer_pointer());
-    }
+    SetFinalizer<SourceT>()();
   }
+
+  template<typename BareT>
+  struct SetFinalizer
+  {
+    void operator()()
+    {
+      #if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 5
+            finalizer_pointer() = jl_new_closure(detail::finalizer_closure<BareT>, (jl_value_t*)jl_emptysvec, NULL);
+      #else
+            finalizer_pointer() = jl_box_voidpointer((void*)detail::finalizer<BareT>);
+      #endif
+            protect_from_gc(finalizer_pointer());
+    }
+  };
+
+  template<typename BareT>
+  struct SetFinalizer<BareT*>
+  {
+    void operator()()
+    {
+    }
+  };
 
   static jl_function_t* finalizer()
   {
@@ -311,6 +325,18 @@ private:
     return m_finalizer;
   }
 };
+
+/// Automatically register pointer types
+template<typename T>
+void set_julia_type(jl_datatype_t* dt)
+{
+  static_type_mapping<T>::set_julia_type(dt);
+  if(!IsImmutable<T>::value && !IsBits<T>::value)
+  {
+    static_type_mapping<T*>::set_julia_type(dt);
+    static_type_mapping<const T*>::set_julia_type(dt);
+  }
+}
 
 /// Helper for Singleton types (Type{T} in Julia)
 template<typename T>
