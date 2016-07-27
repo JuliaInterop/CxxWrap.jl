@@ -38,7 +38,7 @@ struct ReturnTypeAdapter<R&, Args...>
 {
   inline mapped_julia_type<remove_const_ref<R>> operator()(const void* functor, mapped_julia_type<mapped_reference_type<Args>>... args)
   {
-    auto std_func = reinterpret_cast<const std::function<R(Args...)>*>(functor);
+    auto std_func = reinterpret_cast<const std::function<R&(Args...)>*>(functor);
     assert(std_func != nullptr);
     R& result = (*std_func)(convert_to_cpp<mapped_reference_type<Args>>(args)...);
     return convert_to_julia(&result);

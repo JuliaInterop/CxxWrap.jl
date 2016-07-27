@@ -646,6 +646,24 @@ struct ConvertToJulia<std::string, false, false, false>
 };
 
 template<>
+struct ConvertToJulia<std::string*, false, false, false>
+{
+  jl_value_t* operator()(const std::string* str) const
+  {
+    return ConvertToJulia<std::string, false, false, false>()(*str);
+  }
+};
+
+template<>
+struct ConvertToJulia<const std::string*, false, false, false>
+{
+  jl_value_t* operator()(const std::string* str) const
+  {
+    return ConvertToJulia<std::string, false, false, false>()(*str);
+  }
+};
+
+template<>
 struct ConvertToJulia<const char*, false, false, false>
 {
   jl_value_t* operator()(const char* str) const
