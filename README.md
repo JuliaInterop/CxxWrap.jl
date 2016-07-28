@@ -160,6 +160,32 @@ cxx_wrap::create<Class>(constructor_arg1, ...);
 ```
 This will return the new C++ object wrapped in a `jl_value_t*` that has a finalizer.
 
+## Call operator overload
+Since Julia supports overloading the function call operator `()`, this can be used to wrap `operator()` by just omitting the method name:
+
+```c++
+struct CallOperator
+{
+  int operator()() const
+  {
+    return 43;
+  }
+};
+
+// ...
+
+types.add_type<CallOperator>("CallOperator").method(&CallOperator::operator());
+```
+
+Use in Julia:
+
+```julia
+call_op = CallOperator()
+@test call_op() == 43
+```
+
+The C++ function does not even have to be `operator()`, but of course it is most logical use case.
+
 ## Smart pointers
 Currently, `std::shared_ptr` and `std::unique_ptr` are supported transparently. Returning one of these pointer types will return an object of type `SharedPtr{T}` (or `UniquePtr{T}`), and a `get` method is added automatically to the module that wraps `T` to extract the pointer. Example from the types test:
 ```c++

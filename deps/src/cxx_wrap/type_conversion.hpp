@@ -747,15 +747,12 @@ namespace detail
 {
 
 // Unpack based on reference or pointer target type
-template<typename IsReference, typename IsPointer>
-struct DoUnpack;
-
-// Unpack for a reference
-template<>
-struct DoUnpack<std::true_type, std::false_type>
+// Try to dereference by default
+template<typename T>
+struct DoUnpack
 {
   template<typename CppT>
-  CppT& operator()(CppT* ptr)
+  T operator()(CppT* ptr)
   {
     if(ptr == nullptr)
     {
@@ -766,30 +763,24 @@ struct DoUnpack<std::true_type, std::false_type>
   }
 };
 
-// Unpack for a pointer
-template<>
-struct DoUnpack<std::false_type, std::true_type>
+// Return the pointer if a pointer was passed
+template<typename T>
+struct DoUnpack<T*>
 {
   template<typename CppT>
-  CppT* operator()(CppT* ptr)
+  T* operator()(CppT* ptr)
   {
     return ptr;
   }
 };
 
-// Unpack for a value
-template<>
-struct DoUnpack<std::false_type, std::false_type>
+template<typename T>
+struct DoUnpack<T*&&>
 {
   template<typename CppT>
-  CppT operator()(CppT* ptr)
+  T* operator()(CppT* ptr)
   {
-    if(ptr == nullptr)
-    {
-      throw std::runtime_error("C++ object was deleted");
-    }
-
-    return *ptr;
+    return ptr;
   }
 };
 
@@ -802,7 +793,7 @@ struct JuliaUnpacker
 
   CppT operator()(jl_value_t* julia_value)
   {
-    return DoUnpack<typename std::is_reference<CppT>::type, typename std::is_pointer<CppT>::type>()(extract_cpp_pointer(julia_value));
+    return DoUnpack<CppT>()(extract_cpp_pointer(julia_value));
   }
 
   /// Convert the void pointer in the julia structure to a C++ pointer, asserting that the type is correct

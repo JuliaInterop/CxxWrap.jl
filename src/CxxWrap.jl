@@ -78,6 +78,33 @@ function exported_symbols(registry::Ptr{Void}, modname::AbstractString)
   ccall((:get_exported_symbols, cxx_wrap_path), Array{AbstractString}, (Ptr{Void},AbstractString), registry, modname)
 end
 
+# Interpreted as a constructor for Julia  > 0.5
+type ConstructorFname
+  _type::DataType
+end
+
+# Interpreted as an operator call overload
+type CallOpOverload
+  _type::DataType
+end
+
+process_fname(fn::Symbol) = fn
+process_fname(fn::ConstructorFname) = :(::$(Type{fn._type}))
+function process_fname(fn::CallOpOverload)
+  if VERSION < v"0.5-dev"
+    return :call
+  end
+  return :(arg1::$(fn._type))
+end
+
+make_func_declaration(fn, argmap) = :($(process_fname(fn))($(argmap...)))
+function make_func_declaration(fn::CallOpOverload, argmap)
+  if VERSION < v"0.5-dev"
+    return :($(process_fname(fn))($(argmap...)))
+  end
+  return :($(process_fname(fn))($((argmap[2:end])...)))
+end
+
 # Build the expression to wrap the given function
 function build_function_expression(func::CppFunctionInfo)
   # Arguments and types
@@ -138,8 +165,7 @@ function build_function_expression(func::CppFunctionInfo)
     for (t, s) in zip(overloaded_signature, argsymbols)
       push!(argmap, :($s::$t))
     end
-    fname = isa(func.name, DataType) ? :(::$(func.name)) : func.name
-    func_declaration = :($fname($(argmap...)))
+    func_declaration = make_func_declaration(func.name, argmap)
     push!(function_expressions.args, :($func_declaration = $call_exp))
   end
   return function_expressions

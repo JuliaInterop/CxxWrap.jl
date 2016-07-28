@@ -104,6 +104,9 @@ struct NeedConvertHelper<>
 
 } // end namespace detail
 
+/// Get the type from a global symbol
+CXX_WRAP_EXPORT jl_datatype_t* julia_type(const std::string& name);
+
 template<bool>
 struct CreateChooser
 {};
@@ -315,37 +318,38 @@ public:
 
   /// Define a new function
   template<typename R, typename... Args>
-  void method(const std::string& name,  std::function<R(Args...)> f)
+  FunctionWrapperBase& method(const std::string& name,  std::function<R(Args...)> f)
   {
     auto* new_wrapper = new FunctionWrapper<R, Args...>(f);
     new_wrapper->set_name((jl_value_t*)jl_symbol(name.c_str()));
     append_function(new_wrapper);
+    return *new_wrapper;
   }
 
   /// Define a new function. Overload for pointers
   template<typename R, typename... Args>
-  void method(const std::string& name,  R(*f)(Args...), const bool force_convert = false)
+  FunctionWrapperBase& method(const std::string& name,  R(*f)(Args...), const bool force_convert = false)
   {
     bool need_convert = force_convert || !std::is_same<mapped_julia_type<R>,remove_const_ref<R>>::value || detail::NeedConvertHelper<Args...>()();
 
     // Conversion is automatic when using the std::function calling method, so if we need conversion we use that
     if(need_convert)
     {
-      method(name, std::function<R(Args...)>(f));
-      return;
+      return method(name, std::function<R(Args...)>(f));
     }
 
     // No conversion needed -> call can be through a naked function pointer
     auto* new_wrapper = new FunctionPtrWrapper<R, Args...>(f);
     new_wrapper->set_name((jl_value_t*)jl_symbol(name.c_str()));
     append_function(new_wrapper);
+    return *new_wrapper;
   }
 
   /// Define a new function. Overload for lambda
   template<typename LambdaT>
-  void method(const std::string& name, LambdaT&& lambda)
+  FunctionWrapperBase& method(const std::string& name, LambdaT&& lambda)
   {
-    add_lambda(name, lambda, &LambdaT::operator());
+    return add_lambda(name, lambda, &LambdaT::operator());
   }
 
   /// Loop over the functions
@@ -431,9 +435,9 @@ private:
   TypeWrapper<T> add_type_internal(const std::string& name, jl_datatype_t* super, int abstract, FieldListT&& = FieldList<>());
 
   template<typename R, typename LambdaRefT, typename LambdaT, typename... ArgsT>
-  void add_lambda(const std::string& name, LambdaRefT&& lambda, R(LambdaT::*f)(ArgsT...) const)
+  FunctionWrapperBase& add_lambda(const std::string& name, LambdaRefT&& lambda, R(LambdaT::*f)(ArgsT...) const)
   {
-    method(name, std::function<R(ArgsT...)>(lambda));
+    return method(name, std::function<R(ArgsT...)>(lambda));
   }
 
   std::string m_name;
@@ -554,6 +558,21 @@ struct BuildParameterList<T<ParametersT...>>
   typedef ParameterList<std::integral_constant<int, ParametersT>...> type;
 };
 
+namespace detail
+{
+  template<typename... ArgsT>
+  inline jl_value_t* make_fname(const std::string& nametype, ArgsT... args)
+  {
+    jl_value_t* name = nullptr;
+    JL_GC_PUSH1(&name);
+    name = jl_new_struct(julia_type(nametype), args...);
+    protect_from_gc(name);
+    JL_GC_POP();
+
+    return name;
+  }
+}
+
 /// Helper class to wrap type methods
 template<typename T>
 class TypeWrapper
@@ -572,9 +591,8 @@ public:
 #if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 5
     m_module.method("call", [](SingletonType<T>, ArgsT... args) { return create<T>(args...); });
 #else
-    auto* new_wrapper = new FunctionWrapper<jl_value_t*, ArgsT...>(std::function<jl_value_t*(ArgsT...)>(static_cast<jl_value_t*(*)(ArgsT&&...)>(create<T>)));
-    new_wrapper->set_name((jl_value_t*)julia_type<SingletonType<T>>());
-    m_module.append_function(new_wrapper);
+    FunctionWrapperBase& new_wrapper = m_module.method("dummy", [](ArgsT... args) { return create<T>(args...); });
+    new_wrapper.set_name(detail::make_fname("ConstructorFname", m_dt));
 #endif
 
     return *this;
@@ -593,6 +611,22 @@ public:
   TypeWrapper<T>& method(const std::string& name, R(CT::*f)(ArgsT...) const)
   {
     m_module.method(name, [f](const T& obj, ArgsT... args) -> R { return (obj.*f)(args...); } );
+    return *this;
+  }
+
+  /// Call operator overload
+  template<typename R, typename CT, typename... ArgsT>
+  TypeWrapper<T>& method(R(CT::*f)(ArgsT...))
+  {
+    FunctionWrapperBase& new_wrapper = m_module.method("operator()", [f](T& obj, ArgsT... args) -> R { return (obj.*f)(args...); } );
+    new_wrapper.set_name(detail::make_fname("CallOpOverload", m_dt));
+    return *this;
+  }
+  template<typename R, typename CT, typename... ArgsT>
+  TypeWrapper<T>& method(R(CT::*f)(ArgsT...) const)
+  {
+    FunctionWrapperBase& new_wrapper = m_module.method("operator()", [f](const T& obj, ArgsT... args) -> R { return (obj.*f)(args...); } );
+    new_wrapper.set_name(detail::make_fname("CallOpOverload", m_dt));
     return *this;
   }
 
@@ -768,9 +802,6 @@ inline jl_value_t* convert_to_julia(std::unique_ptr<T> cpp_val)
 {
   return create<std::unique_ptr<T>>(std::move(cpp_val));
 }
-
-/// Get the type from a global symbol
-CXX_WRAP_EXPORT jl_datatype_t* julia_type(const std::string& name);
 
 } // namespace cxx_wrap
 

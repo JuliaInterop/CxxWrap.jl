@@ -14,7 +14,7 @@ struct World
 {
   World(const std::string& message = "default hello") : msg(message){}
   void set(const std::string& msg) { this->msg = msg; }
-  std::string greet() const { return msg; }
+  const std::string& greet() const { return msg; }
   std::string msg;
   ~World() { std::cout << "Destroying World with message " << msg << std::endl; }
 };
@@ -78,13 +78,21 @@ struct ReturnConstRef
   AConstRef m_val;
 };
 
+struct CallOperator
+{
+  int operator()() const
+  {
+    return 43;
+  }
+};
+
 struct ConstPtrConstruct
 {
   ConstPtrConstruct(const World* w) : m_w(w)
   {
   }
 
-  std::string greet() { return m_w->greet(); }
+  const std::string& greet() { return m_w->greet(); }
 
   const World* m_w;
 };
@@ -160,6 +168,8 @@ JULIA_CPP_MODULE_BEGIN(registry)
 
   types.add_type<AConstRef>("AConstRef").method("value", &AConstRef::value);
   types.add_type<ReturnConstRef>("ReturnConstRef").method("value", &ReturnConstRef::operator());
+
+  types.add_type<CallOperator>("CallOperator").method(&CallOperator::operator());
 
   types.add_type<ConstPtrConstruct>("ConstPtrConstruct")
     .constructor<const World*>()

@@ -90,3 +90,6 @@ println("created bc")
 @test value(value(ReturnConstRef())) == 42
 
 @test CppTypes.greet(ConstPtrConstruct(World())) == "default hello"
+
+call_op = CallOperator()
+@test call_op() == 43
