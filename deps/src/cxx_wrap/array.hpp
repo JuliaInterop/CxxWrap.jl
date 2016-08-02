@@ -8,6 +8,8 @@
 
 #include "type_conversion.hpp"
 
+#include "containers/tuple.hpp"
+
 namespace cxx_wrap
 {
 
@@ -125,7 +127,8 @@ public:
   }
 
   /// Convert from existing C-array
-  ArrayRef(ValueT* ptr, const int rows, const int cols);
+  template<typename... SizesT>
+  ArrayRef(ValueT* ptr, const SizesT... sizes);
 
   jl_array_t* wrapped()
   {
@@ -189,11 +192,16 @@ template<typename T, int Dim> struct static_type_mapping<ArrayRef<T, Dim>>
   template<typename T2> using remove_const_ref = cxx_wrap::remove_const_ref<T2>;
 };
 
-template<typename ValueT, int Dim> ArrayRef<ValueT, Dim>::ArrayRef(ValueT* c_ptr, const int rows, const int cols)
+template<typename ValueT, int Dim>
+template<typename... SizesT>
+ArrayRef<ValueT, Dim>::ArrayRef(ValueT* c_ptr, const SizesT... sizes)
 {
   jl_datatype_t* dt = static_type_mapping<ArrayRef<ValueT, Dim>>::julia_type();
-  jl_value_t *dims = jl_new_struct((jl_datatype_t*)jl_tupletype_fill(Dim, (jl_value_t*)jl_long_type), jl_box_long(rows), jl_box_long(cols));
+  jl_value_t *dims = nullptr;
+  JL_GC_PUSH1(&dims);
+  dims = convert_to_julia(std::make_tuple(sizes...));
   m_array = jl_ptr_to_array((jl_value_t*)dt, c_ptr, dims, 0);
+  JL_GC_POP();
 }
 
 template<typename T, int Dim>

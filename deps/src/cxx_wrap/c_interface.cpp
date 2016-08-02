@@ -73,19 +73,24 @@ CXX_WRAP_EXPORT jl_array_t* get_module_functions(void* void_registry)
     {
       const std::vector<jl_datatype_t*> types_vec = f.argument_types();
       Array<jl_datatype_t*> arg_types_array;
-      JL_GC_PUSH1(arg_types_array.gc_pointer());
+      jl_value_t* boxed_f = nullptr;
+      jl_value_t* boxed_thunk = nullptr;
+      JL_GC_PUSH3(arg_types_array.gc_pointer(), &boxed_f, &boxed_thunk);
 
       for(const auto& t : types_vec)
       {
         arg_types_array.push_back(t);
       }
 
+      boxed_f = jl_box_voidpointer(f.pointer());
+      boxed_thunk = jl_box_voidpointer(f.thunk());
+
       function_array.push_back(jl_new_struct(g_cppfunctioninfo_type,
         f.name(),
         arg_types_array.wrapped(),
         f.return_type(),
-        jl_box_voidpointer(f.pointer()),
-        jl_box_voidpointer(f.thunk())
+        boxed_f,
+        boxed_thunk
       ));
 
       JL_GC_POP();
