@@ -74,7 +74,7 @@ genopt = "Unix Makefiles"
 end
 
 # Functions library for testing
-example_labels = [:except, :extended, :functions, :hello, :inheritance, :parametric, :types]
+example_labels = [:containers, :except, :extended, :functions, :hello, :inheritance, :parametric, :types]
 examples = BinDeps.LibraryDependency[]
 for l in example_labels
   @eval $l = $(library_dependency(string(l), aliases=["lib"*string(l)]))
@@ -134,6 +134,7 @@ provides(BuildProcess,
 provides(Binaries, Dict(URI("https://github.com/barche/CxxWrap.jl/releases/download/v0.1.5/CxxWrap-julia-$(VERSION.major).$(VERSION.minor)-win$(Sys.WORD_SIZE).zip") => deps), os = :Windows)
 
 @BinDeps.install Dict([(:cxx_wrap, :_l_cxx_wrap),
+                       (:containers, :_l_containers),
                        (:except, :_l_except),
                        (:extended, :_l_extended),
                        (:functions, :_l_functions),

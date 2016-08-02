@@ -218,6 +218,33 @@ mod.method("test_exception", test_exception, true);
 ```
 Member functions and lambdas are automatically wrapped in an `std::functor` and so any exceptions thrown there are always intercepted and converted to a Julia exception.
 
+## Tuples
+
+C++11 tuples can be converted to Julia tuples by including the `containers/tuple.hpp` header:
+```c++
+#include <cxx_wrap.hpp>
+#include <containers/tuple.hpp>
+
+JULIA_CPP_MODULE_BEGIN(registry)
+  cxx_wrap::Module& containers = registry.create_module("Containers");
+
+  containers.method("test_tuple", []() { return std::make_tuple(1, 2., 3.f); });
+
+  containers.export_symbols("test_tuple");
+JULIA_CPP_MODULE_END
+```
+
+Use in Julia:
+
+```julia
+using CxxWrap
+using Base.Test
+
+wrap_modules(CxxWrap._l_containers)
+using Containers
+
+@test test_tuple() == (1,2.0,3.0f0)
+```
 ## Working with arrays
 The `ArrayRef` type is provided to work conveniently with array data from Julia. Defining a function like this in C++:
 ```c++

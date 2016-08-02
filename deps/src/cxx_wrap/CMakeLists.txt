@@ -60,6 +60,15 @@ install(
     Devel
 )
 
+install(
+  FILES
+    containers/tuple.hpp
+  DESTINATION
+    include/containers
+  COMPONENT
+    Devel
+)
+
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
   "${CMAKE_CURRENT_BINARY_DIR}/CxxWrapConfigVersion.cmake"

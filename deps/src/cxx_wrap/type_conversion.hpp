@@ -392,7 +392,7 @@ template<> struct static_type_mapping<double>
 template<> struct static_type_mapping<float>
 {
   typedef float type;
-  static jl_datatype_t* julia_type() { return jl_float64_type; }
+  static jl_datatype_t* julia_type() { return jl_float32_type; }
   template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
