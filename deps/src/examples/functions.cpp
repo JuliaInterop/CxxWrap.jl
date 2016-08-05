@@ -64,6 +64,11 @@ long long int test_long_long()
   return 42;
 }
 
+short test_short()
+{
+  return 43;
+}
+
 void test_exception()
 {
   throw std::runtime_error("This is an exception");
@@ -126,6 +131,7 @@ void init_test_module(cxx_wrap::Module& mod)
   mod.method("test_array_get", test_array_get);
   mod.method("test_type_name", test_type_name);
   mod.method("test_long_long", test_long_long);
+  mod.method("test_short", test_short);
 }
 
 }

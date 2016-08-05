@@ -38,6 +38,7 @@ CppTestFunctions.test_array_set(ta, Int64(1), 4.)
 @test CppTestFunctions.test_type_name("IO") == "IO"
 
 @test CppTestFunctions.test_long_long() == 42
+@test CppTestFunctions.test_short() == 43
 
 # Performance tests
 const test_size = 50000000

@@ -438,6 +438,14 @@ template<> struct static_type_mapping<double*>
   template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
+template<> struct static_type_mapping<short>
+{
+  static_assert(sizeof(short) == 2, "short is expected to be 32 bits");
+  typedef short type;
+  static jl_datatype_t* julia_type() { return jl_int16_type; }
+  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
+};
+
 template<> struct static_type_mapping<int>
 {
   static_assert(sizeof(int) == 4, "int is expected to be 32 bits");
