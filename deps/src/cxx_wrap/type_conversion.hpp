@@ -151,6 +151,25 @@ namespace detail
     finalizer<T>(args[0]);
     return nullptr;
   }
+
+  template<typename T>
+  struct unused_type
+  {
+  };
+
+  template<typename T1, typename T2>
+  struct DefineIfDifferent
+  {
+    typedef T1 type;
+  };
+
+  template<typename T>
+  struct DefineIfDifferent<T,T>
+  {
+    typedef unused_type<T> type;
+  };
+
+template<typename T1, typename T2> using define_if_different = typename DefineIfDifferent<T1,T2>::type;
 }
 
 template<typename CppT>
@@ -201,6 +220,28 @@ inline jl_value_t* box(const double x)
 {
   return jl_box_float64(x);
 }
+
+namespace detail
+{
+  inline jl_value_t* box_long(long x)
+  {
+    return jl_box_long(x);
+  }
+
+  inline jl_value_t* box_long(unused_type<long>)
+  {
+    // never called
+    return nullptr;
+  }
+}
+
+template<>
+inline jl_value_t* box(const detail::define_if_different<long, int64_t> x)
+{
+  return detail::box_long(x);
+}
+
+
 
 // Unbox boxed type
 template<typename CppT>
@@ -440,7 +481,7 @@ template<> struct static_type_mapping<double*>
 
 template<> struct static_type_mapping<short>
 {
-  static_assert(sizeof(short) == 2, "short is expected to be 32 bits");
+  static_assert(sizeof(short) == 2, "short is expected to be 16 bits");
   typedef short type;
   static jl_datatype_t* julia_type() { return jl_int16_type; }
   template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
@@ -469,28 +510,6 @@ template<> struct static_type_mapping<unsigned char>
   template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
-namespace detail
-{
-  template<typename T>
-  struct unused_type
-  {
-  };
-
-  template<typename T1, typename T2>
-  struct DefineIfDifferent
-  {
-    typedef T1 type;
-  };
-
-  template<typename T>
-  struct DefineIfDifferent<T,T>
-  {
-    typedef unused_type<T> type;
-  };
-
-template<typename T1, typename T2> using define_if_different = typename DefineIfDifferent<T1,T2>::type;
-}
-
 template<> struct static_type_mapping<int64_t>
 {
   typedef int64_t type;
@@ -507,6 +526,7 @@ template<> struct static_type_mapping<uint64_t>
 
 template<> struct static_type_mapping<detail::define_if_different<long, int64_t>>
 {
+  static_assert(sizeof(long) == 8, "long is expected to be 64 bits");
   typedef long type;
   static jl_datatype_t* julia_type() { return jl_int64_type; }
   template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
@@ -972,12 +992,43 @@ struct ConvertToCpp<ObjectIdDict, false, false, false>
   }
 };
 
+/// Represent a Julia TypeVar in the template parameter list
+template<int I>
+struct TypeVar
+{
+  static constexpr int value = I;
+
+  static jl_tvar_t* tvar()
+  {
+    static jl_tvar_t* this_tvar = build_tvar();
+    return this_tvar;
+  }
+
+  static jl_tvar_t* build_tvar()
+  {
+    jl_tvar_t* result = jl_new_typevar(jl_symbol((std::string("T") + std::to_string(I)).c_str()), (jl_value_t*)jl_bottom_type, (jl_value_t*)jl_any_type);
+    protect_from_gc(result);
+    return result;
+  }
+};
+
+template<int I>
+struct static_type_mapping<TypeVar<I>>
+{
+  typedef jl_tvar_t* type;
+  static jl_tvar_t* julia_type() { return TypeVar<I>::tvar(); }
+  template<typename T2> using remove_const_ref = cxx_wrap::remove_const_ref<T2>;
+};
+
 /// Convenience function to get the julia data type associated with T
 template<typename T>
 inline jl_datatype_t* julia_type()
 {
   return static_type_mapping<T>::julia_type();
 }
+
+/// Get the type from a global symbol
+CXX_WRAP_EXPORT jl_datatype_t* julia_type(const std::string& name);
 
 }
 

@@ -104,9 +104,6 @@ struct NeedConvertHelper<>
 
 } // end namespace detail
 
-/// Get the type from a global symbol
-CXX_WRAP_EXPORT jl_datatype_t* julia_type(const std::string& name);
-
 template<bool>
 struct CreateChooser
 {};
@@ -280,28 +277,27 @@ struct Parametric
 {
 };
 
-/// Represent a Julia TypeVar in the template parameter list
-template<int I>
-struct TypeVar
+template<typename T>
+class TypeWrapper;
+
+class CXX_WRAP_EXPORT Module;
+
+/// Specialise this to instantiate parametric types when first used in a wrapper
+template<typename T>
+struct InstantiateParametricType
 {
-  static constexpr int value = I;
-
-  static jl_tvar_t* tvar()
+  // Returns int to expand parameter packs into an initilization list
+  int operator()(Module&) const
   {
-    static jl_tvar_t* this_tvar = build_tvar();
-    return this_tvar;
-  }
-
-  static jl_tvar_t* build_tvar()
-  {
-    jl_tvar_t* result = jl_new_typevar(jl_symbol((std::string("T") + std::to_string(I)).c_str()), (jl_value_t*)jl_bottom_type, (jl_value_t*)jl_any_type);
-    protect_from_gc(result);
-    return result;
+    return 0;
   }
 };
 
-template<typename T>
-class TypeWrapper;
+template<typename... TypesT>
+void instantiate_parametric_types(Module& m)
+{
+  auto unused = {InstantiateParametricType<remove_const_ref<TypesT>>()(m)...};
+}
 
 /// Store all exposed C++ functions associated with a module
 class CXX_WRAP_EXPORT Module
@@ -320,6 +316,7 @@ public:
   template<typename R, typename... Args>
   FunctionWrapperBase& method(const std::string& name,  std::function<R(Args...)> f)
   {
+    instantiate_parametric_types<R, Args...>(*this);
     auto* new_wrapper = new FunctionWrapper<R, Args...>(f);
     new_wrapper->set_name((jl_value_t*)jl_symbol(name.c_str()));
     append_function(new_wrapper);
@@ -337,6 +334,8 @@ public:
     {
       return method(name, std::function<R(Args...)>(f));
     }
+
+    instantiate_parametric_types<R, Args...>(*this);
 
     // No conversion needed -> call can be through a naked function pointer
     auto* new_wrapper = new FunctionPtrWrapper<R, Args...>(f);
@@ -513,10 +512,9 @@ struct IsParametric
   static constexpr bool value = false;
 };
 
-template<typename... ParametersT>
-struct IsParametric<Parametric<ParametersT...>>
+template<template<typename...> class T, int I, typename... ParametersT>
+struct IsParametric<T<TypeVar<I>, ParametersT...>>
 {
-  static constexpr int nb_parameters = 0;
   static constexpr bool value = true;
 };
 
@@ -644,6 +642,11 @@ public:
     return m_module;
   }
 
+  jl_datatype_t* dt()
+  {
+    return m_dt;
+  }
+
 private:
 
   template<typename AppliedT, typename FunctorT>
@@ -694,6 +697,11 @@ TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t*
 
   assert(jl_svec_len(ftypes) == jl_svec_len(fnames));
 
+  if(is_parametric && jl_nparams(super) == jl_svec_len(parameters))
+  {
+    super = (jl_datatype_t*)jl_apply_type((jl_value_t*)super, parameters);
+  }
+
   // Create the datatype
   jl_datatype_t* dt = jl_new_datatype(jl_symbol(name.c_str()), super, parameters, fnames, ftypes, abstract, mutabl, ninitialized);
   protect_from_gc(dt);
@@ -739,15 +747,44 @@ TypeWrapper<T> Module::add_immutable(const std::string& name, FieldListT&& field
   return add_type_internal<T, true>(name, super, 0, std::forward<FieldListT>(field_list));
 }
 
+namespace detail
+{
+  template<typename T, bool>
+  struct dispatch_set_julia_type;
+
+  // non-parametric
+  template<typename T>
+  struct dispatch_set_julia_type<T, false>
+  {
+    void operator()(jl_datatype_t* dt)
+    {
+      set_julia_type<T>(dt);
+    }
+  };
+
+  // parametric
+  template<typename T>
+  struct dispatch_set_julia_type<T, true>
+  {
+    void operator()(jl_datatype_t* dt)
+    {
+    }
+  };
+}
+
 /// Add a bits type
 template<typename T>
 TypeWrapper<T> Module::add_bits(const std::string& name, jl_datatype_t* super)
 {
-  static_assert(IsBits<T>::value, "Bits types must be marked as such by specializing the IsBits template");
+  static constexpr bool is_parametric = detail::IsParametric<T>::value;
+  static_assert(IsBits<T>::value || is_parametric, "Bits types must be marked as such by specializing the IsBits template");
   static_assert(std::is_standard_layout<T>::value, "Bits types must be standard layout");
-  jl_datatype_t* dt = jl_new_bitstype((jl_value_t*)jl_symbol(name.c_str()), super, jl_emptysvec, 8*sizeof(T));
+  jl_svec_t* params = is_parametric ? parameter_list<T>()() : jl_emptysvec;
+  JL_GC_PUSH1(&params);
+  jl_datatype_t* dt = jl_new_bitstype((jl_value_t*)jl_symbol(name.c_str()), super, params, 8*sizeof(T));
   protect_from_gc(dt);
-  set_julia_type<T>(dt);
+  JL_GC_POP();
+  detail::dispatch_set_julia_type<T, is_parametric>()(dt);
   m_jl_datatypes[name] = dt;
   return TypeWrapper<T>(*this, dt);
 }
@@ -802,6 +839,35 @@ inline jl_value_t* convert_to_julia(std::unique_ptr<T> cpp_val)
 {
   return create<std::unique_ptr<T>>(std::move(cpp_val));
 }
+
+/// Registry for functions that are called when the CxxWrap module is initialized
+class InitHooks
+{
+public:
+  typedef std::function<void()> hook_t;
+
+  // Singleton implementation
+  static InitHooks& instance();
+
+  // add a new hook
+  void add_hook(const hook_t hook);
+
+  // run all hooks
+  void run_hooks();
+private:
+  InitHooks();
+  std::vector<hook_t> m_hooks;
+};
+
+/// Helper to register a hook on library load
+struct RegisterHook
+{
+  template<typename F>
+  RegisterHook(F&& f)
+  {
+    InitHooks::instance().add_hook(InitHooks::hook_t(f));
+  }
+};
 
 } // namespace cxx_wrap
 

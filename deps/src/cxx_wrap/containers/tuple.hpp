@@ -1,5 +1,5 @@
-#ifndef CONST_ARRAY_HPP
-#define CONST_ARRAY_HPP
+#ifndef CXX_WRAPPER_TUPLE_HPP
+#define CXX_WRAPPER_TUPLE_HPP
 
 #include <tuple>
 
@@ -63,6 +63,7 @@ namespace detail
     JL_GC_PUSH1(&result);
     result = jl_new_struct_uninit(dt);
     auto dummy = {tuple_add(result, S, std::get<S>(tp))...};
+    JL_GC_POP();
     return result;
   }
 }
@@ -96,6 +97,20 @@ struct ConvertToJulia<std::tuple<TypesT...>, false, false, false>
   {
     return detail::new_jl_tuple(typename detail::GenerateSequence<sizeof...(TypesT)>::type(), julia_type<std::tuple<TypesT...>>(), tp);
   }
+};
+
+// Wrap NTuple type
+template<typename N, typename T>
+struct NTuple
+{
+};
+
+template<typename N, typename T>
+struct static_type_mapping<NTuple<N,T>>
+{
+  typedef jl_datatype_t* type;
+  static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_tuple_type(jl_svec1(jl_apply_type((jl_value_t*)jl_vararg_type, jl_svec2(static_type_mapping<T>::julia_type(), static_type_mapping<N>::julia_type())))); }
+  template<typename T2> using remove_const_ref = cxx_wrap::remove_const_ref<T2>;
 };
 
 } // namespace cxx_wrap

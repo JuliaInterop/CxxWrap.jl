@@ -27,6 +27,7 @@ const cxx_wrap_path = _l_cxx_wrap
 # Base type for wrapped C++ types
 abstract CppAny
 abstract CppDisplay <: Display
+abstract CppArray{T,N} <: AbstractArray{T,N}
 
 # C++ std::shared_ptr
 type SharedPtr{T} <: CppAny
@@ -52,6 +53,9 @@ function __init__()
     Libdl.dlopen(cxx_wrap_path, Libdl.RTLD_GLOBAL)
   end
   ccall((:initialize, cxx_wrap_path), Void, (Any, Any, Any), CxxWrap, CppAny, CppFunctionInfo)
+
+  Base.linearindexing(::ConstArray) = Base.LinearFast()
+  Base.size(arr::ConstArray) = arr.size
 end
 
 # Load the modules in the shared library located at the given path
@@ -118,7 +122,7 @@ function build_function_expression(func::CppFunctionInfo)
   # Thunk
   thunk = func.thunk_pointer
 
-  map_arg_type(t::DataType) = ((t <: CppAny) || (t <: CppDisplay) || (t <: Tuple)) ? Any : t
+  map_arg_type(t::DataType) = ((t <: CppAny) || (t <: CppDisplay) || (t <: Tuple)) || (t <: CppArray) ? Any : t
 
   # Build the types for the ccall argument list
   c_arg_types = [map_arg_type(t) for t in argtypes]
@@ -178,6 +182,7 @@ function wrap_functions(functions, julia_mod)
     :setindex!,
     :convert,
     :deepcopy_internal,
+    :size,
     :+,
     :*,
     :(==)
@@ -243,7 +248,6 @@ function wrap_module(so_path::AbstractString, parent_mod=Main)
   exps = [Symbol(s) for s in exported_symbols(registry, wanted_name)]
   current_module().eval(:(export $(exps...)))
 end
-
 
 export wrap_modules, wrap_module
 

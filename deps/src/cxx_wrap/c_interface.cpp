@@ -14,6 +14,8 @@ CXX_WRAP_EXPORT void initialize(jl_value_t* julia_module, jl_value_t* cpp_any_ty
   g_cxx_wrap_module = (jl_module_t*)julia_module;
   g_any_type = (jl_datatype_t*)cpp_any_type;
   g_cppfunctioninfo_type = (jl_datatype_t*)cppfunctioninfo_type;
+
+  InitHooks::instance().run_hooks();
 }
 
 CXX_WRAP_EXPORT jl_datatype_t* get_any_type()

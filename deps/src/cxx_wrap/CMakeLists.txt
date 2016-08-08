@@ -29,6 +29,9 @@ add_library(cxx_wrap SHARED
   c_interface.cpp
   cxx_wrap.cpp
   type_conversion.hpp
+  containers/const_array.hpp
+  containers/containers.cpp
+  containers/tuple.hpp
 )
 target_include_directories(cxx_wrap PUBLIC ${JULIA_INCLUDE_DIRECTORY})
 generate_export_header(cxx_wrap)
@@ -62,6 +65,7 @@ install(
 
 install(
   FILES
+    containers/const_array.hpp
     containers/tuple.hpp
   DESTINATION
     include/containers

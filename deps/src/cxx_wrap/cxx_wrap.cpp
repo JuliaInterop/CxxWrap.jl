@@ -54,4 +54,27 @@ CXX_WRAP_EXPORT jl_datatype_t* julia_type(const std::string& name)
   throw std::runtime_error("Symbol for type " + name + " was not found");
 }
 
+InitHooks& InitHooks::instance()
+{
+  static InitHooks hooks;
+  return hooks;
+}
+
+InitHooks::InitHooks()
+{
+}
+
+void InitHooks::add_hook(const hook_t hook)
+{
+  m_hooks.push_back(hook);
+}
+
+void InitHooks::run_hooks()
+{
+  for(const hook_t& h : m_hooks)
+  {
+    h();
+  }
+}
+
 } // End namespace Julia
