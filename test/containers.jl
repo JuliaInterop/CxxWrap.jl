@@ -19,4 +19,6 @@ cv = const_vector()
 cm = const_matrix()
 @test size(cm) == (3,2)
 @test cm == [[1.,2.,3.] [4.,5.,6.]]
-println("Const matrix:\n", cm)
+println("Displaying const matrix")
+display(cm)
+println("")

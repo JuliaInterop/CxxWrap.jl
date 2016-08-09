@@ -246,6 +246,7 @@ using Containers
 @test test_tuple() == (1,2.0,3.0f0)
 ```
 ## Working with arrays
+### Reference native Julia arrays
 The `ArrayRef` type is provided to work conveniently with array data from Julia. Defining a function like this in C++:
 ```c++
 void test_array_set(cxx_wrap::ArrayRef<double> a, const int64_t i, const double v)
@@ -262,6 +263,54 @@ The `ArrayRef` type provides basic functionality:
 * iterators
 * `size`
 * `[]` read-write accessor
+
+### Const arrays
+Sometimes, a function returns a const pointer that is an array, either of fixed size or with a size that can be determined from elsewhere in the API. Example:
+```c++
+const double* const_vector()
+{
+  static double d[] = {1., 2., 3};
+  return d;
+}
+```
+
+In this simple case, the most logical way to translate this would be as a tuple:
+```c++
+mymodule.method("const_ptr_arg", []() { return std::make_tuple(const_vector().ptr[0], const_vector().ptr[1], const_vector().ptr[2]); });
+```
+
+In the case of a larger blob of heap-allocated data it makes more sense to convert this to a `ConstArray`, which implements the read-only part of the Julia array interface, so it exposes the data safely to Julia in a way that can be used natively:
+```c++
+mymodule.method("const_vector", []() { return cxx_wrap::make_const_array(const_vector(), 3); });
+```
+
+For multi-dimensional arrays, the `make_const_array` function takes multiple sizes, e.g.:
+
+```c++
+const double* const_matrix()
+{
+  static double d[2][3] = {{1., 2., 3}, {4., 5., 6.}};
+  return &d[0][0];
+}
+
+// ...module definition skipped...
+
+mymodule.method("const_matrix", []() { return cxx_wrap::make_const_array(const_matrix(), 3, 2); });
+```
+
+Note that because of the column-major convention in Julia, the sizes are in reversed order from C++, so the Julia code:
+```julia
+display(const_matrix())
+```
+
+shows:
+
+```
+3x2 ConstArray{Float64,2}:
+ 1.0  4.0
+ 2.0  5.0
+ 3.0  6.0
+```
 
 ## Adding Julia code to the module
 Sometimes, you may want to write additional Julia code in the module that is built from C++. To do this, call the `wrap_module` method inside an appropriately named Julia module:
