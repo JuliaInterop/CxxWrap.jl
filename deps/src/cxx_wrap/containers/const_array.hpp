@@ -10,11 +10,34 @@ namespace cxx_wrap
 
 namespace detail
 {
+  template<std::size_t S>
+  struct IndexTChooser
+  {
+  };
+
+  template<>
+  struct IndexTChooser<4>
+  {
+    typedef int32_t type;
+  };
+
+  template<>
+  struct IndexTChooser<8>
+  {
+    typedef int64_t type;
+  };
+
+}
+
+typedef typename detail::IndexTChooser<sizeof(std::ptrdiff_t)>::type index_t;
+
+namespace detail
+{
   // Helper to make a C++ tuple of longs based on the number of elements
-  template<long N, typename... TypesT>
+  template<index_t N, typename... TypesT>
   struct LongNTuple
   {
-    typedef typename LongNTuple<N-1, long, TypesT...>::type type;
+    typedef typename LongNTuple<N-1, index_t, TypesT...>::type type;
   };
 
   template<typename... TypesT>
@@ -51,7 +74,7 @@ struct InstantiateParametricType<ConstPtr<T>>
 
 /// Wrap a pointer, providing the Julia array interface for it
 /// The parameter N represents the number of dimensions
-template<typename T, long N>
+template<typename T, index_t N>
 class ConstArray
 {
 public:
@@ -90,9 +113,9 @@ ConstArray<T, sizeof...(SizesT)> make_const_array(const T* p, const SizesT... si
   return ConstArray<T, sizeof...(SizesT)>(p, sizes...);
 }
 
-template<typename T, long N> struct IsImmutable<ConstArray<T,N>> : std::true_type {};
+template<typename T, index_t N> struct IsImmutable<ConstArray<T,N>> : std::true_type {};
 
-template<typename T, long N>
+template<typename T, index_t N>
 struct ConvertToJulia<ConstArray<T,N>, false, true, false>
 {
   jl_value_t* operator()(const ConstArray<T,N>& arr)
@@ -109,7 +132,7 @@ struct ConvertToJulia<ConstArray<T,N>, false, true, false>
   }
 };
 
-template<typename T, long N>
+template<typename T, index_t N>
 struct InstantiateParametricType<ConstArray<T,N>>
 {
   int operator()(Module& m) const

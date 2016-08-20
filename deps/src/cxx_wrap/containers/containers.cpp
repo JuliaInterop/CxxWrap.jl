@@ -29,7 +29,7 @@ struct static_type_mapping<ConstPtr<TypeVar<I>>>
 RegisterHook const_array_reg([]() {
   Module m("CxxWrap");
   g_constptr_dt = m.add_bits<ConstPtr<TypeVar<1>>>("ConstPtr").dt();
-  m.add_immutable<Parametric<TypeVar<1>, TypeVar<2>>>("ConstArray", FieldList<ConstPtr<TypeVar<1>>, NTuple<TypeVar<2>, long>>("ptr", "size"), julia_type("CppArray"));
+  m.add_immutable<Parametric<TypeVar<1>, TypeVar<2>>>("ConstArray", FieldList<ConstPtr<TypeVar<1>>, NTuple<TypeVar<2>, index_t>>("ptr", "size"), julia_type("CppArray"));
   m.bind_types(g_cxx_wrap_module);
 });
 
