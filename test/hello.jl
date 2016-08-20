@@ -1,7 +1,5 @@
 # Hello world example, similar to the Boost.Python hello world
 
-println("Running hello.jl...")
-
 using CxxWrap
 using Base.Test
 

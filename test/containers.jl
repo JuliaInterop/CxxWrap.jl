@@ -1,5 +1,3 @@
-println("Running containers.jl...")
-
 using CxxWrap
 using Base.Test
 

@@ -1,6 +1,4 @@
 # Example on how to load types and methods from C++ into an existing module
-
-println("Running extended_module.jl...")
 using Base.Test
 
 module ExtendedTypes

@@ -1,7 +1,5 @@
 using Base.Test
 
-println("Running property.jl...")
-
 # This is a stand-alone test, showing how to call a function when setting obj.field = something.
 # It would be useful for calling getters and setters on a wrapped C++ class
 # The example here uses CppClass to stand-in for a real C++ class and allow a pure Julia demo

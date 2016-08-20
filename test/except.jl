@@ -1,5 +1,3 @@
-println("Running except.jl...")
-
 using Base.Test
 import CxxWrap
 

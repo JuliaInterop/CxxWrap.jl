@@ -1,7 +1,5 @@
 # Tests for the functions library in deps/examples
 
-println("Running functions.jl...")
-
 using CxxWrap
 using Base.Test
 using Compat
@@ -26,7 +24,9 @@ wrap_modules(functions_lib_path)
 @test CppTestFunctions.test_int64_array(Int64[1,2])
 @test CppTestFunctions.test_float_array(Float32[1.,2.])
 @test CppTestFunctions.test_double_array([1.,2.])
-@test_throws ErrorException CppTestFunctions.test_exception()
+if !(is_windows() && Sys.WORD_SIZE == 32)
+  @test_throws ErrorException CppTestFunctions.test_exception()
+end
 ta = [1.,2.]
 @test CppTestFunctions.test_array_len(ta) == 2
 @test CppTestFunctions.test_array_get(ta, Int64(0)) == 1.
