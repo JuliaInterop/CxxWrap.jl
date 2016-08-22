@@ -40,6 +40,26 @@ CppTestFunctions.test_array_set(ta, Int64(1), 4.)
 @test CppTestFunctions.test_long_long() == 42
 @test CppTestFunctions.test_short() == 43
 
+# Test GC protection array
+a = "str1"
+b = "str2"
+c = "str3"
+protect_arr = CxxWrap._gc_protected
+start_len = length(protect_arr)
+CppTestFunctions.test_protect_from_gc(a)
+CppTestFunctions.test_protect_from_gc(b)
+@test length(protect_arr) == start_len + 2
+@test protect_arr[end-1] == a
+@test protect_arr[end] == b
+CppTestFunctions.test_unprotect_from_gc(a)
+@test length(protect_arr) == start_len + 2
+@test protect_arr[end-1] == nothing
+@test protect_arr[end] == b
+CppTestFunctions.test_protect_from_gc(c)
+@test length(protect_arr) == start_len + 2
+@test protect_arr[end-1] == c
+@test protect_arr[end] == b
+
 # Performance tests
 const test_size = 50000000
 const numbers = rand(test_size)

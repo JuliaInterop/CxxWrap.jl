@@ -132,6 +132,8 @@ void init_test_module(cxx_wrap::Module& mod)
   mod.method("test_type_name", test_type_name);
   mod.method("test_long_long", test_long_long);
   mod.method("test_short", test_short);
+  mod.method("test_protect_from_gc", [](jl_value_t* v) { cxx_wrap::protect_from_gc(v); });
+  mod.method("test_unprotect_from_gc", [](jl_value_t* v) { cxx_wrap::unprotect_from_gc(v); });
 }
 
 }

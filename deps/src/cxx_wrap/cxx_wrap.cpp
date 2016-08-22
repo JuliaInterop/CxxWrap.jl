@@ -27,6 +27,18 @@ CXX_WRAP_EXPORT jl_array_t* gc_protected()
   return m_arr;
 }
 
+CXX_WRAP_EXPORT std::stack<std::size_t>& gc_free_stack()
+{
+  static std::stack<std::size_t> m_stack;
+  return m_stack;
+}
+
+CXX_WRAP_EXPORT std::map<jl_value_t*, std::size_t>& gc_index_map()
+{
+  static std::map<jl_value_t*, std::size_t> m_map;
+  return m_map;
+}
+
 Module::Module(const std::string& name) : m_name(name)
 {
 }

@@ -8,6 +8,7 @@
 
 #include <map>
 #include <memory>
+#include <stack>
 #include <stdexcept>
 #include <string>
 #include <typeinfo>
@@ -25,16 +26,36 @@ namespace cxx_wrap
 {
 
 CXX_WRAP_EXPORT jl_array_t* gc_protected();
+CXX_WRAP_EXPORT std::stack<std::size_t>& gc_free_stack();
+CXX_WRAP_EXPORT std::map<jl_value_t*, std::size_t>& gc_index_map();
 
 
 template<typename T>
 inline void protect_from_gc(T* val)
 {
-#if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 5
-  jl_cell_1d_push(gc_protected(), (jl_value_t*)val);
-#else
-  jl_array_ptr_1d_push(gc_protected(), (jl_value_t*)val);
-#endif
+  std::size_t pos = 0;
+  if(gc_free_stack().empty())
+  {
+    pos = jl_array_len(gc_protected());
+    jl_array_grow_end(gc_protected(), 1);
+  }
+  else
+  {
+    pos = gc_free_stack().top();
+    gc_free_stack().pop();
+  }
+  jl_arrayset(gc_protected(), (jl_value_t*)(val), pos);
+  gc_index_map()[(jl_value_t*)val] = pos;
+}
+
+template<typename T>
+inline void unprotect_from_gc(T* val)
+{
+  const auto found = gc_index_map().find((jl_value_t*)val);
+  assert(found != gc_index_map().end());
+  gc_free_stack().push(found->second);
+  jl_arrayset(gc_protected(), jl_nothing, found->second);
+  gc_index_map().erase(found);
 }
 
 /// Get the symbol name correctly depending on Julia version
