@@ -33,6 +33,7 @@ CXX_WRAP_EXPORT std::map<jl_value_t*, std::size_t>& gc_index_map();
 template<typename T>
 inline void protect_from_gc(T* val)
 {
+  JL_GC_PUSH1(&val);
   std::size_t pos = 0;
   if(gc_free_stack().empty())
   {
@@ -46,6 +47,7 @@ inline void protect_from_gc(T* val)
   }
   jl_arrayset(gc_protected(), (jl_value_t*)(val), pos);
   gc_index_map()[(jl_value_t*)val] = pos;
+  JL_GC_POP();
 }
 
 template<typename T>
