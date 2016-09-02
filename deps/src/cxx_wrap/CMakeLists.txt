@@ -28,6 +28,8 @@ add_library(cxx_wrap SHARED
   array.hpp
   c_interface.cpp
   cxx_wrap.cpp
+  functions.hpp
+  functions.cpp
   type_conversion.hpp
   containers/const_array.hpp
   containers/containers.cpp
@@ -56,6 +58,7 @@ install(
   FILES
     array.hpp
     cxx_wrap.hpp
+    functions.hpp
     type_conversion.hpp
   DESTINATION
     include
