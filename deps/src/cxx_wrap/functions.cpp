@@ -5,7 +5,7 @@
 namespace cxx_wrap
 {
 
-jl_function_t* julia_function(const std::string& name, const std::string& module_name)
+CXX_WRAP_EXPORT jl_function_t* julia_function(const std::string& name, const std::string& module_name)
 {
   jl_module_t* mod = module_name.empty() ? jl_current_module : (jl_module_t*)jl_get_global(jl_current_module, jl_symbol(module_name.c_str()));
   if(mod == nullptr)
