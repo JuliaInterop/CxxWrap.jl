@@ -3,6 +3,12 @@
 using CxxWrap
 using Base.Test
 using Compat
+cxx_available = true
+try
+  using Cxx
+catch
+  cxx_available = false
+end
 
 const functions_lib_path = CxxWrap._l_functions
 
@@ -89,11 +95,25 @@ half_c(d::Float64) = ccall((:half_c, functions_lib_path), Cdouble, (Cdouble,), d
 # Bring C++ versions into scope
 using CppHalfFunctions.half_d, CppHalfFunctions.half_lambda, CppHalfFunctions.half_loop_cpp!
 
+@static if cxx_available
+  # Cxx.jl version
+  cxx"""
+  double half_cxx(const double d)
+  {
+    return 0.5*d;
+  }
+  """
+  half_cxxjl(d::Float64) = @cxx half_cxx(d)
+end
+
 # Make the looping functions
 make_loop_function(:julia)
 make_loop_function(:c)
 make_loop_function(:d) # C++ with regular C++ function pointer
 make_loop_function(:lambda) # C++ lambda, so using std::function
+if cxx_available
+  make_loop_function(:cxxjl) # Cxx.jl version
+end
 
 # test that a "half" function does what it should
 function test_half_function(f)
@@ -107,6 +127,9 @@ test_half_function(half_loop_c!)
 test_half_function(half_loop_d!)
 test_half_function(half_loop_lambda!)
 test_half_function(half_loop_cpp!)
+if cxx_available
+  test_half_function(half_loop_cxxjl!)
+end
 
 # Run timing tests
 println("---- Half test timings ----")
@@ -124,6 +147,13 @@ println("C++ test:")
 @time half_loop_d!(numbers, output)
 @time half_loop_d!(numbers, output)
 @time half_loop_d!(numbers, output)
+
+if cxx_available
+  println("Cxx.jl test:")
+  @time half_loop_cxxjl!(numbers, output)
+  @time half_loop_cxxjl!(numbers, output)
+  @time half_loop_cxxjl!(numbers, output)
+end
 
 println("C++ lambda test:")
 @time half_loop_lambda!(numbers, output)
