@@ -54,7 +54,11 @@ template<typename T>
 inline void unprotect_from_gc(T* val)
 {
   const auto found = gc_index_map().find((jl_value_t*)val);
-  assert(found != gc_index_map().end());
+  if(found == gc_index_map().end())
+  {
+    std::cout << "WARNING: attempt to unprotect a jl_value_t* that was never protected" << std::endl;
+    return;
+  }
   gc_free_stack().push(found->second);
   jl_arrayset(gc_protected(), jl_nothing, found->second);
   gc_index_map().erase(found);

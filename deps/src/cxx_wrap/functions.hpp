@@ -35,6 +35,8 @@ namespace detail
       m_arg_array[m_i++] = convert_to_julia(a);
     }
 
+    void push() {}
+
     jl_value_t** m_arg_array;
     int m_i = 0;
   };

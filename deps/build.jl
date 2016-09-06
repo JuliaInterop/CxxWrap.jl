@@ -61,9 +61,12 @@ if !isdir(julia_include_dir)  # then we're running directly from build
   julia_include_dir *= ";" * joinpath(julia_base_dir_aux, "src" )
 end
 
+makeopts = ["--", "-j", "$(Sys.CPU_CORES+2)"]
+
 # Set generator if on windows
 genopt = "Unix Makefiles"
 @static if is_windows()
+  makeopts = ""
   if Sys.WORD_SIZE == 64
     genopt = "Visual Studio 14 2015 Win64"
   elseif !(haskey(ENV, "MINGW_CHOST") && ENV["MINGW_CHOST"] == "i686-w64-mingw32")
@@ -86,7 +89,7 @@ deps = [cxx_wrap; examples]
 
 cxx_steps = @build_steps begin
   `cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="Release"  -DJULIA_INCLUDE_DIRECTORY="$julia_include_dir" -DJULIA_LIBRARY="$julia_lib" -DLIBDIR_SUFFIX=$libdir_opt $cxx_wrap_srcdir`
-  `cmake --build . --config Release --target install`
+  `cmake --build . --config Release --target install $makeopts`
 end
 
 example_paths = AbstractString[]
@@ -96,7 +99,7 @@ end
 
 examples_steps = @build_steps begin
   `cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="Release" -DLIBDIR_SUFFIX=$libdir_opt $examples_srcdir`
-  `cmake --build . --config Release --target install`
+  `cmake --build . --config Release --target install $makeopts`
 end
 
 # If built, always run cmake, in case the code changed
