@@ -93,7 +93,7 @@ half_julia(d::Float64) = d*0.5
 half_c(d::Float64) = ccall((:half_c, functions_lib_path), Cdouble, (Cdouble,), d)
 
 # Bring C++ versions into scope
-using CppHalfFunctions.half_d, CppHalfFunctions.half_lambda, CppHalfFunctions.half_loop_cpp!
+using CppHalfFunctions.half_d, CppHalfFunctions.half_lambda, CppHalfFunctions.half_loop_cpp!, CppHalfFunctions.half_loop_jlcall!
 
 @static if cxx_available
   # Cxx.jl version
@@ -164,3 +164,11 @@ println("C++ test, loop in the C++ code:")
 @time half_loop_cpp!(numbers, output)
 @time half_loop_cpp!(numbers, output)
 @time half_loop_cpp!(numbers, output)
+
+const small_in = rand(test_size÷100)
+small_out = zeros(test_size÷100)
+
+println("jl_call inside C++ loop (array is 100 times smaller than other tests):")
+@time half_loop_jlcall!(small_in, small_out)
+@time half_loop_jlcall!(small_in, small_out)
+@time half_loop_jlcall!(small_in, small_out)
