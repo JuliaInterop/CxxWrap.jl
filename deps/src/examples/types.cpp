@@ -1,6 +1,7 @@
 #include <string>
 
 #include <cxx_wrap.hpp>
+#include <functions.hpp>
 
 namespace cpp_types
 {
@@ -97,6 +98,19 @@ struct ConstPtrConstruct
   const World* m_w;
 };
 
+// Call a function on a type that is defined in Julia
+struct JuliaTestType {
+  double a;
+  double b;
+};
+void call_testype_function()
+{
+  JuliaTestType A = {2., 3.};
+  jl_value_t* result = jl_new_struct_uninit(cxx_wrap::julia_type("JuliaTestType"));
+  *reinterpret_cast<JuliaTestType*>(result) = A;
+  cxx_wrap::julia_call(cxx_wrap::julia_function("julia_test_func"), result);
+}
+
 } // namespace cpp_types
 
 namespace cxx_wrap
@@ -109,6 +123,8 @@ JULIA_CPP_MODULE_BEGIN(registry)
   using namespace cpp_types;
 
   cxx_wrap::Module& types = registry.create_module("CppTypes");
+
+  types.method("call_testype_function", call_testype_function);
 
   types.add_type<DoubleData>("DoubleData");
 

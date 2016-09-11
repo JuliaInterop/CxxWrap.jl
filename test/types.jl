@@ -95,3 +95,16 @@ println("created bc")
 
 call_op = CallOperator()
 @test call_op() == 43
+
+type JuliaTestType
+    a::Float64
+    b::Float64
+end
+
+function julia_test_func(data)
+  println("a: ", data.a, ", b: ", data.b)
+  @test data.a == 2.
+  @test data.b == 3.
+end
+
+CppTypes.call_testype_function()
