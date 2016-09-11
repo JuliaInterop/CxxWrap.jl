@@ -66,7 +66,7 @@ makeopts = ["--", "-j", "$(Sys.CPU_CORES+2)"]
 # Set generator if on windows
 genopt = "Unix Makefiles"
 @static if is_windows()
-  makeopts = ""
+  makeopts = "--"
   if Sys.WORD_SIZE == 64
     genopt = "Visual Studio 14 2015 Win64"
   elseif !(haskey(ENV, "MINGW_CHOST") && ENV["MINGW_CHOST"] == "i686-w64-mingw32")
