@@ -706,6 +706,13 @@ TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t*
   jl_datatype_t* dt = jl_new_datatype(jl_symbol(name.c_str()), super, parameters, fnames, ftypes, abstract, mutabl, ninitialized);
   protect_from_gc(dt);
 
+  if(abstract)
+  {
+    jl_datatype_t* concrete_dt = jl_new_datatype(jl_symbol((name+"DefaultImplementation").c_str()), dt, parameters, fnames, ftypes, 0, mutabl, ninitialized);
+    protect_from_gc(concrete_dt);
+    static_type_mapping<T>::set_instantiable_julia_type(concrete_dt);
+  }
+
   // Register the type
   if(!is_parametric)
   {

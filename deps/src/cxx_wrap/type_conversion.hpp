@@ -334,6 +334,21 @@ template<typename SourceT> struct CXX_WRAP_EXPORT static_type_mapping
     return type_pointer();
   }
 
+  static jl_datatype_t* julia_instantiable_type()
+  {
+    if(type_pointer() == nullptr)
+    {
+      throw std::runtime_error("Type " + std::string(typeid(SourceT).name()) + " has no Julia wrapper");
+    }
+    if(jl_is_abstracttype(type_pointer()))
+    {
+      // A default instantiable type should be auto-created for each abstract type
+      assert(instantiable_type_pointer());
+      return instantiable_type_pointer();
+    }
+    return type_pointer();
+  }
+
   static void set_julia_type(jl_datatype_t* dt)
   {
     if(type_pointer() != nullptr)
@@ -342,6 +357,11 @@ template<typename SourceT> struct CXX_WRAP_EXPORT static_type_mapping
     }
     type_pointer() = dt;
     SetFinalizer<SourceT>()();
+  }
+
+  static void set_instantiable_julia_type(jl_datatype_t* dt)
+  {
+    instantiable_type_pointer() = dt;
   }
 
   template<typename BareT>
@@ -385,6 +405,12 @@ private:
   {
     static jl_datatype_t* m_type_pointer = nullptr;
     return m_type_pointer;
+  }
+
+  static jl_datatype_t*& instantiable_type_pointer()
+  {
+    static jl_datatype_t* m_instantiable_type_pointer = nullptr;
+    return m_instantiable_type_pointer;
   }
 
   static jl_function_t*& finalizer_pointer()
@@ -679,7 +705,7 @@ struct ConvertToJulia<T*, false, false, false>
 {
   jl_value_t* operator()(T* cpp_obj) const
   {
-    jl_datatype_t* dt = static_type_mapping<typename std::remove_const<T>::type>::julia_type();
+    jl_datatype_t* dt = static_type_mapping<typename std::remove_const<T>::type>::julia_instantiable_type();
     assert(!jl_isbits(dt));
 
     jl_value_t* result = nullptr;
