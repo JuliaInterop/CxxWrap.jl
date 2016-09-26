@@ -26,6 +26,9 @@ function find_julia_lib(lib_suffix::AbstractString, julia_base_dir::AbstractStri
     julia_lib = joinpath(julia_base_dir, "lib64", "julia", "libjulia.$lib_suffix")
   end
   if !isfile(julia_lib)
+    julia_lib = joinpath(julia_base_dir, "lib64", "libjulia.$lib_suffix")
+  end
+  if !isfile(julia_lib)
     julia_lib = joinpath(julia_base_dir, "lib", "x86_64-linux-gnu", "julia", "libjulia.$lib_suffix")
   end
   return julia_lib
