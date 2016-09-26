@@ -199,126 +199,6 @@ namespace detail
 template<typename T1, typename T2> using define_if_different = typename DefineIfDifferent<T1,T2>::type;
 }
 
-template<typename CppT>
-inline jl_value_t* box(const CppT v)
-{
-  static_assert(sizeof(CppT) == 0, "Unimplemented box in cxx_wrap");
-  return nullptr;
-}
-
-template<>
-inline jl_value_t* box(const bool b)
-{
-  return jl_box_bool(b);
-}
-
-template<>
-inline jl_value_t* box(const int32_t i)
-{
-  return jl_box_int32(i);
-}
-
-template<>
-inline jl_value_t* box(const int64_t i)
-{
-  return jl_box_int64(i);
-}
-
-template<>
-inline jl_value_t* box(const uint32_t i)
-{
-  return jl_box_uint32(i);
-}
-
-template<>
-inline jl_value_t* box(const uint64_t i)
-{
-  return jl_box_uint64(i);
-}
-
-template<>
-inline jl_value_t* box(const float x)
-{
-  return jl_box_float32(x);
-}
-
-template<>
-inline jl_value_t* box(const double x)
-{
-  return jl_box_float64(x);
-}
-
-namespace detail
-{
-  inline jl_value_t* box_long(long x)
-  {
-    return jl_box_long(x);
-  }
-
-  inline jl_value_t* box_long(unused_type<long>)
-  {
-    // never called
-    return nullptr;
-  }
-}
-
-template<>
-inline jl_value_t* box(const detail::define_if_different<long, int64_t> x)
-{
-  return detail::box_long(x);
-}
-
-
-
-// Unbox boxed type
-template<typename CppT>
-inline CppT unbox(jl_value_t* v)
-{
-  static_assert(sizeof(CppT) == 0, "Unimplemented unbox in cxx_wrap");
-}
-
-template<>
-inline bool unbox(jl_value_t* v)
-{
-  return jl_unbox_bool(v);
-}
-
-template<>
-inline float unbox(jl_value_t* v)
-{
-  return jl_unbox_float32(v);
-}
-
-template<>
-inline double unbox(jl_value_t* v)
-{
-  return jl_unbox_float64(v);
-}
-
-template<>
-inline int32_t unbox(jl_value_t* v)
-{
-  return jl_unbox_int32(v);
-}
-
-template<>
-inline int64_t unbox(jl_value_t* v)
-{
-  return jl_unbox_int64(v);
-}
-
-template<>
-inline uint32_t unbox(jl_value_t* v)
-{
-  return jl_unbox_uint32(v);
-}
-
-template<>
-inline uint64_t unbox(jl_value_t* v)
-{
-  return jl_unbox_uint64(v);
-}
-
 /// Static mapping base template
 template<typename SourceT> struct CXX_WRAP_EXPORT static_type_mapping
 {
@@ -799,6 +679,127 @@ inline auto convert_to_julia(const T& cpp_val) -> decltype(julia_converter_type<
 
 template<typename T>
 inline jl_value_t* convert_to_julia(std::unique_ptr<T> cpp_val);
+
+// Pass-through for already boxed types
+template<typename CppT>
+inline jl_value_t* box(const CppT& v)
+{
+  return convert_to_julia(v);
+}
+
+template<>
+inline jl_value_t* box(const bool& b)
+{
+  return jl_box_bool(b);
+}
+
+template<>
+inline jl_value_t* box(const int32_t& i)
+{
+  return jl_box_int32(i);
+}
+
+template<>
+inline jl_value_t* box(const int64_t& i)
+{
+  return jl_box_int64(i);
+}
+
+template<>
+inline jl_value_t* box(const uint32_t& i)
+{
+  return jl_box_uint32(i);
+}
+
+template<>
+inline jl_value_t* box(const uint64_t& i)
+{
+  return jl_box_uint64(i);
+}
+
+template<>
+inline jl_value_t* box(const float& x)
+{
+  return jl_box_float32(x);
+}
+
+template<>
+inline jl_value_t* box(const double& x)
+{
+  return jl_box_float64(x);
+}
+
+namespace detail
+{
+  inline jl_value_t* box_long(long x)
+  {
+    return jl_box_long(x);
+  }
+
+  inline jl_value_t* box_long(unused_type<long>)
+  {
+    // never called
+    return nullptr;
+  }
+}
+
+template<>
+inline jl_value_t* box(const detail::define_if_different<long, int64_t>& x)
+{
+  return detail::box_long(x);
+}
+
+
+
+// Unbox boxed type
+template<typename CppT>
+inline CppT unbox(jl_value_t* v)
+{
+  static_assert(sizeof(CppT) == 0, "Unimplemented unbox in cxx_wrap");
+}
+
+template<>
+inline bool unbox(jl_value_t* v)
+{
+  return jl_unbox_bool(v);
+}
+
+template<>
+inline float unbox(jl_value_t* v)
+{
+  return jl_unbox_float32(v);
+}
+
+template<>
+inline double unbox(jl_value_t* v)
+{
+  return jl_unbox_float64(v);
+}
+
+template<>
+inline int32_t unbox(jl_value_t* v)
+{
+  return jl_unbox_int32(v);
+}
+
+template<>
+inline int64_t unbox(jl_value_t* v)
+{
+  return jl_unbox_int64(v);
+}
+
+template<>
+inline uint32_t unbox(jl_value_t* v)
+{
+  return jl_unbox_uint32(v);
+}
+
+template<>
+inline uint64_t unbox(jl_value_t* v)
+{
+  return jl_unbox_uint64(v);
+}
+
 
 // Fundamental type conversion
 template<typename CppT>

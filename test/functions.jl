@@ -65,7 +65,7 @@ CppTestFunctions.test_protect_from_gc(c)
 @test length(protect_arr) == start_len + 2
 @test protect_arr[end-1] == c
 @test protect_arr[end] == b
-@test CppTestFunctions.test_julia_call(1,2) == 2
+@test CppTestFunctions.test_julia_call(1.,2.) == 2
 
 # Performance tests
 const test_size = 50000000

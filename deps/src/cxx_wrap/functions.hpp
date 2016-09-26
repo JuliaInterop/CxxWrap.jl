@@ -32,7 +32,7 @@ namespace detail
     template<typename ArgT>
     void push(ArgT&& a)
     {
-      m_arg_array[m_i++] = convert_to_julia(a);
+      m_arg_array[m_i++] = box(a);
     }
 
     void push() {}
@@ -43,7 +43,6 @@ namespace detail
 }
 
 /// Call a julia function, converting the arguments to the corresponding Julia types
-/// ArgumentsT is a standard container filled with the arguments
 template<typename... ArgumentsT>
 jl_value_t* julia_call(jl_function_t* f, ArgumentsT&&... args)
 {
