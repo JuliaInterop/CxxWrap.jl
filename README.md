@@ -1,6 +1,6 @@
 # CxxWrap
 
-[![Build Status](https://travis-ci.org/barche/CxxWrap.jl.svg?branch=master)](https://travis-ci.org/barche/CxxWrap.jl)
+[![Build Status](https://travis-ci.org/JuliaInterop/CxxWrap.jl.svg?branch=master)](https://travis-ci.org/JuliaInterop/CxxWrap.jl)
 [![Build status](https://ci.appveyor.com/api/projects/status/emjnb5afswn0lq6x?svg=true)](https://ci.appveyor.com/project/barche/cxxwrap-jl)
 [![CxxWrap](http://pkg.julialang.org/badges/CxxWrap_0.4.svg)](http://pkg.julialang.org/?pkg=CxxWrap)
 [![CxxWrap](http://pkg.julialang.org/badges/CxxWrap_0.5.svg)](http://pkg.julialang.org/?pkg=CxxWrap)
@@ -30,7 +30,7 @@ Just like any registered package:
 Pkg.add("CxxWrap")
 ```
 ### Building on Windows
-To build on Windows, you need to comment [2 lines](https://github.com/barche/CxxWrap.jl/blob/master/deps/build.jl#L90-L91) from `deps/build.jl` to avoid the automatic binary download. The build prerequisites are:
+To build on Windows, you need to set the `BUILD_ON_WINDOWS` environment variable to `"1"` in order to avoid the automatic binary download. The build prerequisites are:
 - Cmake in the path
 - Latest version of Visual Studio (Visual Studio 2015 Update 2 RC with MSVC 19.0.23824.1, it won't work on older versions due to internal compiler errors)
 
