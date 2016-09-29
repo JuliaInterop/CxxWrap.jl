@@ -74,6 +74,7 @@ jl_value_t* julia_call(jl_function_t* f, ArgumentsT&&... args)
   {
     jl_show(jl_stderr_obj(), jl_exception_occurred());
     jl_printf(jl_stderr_stream(), "\n");
+    jlbacktrace();
     JL_GC_POP();
     JL_GC_POP();
     return nullptr;

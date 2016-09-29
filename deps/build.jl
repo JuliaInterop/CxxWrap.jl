@@ -137,7 +137,7 @@ provides(BuildProcess,
     end
   end), examples)
 
-provides(Binaries, Dict(URI("https://github.com/barche/CxxWrap.jl/releases/download/v0.1.5/CxxWrap-julia-$(VERSION.major).$(VERSION.minor)-win$(Sys.WORD_SIZE).zip") => deps), os = :Windows)
+provides(Binaries, Dict(URI("https://github.com/JuliaInterop/CxxWrap.jl/releases/download/v0.1.7/CxxWrap-julia-$(VERSION.major).$(VERSION.minor)-win$(Sys.WORD_SIZE).zip") => deps), os = :Windows)
 
 @BinDeps.install Dict([(:cxx_wrap, :_l_cxx_wrap),
                        (:containers, :_l_containers),
