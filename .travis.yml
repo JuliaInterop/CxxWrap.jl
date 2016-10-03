@@ -16,7 +16,22 @@ matrix:
       env:
         - CC=gcc-4.9
         - CXX=g++-4.9
-      julia: release
+      julia: 0.4
+    - os: linux
+      compiler: "g++-4.9"
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - george-edison55-precise-backports # cmake 3.2.3 / doxygen 1.8.3
+          packages:
+            - g++-4.9
+            - cmake
+            - cmake-data
+      env:
+        - CC=gcc-4.9
+        - CXX=g++-4.9
+      julia: 0.5
     - os: osx
       compiler: "clang"
       julia: nightly
