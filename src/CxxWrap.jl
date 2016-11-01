@@ -122,7 +122,17 @@ function build_function_expression(func::CppFunctionInfo)
   # Thunk
   thunk = func.thunk_pointer
 
-  map_arg_type(t::DataType) = ((t <: CppAny) || (t <: CppDisplay) || (t <: Tuple)) || (t <: CppArray) ? Any : t
+  function map_arg_type(t::DataType)
+    if ((t <: CppAny) || (t <: CppDisplay) || (t <: Tuple)) || (t <: CppArray)
+      return Any
+    end
+
+    if t == Array{AbstractString,1} || t == Array{String,1}
+      return Any
+    end
+
+    return t
+  end
 
   # Build the types for the ccall argument list
   c_arg_types = [map_arg_type(t) for t in argtypes]
@@ -138,7 +148,7 @@ function build_function_expression(func::CppFunctionInfo)
   assert(call_exp != nothing)
 
   # Generate overloads for some types
-  overload_map = Dict([(Cint,[Int]), (Cuint,[UInt,Int]), (Float64,[Int])])
+  overload_map = Dict([(Cint,[Int]), (Cuint,[UInt,Int]), (Float64,[Int]), (Array{AbstractString,1}, [Array{String,1}])])
   nargs = length(argtypes)
 
   counters = ones(Int, nargs);

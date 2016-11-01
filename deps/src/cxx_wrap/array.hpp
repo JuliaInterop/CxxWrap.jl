@@ -9,15 +9,29 @@ namespace cxx_wrap
 {
 
 template<typename PointedT, typename CppT>
-class array_iterator_base
+struct ValueExtractor
 {
-  // TODO
-  static_assert(std::is_same<CppT, PointedT>::value, "Iterator not implemented if Array C++ and Julia types differ");
+  inline CppT operator()(PointedT* p)
+  {
+    return convert_to_cpp<CppT>(*p);
+  }
 };
 
+
 template<typename PointedT>
-class array_iterator_base<PointedT, PointedT> : public std::iterator<std::random_access_iterator_tag, PointedT>
+struct ValueExtractor<PointedT, PointedT>
 {
+  inline PointedT& operator()(PointedT* p)
+  {
+    return *p;
+  }
+};
+
+template<typename PointedT, typename CppT>
+class array_iterator_base : public std::iterator<std::random_access_iterator_tag, PointedT>
+{
+private:
+  PointedT* m_ptr;
 public:
   array_iterator_base() : m_ptr(nullptr)
   {
@@ -27,33 +41,33 @@ public:
   {
   }
 
-  template <class OtherPointedT>
-  array_iterator_base(array_iterator_base<OtherPointedT, OtherPointedT> const& other) : m_ptr(other.m_ptr) {}
+  template <class OtherPointedT, class OtherCppT>
+  array_iterator_base(array_iterator_base<OtherPointedT, OtherCppT> const& other) : m_ptr(other.m_ptr) {}
 
-  PointedT& operator*()
+  auto operator*() -> decltype(ValueExtractor<PointedT,CppT>()(m_ptr))
   {
-    return *m_ptr;
+    return ValueExtractor<PointedT,CppT>()(m_ptr);
   }
 
-  array_iterator_base<PointedT, PointedT>& operator++()
+  array_iterator_base<PointedT, CppT>& operator++()
   {
     ++m_ptr;
     return *this;
   }
 
-  array_iterator_base<PointedT, PointedT>& operator--()
+  array_iterator_base<PointedT, CppT>& operator--()
   {
     --m_ptr;
     return *this;
   }
 
-  array_iterator_base<PointedT, PointedT>& operator+=(std::ptrdiff_t n)
+  array_iterator_base<PointedT, CppT>& operator+=(std::ptrdiff_t n)
   {
     m_ptr += n;
     return *this;
   }
 
-  array_iterator_base<PointedT, PointedT>& operator-=(std::ptrdiff_t n)
+  array_iterator_base<PointedT, CppT>& operator-=(std::ptrdiff_t n)
   {
     m_ptr -= n;
     return *this;
@@ -63,9 +77,6 @@ public:
   {
     return m_ptr;
   }
-
-private:
-  PointedT* m_ptr;
 };
 
 /// Wrap a Julia 1D array in a C++ class. Array is allocated on the C++ side
@@ -111,58 +122,27 @@ private:
   jl_array_t* m_array;
 };
 
-/// Reference a Julia array in an STL-compatible wrapper
-template<typename ValueT, int Dim = 1>
-class ArrayRef
+/// Only provide read/write operator[] if the array contains non-boxed values
+template<typename PointedT, typename CppT>
+struct IndexedArrayRef
 {
-public:
-  ArrayRef(jl_array_t* arr) : m_array(arr)
+  IndexedArrayRef(jl_array_t* arr) : m_array(arr)
   {
-    assert(m_array != nullptr);
   }
 
-  /// Convert from existing C-array
-  template<typename... SizesT>
-  ArrayRef(ValueT* ptr, const SizesT... sizes);
-
-  jl_array_t* wrapped()
+  CppT operator[](const std::size_t i) const
   {
-    return m_array;
+    return convert_to_cpp<CppT>(jl_arrayref(m_array, i));
   }
 
-  typedef mapped_julia_type<ValueT> julia_t;
+  jl_array_t* m_array;
+};
 
-  typedef array_iterator_base<julia_t, ValueT> iterator;
-  typedef array_iterator_base<julia_t const, ValueT const> const_iterator;
-
-  iterator begin()
+template<typename ValueT>
+struct IndexedArrayRef<ValueT,ValueT>
+{
+  IndexedArrayRef(jl_array_t* arr) : m_array(arr)
   {
-    return iterator(static_cast<julia_t*>(jl_array_data(m_array)));
-  }
-
-  const_iterator begin() const
-  {
-    return const_iterator(static_cast<julia_t*>(jl_array_data(m_array)));
-  }
-
-  iterator end()
-  {
-    return iterator(static_cast<julia_t*>(jl_array_data(m_array)) + jl_array_len(m_array));
-  }
-
-  const_iterator end() const
-  {
-    return const_iterator(static_cast<julia_t*>(jl_array_data(m_array)) + jl_array_len(m_array));
-  }
-
-  const ValueT* data() const
-  {
-    return (ValueT*)jl_array_data(m_array);
-  }
-
-  std::size_t size() const
-  {
-    return jl_array_len(m_array);
   }
 
   ValueT& operator[](const std::size_t i)
@@ -175,8 +155,62 @@ public:
     return ((ValueT*)jl_array_data(m_array))[i];
   }
 
-private:
   jl_array_t* m_array;
+};
+
+/// Reference a Julia array in an STL-compatible wrapper
+template<typename ValueT, int Dim = 1>
+class ArrayRef : public IndexedArrayRef<mapped_julia_type<ValueT>, ValueT>
+{
+public:
+  ArrayRef(jl_array_t* arr) : IndexedArrayRef<mapped_julia_type<ValueT>, ValueT>(arr)
+  {
+    assert(wrapped() != nullptr);
+  }
+
+  /// Convert from existing C-array
+  template<typename... SizesT>
+  ArrayRef(ValueT* ptr, const SizesT... sizes);
+
+  typedef mapped_julia_type<ValueT> julia_t;
+
+  typedef array_iterator_base<julia_t, ValueT> iterator;
+  typedef array_iterator_base<julia_t const, ValueT const> const_iterator;
+
+  inline jl_array_t* wrapped() const
+  {
+    return IndexedArrayRef<julia_t, ValueT>::m_array;
+  }
+
+  iterator begin()
+  {
+    return iterator(static_cast<julia_t*>(jl_array_data(wrapped())));
+  }
+
+  const_iterator begin() const
+  {
+    return const_iterator(static_cast<julia_t*>(jl_array_data(wrapped())));
+  }
+
+  iterator end()
+  {
+    return iterator(static_cast<julia_t*>(jl_array_data(wrapped())) + jl_array_len(wrapped()));
+  }
+
+  const_iterator end() const
+  {
+    return const_iterator(static_cast<julia_t*>(jl_array_data(wrapped())) + jl_array_len(wrapped()));
+  }
+
+  const ValueT* data() const
+  {
+    return (ValueT*)jl_array_data(wrapped());
+  }
+
+  std::size_t size() const
+  {
+    return jl_array_len(wrapped());
+  }
 };
 
 // Conversions
@@ -189,13 +223,13 @@ template<typename T, int Dim> struct static_type_mapping<ArrayRef<T, Dim>>
 
 template<typename ValueT, int Dim>
 template<typename... SizesT>
-ArrayRef<ValueT, Dim>::ArrayRef(ValueT* c_ptr, const SizesT... sizes)
+ArrayRef<ValueT, Dim>::ArrayRef(ValueT* c_ptr, const SizesT... sizes) : IndexedArrayRef<julia_t, ValueT>(nullptr)
 {
   jl_datatype_t* dt = static_type_mapping<ArrayRef<ValueT, Dim>>::julia_type();
   jl_value_t *dims = nullptr;
   JL_GC_PUSH1(&dims);
   dims = convert_to_julia(std::make_tuple(sizes...));
-  m_array = jl_ptr_to_array((jl_value_t*)dt, c_ptr, dims, 0);
+  IndexedArrayRef<julia_t, ValueT>::m_array = jl_ptr_to_array((jl_value_t*)dt, c_ptr, dims, 0);
   JL_GC_POP();
 }
 

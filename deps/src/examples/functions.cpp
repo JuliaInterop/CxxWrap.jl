@@ -147,6 +147,10 @@ void init_test_module(cxx_wrap::Module& mod)
   mod.method("test_protect_from_gc", [](jl_value_t* v) { cxx_wrap::protect_from_gc(v); });
   mod.method("test_unprotect_from_gc", [](jl_value_t* v) { cxx_wrap::unprotect_from_gc(v); });
   mod.method("test_julia_call", [](double a, double b) { return cxx_wrap::julia_call(cxx_wrap::julia_function("max"), a, b); });
+  mod.method("test_string_array", [](cxx_wrap::ArrayRef<std::string> arr)
+  {
+    return arr[0] == "first" && arr[1] == "second" && *(arr.begin()) == "first" && *(++arr.begin()) == "second";
+  });
 }
 
 }
