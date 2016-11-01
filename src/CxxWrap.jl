@@ -148,7 +148,13 @@ function build_function_expression(func::CppFunctionInfo)
   assert(call_exp != nothing)
 
   # Generate overloads for some types
-  overload_map = Dict([(Cint,[Int]), (Cuint,[UInt,Int]), (Float64,[Int]), (Array{AbstractString,1}, [Array{String,1}])])
+  string_overloads = []
+  @static if VERSION < v"0.5-dev"
+    string_overloads = [Array{ASCIIString,1}]
+  else
+    string_overloads = [Array{String,1}]
+  end
+  overload_map = Dict([(Cint,[Int]), (Cuint,[UInt,Int]), (Float64,[Int]), (Array{AbstractString,1}, string_overloads)])
   nargs = length(argtypes)
 
   counters = ones(Int, nargs);
