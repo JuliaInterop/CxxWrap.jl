@@ -263,6 +263,7 @@ The `ArrayRef` type provides basic functionality:
 * iterators
 * `size`
 * `[]` read-write accessor
+* `push_back` for appending elements
 
 ### Const arrays
 Sometimes, a function returns a const pointer that is an array, either of fixed size or with a size that can be determined from elsewhere in the API. Example:

@@ -11,7 +11,7 @@ namespace cxx_wrap
 {
 
 /// Get a Julia function pointer from the given function name. Searches the current module by default, otherwise the module with the provided name
-/// Returns null if the function does not exist, throws if the module does not exist
+/// Throws if the module or the function does not exist
 CXX_WRAP_EXPORT jl_function_t* julia_function(const std::string& name, const std::string& module_name = "");
 
 namespace detail

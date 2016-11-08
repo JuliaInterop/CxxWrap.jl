@@ -151,6 +151,10 @@ void init_test_module(cxx_wrap::Module& mod)
   {
     return arr[0] == "first" && arr[1] == "second" && *(arr.begin()) == "first" && *(++arr.begin()) == "second";
   });
+  mod.method("test_append_array!", [](cxx_wrap::ArrayRef<double> arr)
+  {
+    arr.push_back(3.);
+  });
 }
 
 }

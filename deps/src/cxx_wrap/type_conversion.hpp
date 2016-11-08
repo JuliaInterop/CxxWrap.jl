@@ -684,7 +684,7 @@ inline jl_value_t* convert_to_julia(std::unique_ptr<T> cpp_val);
 template<typename CppT>
 inline jl_value_t* box(const CppT& v)
 {
-  return convert_to_julia(v);
+  return (jl_value_t*)convert_to_julia(v);
 }
 
 template<>

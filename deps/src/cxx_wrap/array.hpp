@@ -96,13 +96,13 @@ public:
     m_array = jl_alloc_array_1d(array_type, n);
   }
 
-  /// Overload for void pointer
+  /// Append an element to the end of the list
   void push_back(const ValueT& val)
   {
     JL_GC_PUSH1(&m_array);
     const size_t pos = jl_array_len(m_array);
     jl_array_grow_end(m_array, 1);
-    jl_arrayset(m_array, (jl_value_t*)(convert_to_julia(val)), pos);
+    jl_arrayset(m_array, box(val), pos);
     JL_GC_POP();
   }
 
@@ -200,6 +200,15 @@ public:
   const_iterator end() const
   {
     return const_iterator(static_cast<julia_t*>(jl_array_data(wrapped())) + jl_array_len(wrapped()));
+  }
+
+  void push_back(const ValueT& val)
+  {
+    JL_GC_PUSH1(&(IndexedArrayRef<julia_t, ValueT>::m_array));
+    const size_t pos = size();
+    jl_array_grow_end(wrapped(), 1);
+    jl_arrayset(wrapped(), box(val), pos);
+    JL_GC_POP();
   }
 
   const ValueT* data() const
