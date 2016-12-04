@@ -124,7 +124,19 @@ struct ConvertToCpp
   }
 };
 
-template<typename T> using cpp_converter_type = ConvertToCpp<T, std::is_fundamental<remove_const_ref<T>>::value, IsImmutable<remove_const_ref<T>>::value, IsBits<remove_const_ref<T>>::value>;
+template<typename T>
+struct IsFundamental
+{
+  static constexpr bool value = std::is_fundamental<remove_const_ref<T>>::value;
+};
+
+template<>
+struct IsFundamental<void*>
+{
+  static constexpr bool value = true;
+};
+
+template<typename T> using cpp_converter_type = ConvertToCpp<T, IsFundamental<remove_const_ref<T>>::value, IsImmutable<remove_const_ref<T>>::value, IsBits<remove_const_ref<T>>::value>;
 
 /// Conversion to C++
 template<typename CppT, typename JuliaT>
@@ -497,7 +509,7 @@ template<> struct static_type_mapping<const char*>
 
 template<> struct static_type_mapping<void*>
 {
-  typedef jl_value_t* type;
+  typedef void* type;
   static jl_datatype_t* julia_type() { return jl_voidpointer_type; }
   template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
@@ -662,7 +674,7 @@ struct ConvertToJulia<jl_datatype_t*, false, false, false>
   }
 };
 
-template<typename T> using julia_converter_type = ConvertToJulia<remove_const_ref<T>, std::is_fundamental<remove_const_ref<T>>::value, IsImmutable<remove_const_ref<T>>::value, IsBits<remove_const_ref<T>>::value>;
+template<typename T> using julia_converter_type = ConvertToJulia<remove_const_ref<T>, IsFundamental<remove_const_ref<T>>::value, IsImmutable<remove_const_ref<T>>::value, IsBits<remove_const_ref<T>>::value>;
 
 /// Conversion to the statically mapped target type.
 template<typename T>
@@ -800,6 +812,11 @@ inline uint64_t unbox(jl_value_t* v)
   return jl_unbox_uint64(v);
 }
 
+template<>
+inline void* unbox(jl_value_t* v)
+{
+  return jl_unbox_voidpointer(v);
+}
 
 // Fundamental type conversion
 template<typename CppT>
