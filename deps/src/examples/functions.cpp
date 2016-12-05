@@ -155,6 +155,15 @@ void init_test_module(cxx_wrap::Module& mod)
   {
     arr.push_back(3.);
   });
+
+  mod.method("test_safe_cfunction", [](cxx_wrap::SafeCFunction<double(double,double)> f)
+  {
+    std::cout << "callback result for function " << f.pointer() << " is " << f(1.,2.) << std::endl;
+    if(f(1.,2.) != 3.)
+    {
+      throw std::runtime_error("Incorrect callback result, expected 3");
+    }
+  });
 }
 
 }

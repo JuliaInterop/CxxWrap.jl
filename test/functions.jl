@@ -71,6 +71,9 @@ darr = [1.,2.]
 CppTestFunctions.test_append_array!(darr)
 @test darr == [1.,2.,3.]
 
+testf(x,y) = x+y
+CppTestFunctions.test_safe_cfunction(safe_cfunction(testf, Float64, (Float64,Float64)))
+
 # Performance tests
 const test_size = 50000000
 const numbers = rand(test_size)
