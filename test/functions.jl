@@ -72,7 +72,9 @@ CppTestFunctions.test_append_array!(darr)
 @test darr == [1.,2.,3.]
 
 testf(x,y) = x+y
-CppTestFunctions.test_safe_cfunction(safe_cfunction(testf, Float64, (Float64,Float64)))
+@show c_func = safe_cfunction(testf, Float64, (Float64,Float64))
+CppTestFunctions.test_safe_cfunction(c_func)
+CppTestFunctions.test_safe_cfunction2(c_func)
 
 # Performance tests
 const test_size = 50000000

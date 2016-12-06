@@ -23,6 +23,7 @@ Boost.Python also uses the latter (C++-only) approach, so translating existing P
 * Standard-layout C++ classes can be converted to an opaque Julia bits type
 * Template classes map to parametric types, for the instantiations listed in the wrapper
 * Automatic wrapping of default and copy constructor (mapped to deepcopy) if defined on the wrapped C++ class
+* Facilitate calling Julia functions from C++
 
 ## Installation
 Just like any registered package:
@@ -312,6 +313,54 @@ shows:
  2.0  5.0
  3.0  6.0
 ```
+
+## Calling Julia functions from C++
+### Direct call to Julia
+Directly calling Julia functions uses `jl_call` from `julia.h` but with a more convenient syntax and automatic argument conversion and boxing. Use a `JuliaFunction` to get a functor that can be invoked directly. Example for calling the `max` function from `Base`:
+
+```c++
+mymodule.method("julia_max", [](double a, double b)
+{
+  cxx_wrap::JuliaFunction max("max");
+  return max(a, b);
+});
+```
+
+Internally, the arguments and return value are boxed, making this method convenient but slower than calling a regular C function.
+
+### Safe `cfunction`
+The function `CxxWrap.safe_cfunction` provides a wrapper around `Base.cfunction` that checks the type of the function pointer. Example C++ function:
+```c++
+mymodule.method("call_safe_function", [](double(*f)(double,double))
+{
+  if(f(1.,2.) != 3.)
+  {
+    throw std::runtime_error("Incorrect callback result, expected 3");
+  }
+});
+```
+Use from Julia:
+```julia
+testf(x,y) = x+y
+c_func = safe_cfunction(testf, Float64, (Float64,Float64))
+MyModule.call_safe_function(c_func)
+```
+
+Using types different from the expected function pointer call will result in an error. This check incurs a runtime overhead, so the idea here is that the function is converted only once and then applied many times on the C++ side.
+
+If the result of `safe_cfunction` needs to be stored before the calling signature is known, direct conversion of the created structure (type `SafeCFunction`) is also possible. It can then be converted later using `cxx_wrap::make_function_pointer`:
+```c++
+mymodule.method("call_safe_function", [](cxx_wrap::SafeCFunction f_data)
+{
+  auto f = cxx_wrap::make_function_pointer<double(double,double)>(f_data);
+  if(f(1.,2.) != 3.)
+  {
+    throw std::runtime_error("Incorrect callback result, expected 3");
+  }
+});
+```
+
+This method of calling a Julia function is less convenient, but the call overhead should be no larger than calling a regular C function through its pointer.
 
 ## Adding Julia code to the module
 Sometimes, you may want to write additional Julia code in the module that is built from C++. To do this, call the `wrap_module` method inside an appropriately named Julia module:

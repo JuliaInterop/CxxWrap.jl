@@ -265,13 +265,13 @@ function wrap_module(so_path::AbstractString, parent_mod=Main)
   current_module().eval(:(export $(exps...)))
 end
 
-immutable SafeCFunctionData
+immutable SafeCFunction
   fptr::Ptr{Void}
   return_type::DataType
   argtypes::Array{DataType,1}
 end
 
-safe_cfunction(f::Function, rt::DataType, args::Tuple) = SafeCFunctionData(cfunction(f, rt, args), rt, [t for t in args])
+safe_cfunction(f::Function, rt::DataType, args::Tuple) = SafeCFunction(cfunction(f, rt, args), rt, [t for t in args])
 
 export wrap_modules, wrap_module, safe_cfunction
 

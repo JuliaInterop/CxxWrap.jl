@@ -103,10 +103,10 @@ void init_half_module(cxx_wrap::Module& mod)
   mod.method("half_loop_jlcall!",
   [](cxx_wrap::ArrayRef<double> in, cxx_wrap::ArrayRef<double> out)
   {
-    jl_function_t* f = cxx_wrap::julia_function("half_julia");
+    cxx_wrap::JuliaFunction f("half_julia");
     std::transform(in.begin(), in.end(), out.begin(), [=](const double d)
     {
-      return jl_unbox_float64(cxx_wrap::julia_call(f, jl_box_float64(d)));
+      return jl_unbox_float64(f(d));
     });
   });
 }
@@ -146,7 +146,11 @@ void init_test_module(cxx_wrap::Module& mod)
   mod.method("test_short", test_short);
   mod.method("test_protect_from_gc", [](jl_value_t* v) { cxx_wrap::protect_from_gc(v); });
   mod.method("test_unprotect_from_gc", [](jl_value_t* v) { cxx_wrap::unprotect_from_gc(v); });
-  mod.method("test_julia_call", [](double a, double b) { return cxx_wrap::julia_call(cxx_wrap::julia_function("max"), a, b); });
+  mod.method("test_julia_call", [](double a, double b)
+  {
+    cxx_wrap::JuliaFunction max("max");
+    return max(a, b);
+  });
   mod.method("test_string_array", [](cxx_wrap::ArrayRef<std::string> arr)
   {
     return arr[0] == "first" && arr[1] == "second" && *(arr.begin()) == "first" && *(++arr.begin()) == "second";
@@ -155,10 +159,20 @@ void init_test_module(cxx_wrap::Module& mod)
   {
     arr.push_back(3.);
   });
-
-  mod.method("test_safe_cfunction", [](cxx_wrap::SafeCFunction<double(double,double)> f)
+  // Typed callback
+  mod.method("test_safe_cfunction", [](cxx_wrap::SafeCFunction f_data)
   {
-    std::cout << "callback result for function " << f.pointer() << " is " << f(1.,2.) << std::endl;
+    auto f = cxx_wrap::make_function_pointer<double(double,double)>(f_data);
+    std::cout << "callback result for function " << f_data.fptr << " is " << f(1.,2.) << std::endl;
+    if(f(1.,2.) != 3.)
+    {
+      throw std::runtime_error("Incorrect callback result, expected 3");
+    }
+  });
+  // Typed callback, using a pointer
+  mod.method("test_safe_cfunction2", [](double(*f)(double,double))
+  {
+    std::cout << "callback result for function " << (void*)f << " is " << f(1.,2.) << std::endl;
     if(f(1.,2.) != 3.)
     {
       throw std::runtime_error("Incorrect callback result, expected 3");
