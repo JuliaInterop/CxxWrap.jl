@@ -109,6 +109,13 @@ void init_half_module(cxx_wrap::Module& mod)
       return jl_unbox_float64(f(d));
     });
   });
+
+  // Looping function calling Julia cfunction
+  mod.method("half_loop_cfunc!",
+  [](cxx_wrap::ArrayRef<double> in, cxx_wrap::ArrayRef<double> out, double(*f)(const double))
+  {
+    std::transform(in.begin(), in.end(), out.begin(), f);
+  });
 }
 
 // Test for string conversion. Pointer to this function is passed to Julia as-is.

@@ -18,6 +18,14 @@ class CXX_WRAP_EXPORT JuliaFunction
 public:
   /// Construct using a function name and module name. Searches the current module by default. Throws if the function was not found.
   JuliaFunction(const std::string& name, const std::string& module_name = "");
+  /// Construct directly from a pointer (throws if pointer is null)
+  JuliaFunction(jl_function_t* fpointer);
+
+  /// Access to the raw pointer
+  jl_function_t* pointer() const
+  {
+    return m_function;
+  }
 
   /// Call a julia function, converting the arguments to the corresponding Julia types
   template<typename... ArgumentsT>

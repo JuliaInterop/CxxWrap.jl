@@ -20,4 +20,13 @@ JuliaFunction::JuliaFunction(const std::string& name, const std::string& module_
   }
 }
 
+JuliaFunction::JuliaFunction(jl_function_t* fpointer)
+{
+  if(fpointer == nullptr)
+  {
+    throw std::runtime_error("Storing a null function pointer in a JuliaFunction is not allowed");
+  }
+  m_function = fpointer;
+}
+
 }
