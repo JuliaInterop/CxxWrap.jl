@@ -53,10 +53,15 @@ Module& ModuleRegistry::create_module(const std::string &name)
   return *mod;
 }
 
-CXX_WRAP_EXPORT jl_datatype_t* julia_type(const std::string& name)
+CXX_WRAP_EXPORT jl_datatype_t* julia_type(const std::string& name, const std::string& module_name)
 {
-  for(jl_module_t* mod : {jl_base_module, g_cxx_wrap_module, jl_current_module})
+  for(jl_module_t* mod : {jl_base_module, g_cxx_wrap_module, jl_current_module, module_name.empty() ? nullptr : (jl_module_t*)jl_get_global(jl_current_module, jl_symbol(module_name.c_str()))})
   {
+    if(mod == nullptr)
+    {
+      continue;
+    }
+
     jl_value_t* gval = jl_get_global(mod, jl_symbol(name.c_str()));
     if(gval != nullptr && jl_is_datatype(gval))
     {

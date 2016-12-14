@@ -1101,7 +1101,7 @@ inline jl_datatype_t* julia_type()
 }
 
 /// Get the type from a global symbol
-CXX_WRAP_EXPORT jl_datatype_t* julia_type(const std::string& name);
+CXX_WRAP_EXPORT jl_datatype_t* julia_type(const std::string& name, const std::string& module_name = "");
 
 }
 
