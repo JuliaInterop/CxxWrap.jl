@@ -401,6 +401,16 @@ public:
     return m_exported_symbols;
   }
 
+  jl_datatype_t* get_julia_type(const char* name)
+  {
+    if(m_jl_datatypes.count(name) != 0)
+    {
+      return m_jl_datatypes[name];
+    }
+
+    return nullptr;
+  }
+
 private:
 
   template<typename T>
