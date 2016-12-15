@@ -31,6 +31,9 @@ function find_julia_lib(lib_suffix::AbstractString, julia_base_dir::AbstractStri
   if !isfile(julia_lib)
     julia_lib = joinpath(julia_base_dir, "lib", "x86_64-linux-gnu", "julia", "libjulia.$lib_suffix")
   end
+  if !isfile(julia_lib)
+    julia_lib = joinpath(julia_base_dir, "lib", "x86_64-linux-gnu", "libjulia.$lib_suffix")
+  end
   return julia_lib
 end
 
@@ -137,7 +140,9 @@ provides(BuildProcess,
     end
   end), examples)
 
-provides(Binaries, Dict(URI("https://github.com/JuliaInterop/CxxWrap.jl/releases/download/v0.1.8/CxxWrap-julia-$(VERSION.major).$(VERSION.minor)-win$(Sys.WORD_SIZE).zip") => deps), os = :Windows)
+@static if is_windows()
+  provides(Binaries, Dict(URI("https://github.com/JuliaInterop/CxxWrap.jl/releases/download/v0.1.8/CxxWrap-julia-$(VERSION.major).$(VERSION.minor)-win$(Sys.WORD_SIZE).zip") => deps), os = :Windows)
+end
 
 @BinDeps.install Dict([(:cxx_wrap, :_l_cxx_wrap),
                        (:containers, :_l_containers),
