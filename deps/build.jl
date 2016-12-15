@@ -1,6 +1,15 @@
 using Compat
 using BinDeps
 
+function prompt_cmake()
+  try
+    run(pipeline(`cmake --version`, stdout=DevNull, stderr=DevNull))
+    return
+  catch
+    error("command \"cmake\" not found in path, please install CMake and make sure it can be found")
+  end
+end
+
 libdir_opt = ""
 @static if is_windows()
   libdir_opt = Sys.WORD_SIZE==32 ? "32" : ""
@@ -9,11 +18,15 @@ end
 @static if is_windows()
   # prefer building if requested
   if haskey(ENV, "BUILD_ON_WINDOWS") && ENV["BUILD_ON_WINDOWS"] == "1"
+    prompt_cmake()
     saved_defaults = deepcopy(BinDeps.defaults)
     empty!(BinDeps.defaults)
     append!(BinDeps.defaults, [BuildProcess])
   end
+else
+  prompt_cmake()
 end
+
 
 @BinDeps.setup
 
