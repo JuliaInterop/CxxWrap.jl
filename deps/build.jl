@@ -85,11 +85,13 @@ makeopts = ["--", "-j", "$(Sys.CPU_CORES+2)"]
 # Set generator if on windows
 genopt = "Unix Makefiles"
 @static if is_windows()
-  makeopts = "--"
-  if Sys.WORD_SIZE == 64
-    genopt = "Visual Studio 14 2015 Win64"
-  elseif !(haskey(ENV, "MINGW_CHOST") && ENV["MINGW_CHOST"] == "i686-w64-mingw32")
-    genopt = "Visual Studio 14 2015"
+  if get(ENV, "MINGW_CHOST", "") == ""
+    makeopts = "--"
+    if Sys.WORD_SIZE == 64
+      genopt = "Visual Studio 14 2015 Win64"
+    else
+      genopt = "Visual Studio 14 2015"
+    end
   else
     lib_prefix = "lib" #Makefiles on windows do keep the lib prefix
   end

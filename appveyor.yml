@@ -1,12 +1,21 @@
 environment:
-  BUILD_ON_WINDOWS: 1
   matrix:
-  - JULIAVERSION: "julialang/bin/winnt/x86/0.4/julia-0.4-latest-win32.exe"
   - JULIAVERSION: "julialang/bin/winnt/x64/0.4/julia-0.4-latest-win64.exe"
-  - JULIAVERSION: "julialang/bin/winnt/x86/0.5/julia-0.5-latest-win32.exe"
+    - BUILD_ON_WINDOWS: 1
+      MSYSTEM: MINGW64
+    - BUILD_ON_WINDOWS: 1
   - JULIAVERSION: "julialang/bin/winnt/x64/0.5/julia-0.5-latest-win64.exe"
-  - JULIAVERSION: "julianightlies/bin/winnt/x86/julia-latest-win32.exe"
-  - JULIAVERSION: "julianightlies/bin/winnt/x64/julia-latest-win64.exe"
+    - BUILD_ON_WINDOWS: 1
+      MSYSTEM: MINGW64
+    - BUILD_ON_WINDOWS: 1
+
+  # matrix:
+  # - JULIAVERSION: "julialang/bin/winnt/x86/0.4/julia-0.4-latest-win32.exe"
+  # - JULIAVERSION: "julialang/bin/winnt/x64/0.4/julia-0.4-latest-win64.exe"
+  # - JULIAVERSION: "julialang/bin/winnt/x86/0.5/julia-0.5-latest-win32.exe"
+  # - JULIAVERSION: "julialang/bin/winnt/x64/0.5/julia-0.5-latest-win64.exe"
+  # - JULIAVERSION: "julianightlies/bin/winnt/x86/julia-latest-win32.exe"
+  # - JULIAVERSION: "julianightlies/bin/winnt/x64/julia-latest-win64.exe"
 
 branches:
   only:
@@ -30,8 +39,13 @@ install:
 build_script:
 # Need to convert from shallow to complete for Pkg.clone to work
   - IF EXIST .git\shallow (git fetch --unshallow)
-  - C:\projects\julia\bin\julia -e "versioninfo();
-      Pkg.clone(pwd(), \"CxxWrap\"); Pkg.build(\"CxxWrap\")"
+  - IF DEFINED MSYSTEM C:\msys64\usr\bin\bash.exe -l -c pacman --needed --noconfirm -S mingw-w64-x86_64-cmake mingw-w64-x86_64-gcc make
+  - IF DEFINED MSYSTEM C:\msys64\usr\bin\bash.exe -l -c C:\projects\julia\bin\julia -e "versioninfo(); Pkg.clone(pwd(), \"CxxWrap\"); Pkg.build(\"CxxWrap\")"
+  - IF NOT DEFINED MSYSTEM C:\projects\julia\bin\julia -e "versioninfo(); Pkg.clone(pwd(), \"CxxWrap\"); Pkg.build(\"CxxWrap\")"
 
 test_script:
   - C:\projects\julia\bin\julia --check-bounds=yes -e "Pkg.test(\"CxxWrap\")"
+
+
+#Notes:
+# set MSYSTEM=MINGW64
