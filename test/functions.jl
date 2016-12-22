@@ -21,6 +21,8 @@ wrap_modules(functions_lib_path)
 @test CppHalfFunctions.half_i(-2) == -1
 @test CppHalfFunctions.half_u(3) == 1
 @test CppHalfFunctions.half_lambda(2.) == 1.
+@test CppHalfFunctions.strict_half(3.) == 1.5
+@test_throws MethodError CppHalfFunctions.strict_half(3)
 
 # Test functions from the CppTestFunctions module
 @test CppTestFunctions.concatenate_numbers(4, 2.) == "42"

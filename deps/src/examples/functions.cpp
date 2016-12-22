@@ -92,6 +92,9 @@ void init_half_module(cxx_wrap::Module& mod)
   // Register a lambda
   mod.method("half_lambda", [](const double a) {return a*0.5;});
 
+  // Strict number typing
+  mod.method("strict_half", [](const cxx_wrap::StrictlyTypedNumber<double> a) {return a.value*0.5;});
+
   // Looping function
   mod.method("half_loop_cpp!",
   [](cxx_wrap::ArrayRef<double> in, cxx_wrap::ArrayRef<double> out)

@@ -39,6 +39,10 @@ type UniquePtr{T} <: CppAny
   cpp_object::Ptr{Void}
 end
 
+immutable StrictlyTypedNumber{NumberT}
+  value::NumberT
+end
+
 # Encapsulate information about a function
 type CppFunctionInfo
   name::Any
@@ -122,7 +126,7 @@ function build_function_expression(func::CppFunctionInfo)
   # Thunk
   thunk = func.thunk_pointer
 
-  function map_arg_type(t::DataType)
+  function map_c_arg_type(t::DataType)
     if ((t <: CppAny) || (t <: CppDisplay) || (t <: Tuple)) || (t <: CppArray)
       return Any
     end
@@ -133,10 +137,14 @@ function build_function_expression(func::CppFunctionInfo)
 
     return t
   end
+  map_c_arg_type{T}(a::Type{StrictlyTypedNumber{T}}) = T
+
+  map_julia_arg_type(t::DataType) = t
+  map_julia_arg_type{T}(a::Type{StrictlyTypedNumber{T}}) = T
 
   # Build the types for the ccall argument list
-  c_arg_types = [map_arg_type(t) for t in argtypes]
-  return_type = map_arg_type(func.return_type)
+  c_arg_types = [map_c_arg_type(t) for t in argtypes]
+  return_type = map_c_arg_type(func.return_type)
 
   # Build the final call expression
   call_exp = nothing
@@ -183,7 +191,7 @@ function build_function_expression(func::CppFunctionInfo)
   for overloaded_signature in overload_sigs
     argmap = Expr[]
     for (t, s) in zip(overloaded_signature, argsymbols)
-      push!(argmap, :($s::$t))
+      push!(argmap, :($s::$(map_julia_arg_type(t))))
     end
     func_declaration = make_func_declaration(func.name, argmap)
     push!(function_expressions.args, :($func_declaration = $call_exp))

@@ -1103,6 +1103,31 @@ inline jl_datatype_t* julia_type()
 /// Get the type from a global symbol
 CXX_WRAP_EXPORT jl_datatype_t* julia_type(const std::string& name, const std::string& module_name = "");
 
+/// Helper to encapsulate a strictly typed number type. Numbers typed like this will not be involved in the convenience-overloads that allow passing e.g. an Int to a Float64 argument
+template<typename NumberT>
+struct StrictlyTypedNumber
+{
+  NumberT value;
+};
+
+template<typename NumberT> struct IsBits<StrictlyTypedNumber<NumberT>> : std::true_type {};
+
+template<typename NumberT> struct static_type_mapping<StrictlyTypedNumber<NumberT>>
+{
+  typedef NumberT type;
+  static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_type((jl_value_t*)::cxx_wrap::julia_type("StrictlyTypedNumber"), jl_svec1(static_type_mapping<NumberT>::julia_type())); }
+  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
+};
+
+template<typename NumberT>
+struct ConvertToCpp<StrictlyTypedNumber<NumberT>, false, false, true>
+{
+  inline StrictlyTypedNumber<NumberT> operator()(NumberT julia_value) const
+  {
+    return {julia_value};
+  }
+};
+
 }
 
 #endif

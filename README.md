@@ -187,6 +187,34 @@ call_op = CallOperator()
 
 The C++ function does not even have to be `operator()`, but of course it is most logical use case.
 
+## Number type conversion
+By default, overloaded signatures for wrapper methods are generated, so a method taking a `double` in C++ can be called with e.g. an `Int` in Julia. Wrapping a function like this:
+
+```c++
+mod.method("half_lambda", [](const double a) {return a*0.5;});
+```
+
+then yields the methods:
+
+```julia
+half_lambda(arg1::Int64)
+half_lambda(arg1::Float64)
+```
+
+In some cases (e.g. when a template parameter depends on the number type) this is not desired, so the behavior can be disabled on a per-argument basis using the `StrictlyTypedNumber` type. Wrapping a function like this:
+
+```c++
+mod.method("strict_half", [](const cxx_wrap::StrictlyTypedNumber<double> a) {return a.value*0.5;});
+```
+
+will *only* yield the Julia method:
+
+```julia
+strict_half(arg1::Float64)
+```
+
+Note that in C++ the number value is accessed using the `value` member of `StrictlyTypedNumber`.
+
 ## Smart pointers
 Currently, `std::shared_ptr` and `std::unique_ptr` are supported transparently. Returning one of these pointer types will return an object of type `SharedPtr{T}` (or `UniquePtr{T}`), and a `get` method is added automatically to the module that wraps `T` to extract the pointer. Example from the types test:
 ```c++
