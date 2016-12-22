@@ -37,7 +37,7 @@ build_script:
 # Need to convert from shallow to complete for Pkg.clone to work
   - IF EXIST .git\shallow (git fetch --unshallow)
   - IF DEFINED MSYSTEM C:\msys64\usr\bin\bash.exe -l -c "pacman --needed --noconfirm -S mingw-w64-x86_64-cmake mingw-w64-x86_64-gcc make"
-  - IF DEFINED MSYSTEM C:\msys64\usr\bin\bash.exe -l -c "C:\projects\julia\bin\julia -e \"versioninfo(); Pkg.clone(pwd(), \\\"CxxWrap\\\"); Pkg.build(\\\"CxxWrap\\\")\""
+  - IF DEFINED MSYSTEM C:\msys64\usr\bin\bash.exe -l -c "C:/projects/julia/bin/julia -e \"versioninfo(); Pkg.clone(pwd(), \\\"CxxWrap\\\"); Pkg.build(\\\"CxxWrap\\\")\""
   - IF NOT DEFINED MSYSTEM C:\projects\julia\bin\julia -e "versioninfo(); Pkg.clone(pwd(), \"CxxWrap\"); Pkg.build(\"CxxWrap\")"
 
 test_script:
