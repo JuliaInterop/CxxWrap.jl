@@ -37,8 +37,6 @@ install:
 build_script:
 # Need to convert from shallow to complete for Pkg.clone to work
   - IF EXIST .git\shallow (git fetch --unshallow)
-  - IF DEFINED MSYSTEM C:\msys64\usr\bin\bash.exe -l -c "which cmake"
-  - IF DEFINED MSYSTEM C:\msys64\usr\bin\bash.exe -l -c "gcc --version"
   - IF DEFINED MSYSTEM C:\msys64\usr\bin\bash.exe -l -c "HOME=C:/Users/appveyor C:/projects/julia/bin/julia -e \"cd(ENV[\\\"OLDPWD\\\"]); versioninfo(); Pkg.clone(pwd(), \\\"CxxWrap\\\"); Pkg.build(\\\"CxxWrap\\\")\""
   - IF NOT DEFINED MSYSTEM C:\projects\julia\bin\julia -e "versioninfo(); Pkg.clone(pwd(), \"CxxWrap\"); Pkg.build(\"CxxWrap\")"
 
