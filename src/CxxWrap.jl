@@ -113,6 +113,37 @@ function make_func_declaration(fn::CallOpOverload, argmap)
   return :($(process_fname(fn))($((argmap[2:end])...)))
 end
 
+function make_overloaded_call(fn, argtypes, argsymbols)
+  return :(invoke($(process_fname(fn)), ($(argtypes...),), $([:(convert($t, $a)) for (t,a) in zip(argtypes, argsymbols)]...)))
+end
+
+function make_overloaded_call(fn::ConstructorFname, argtypes, argsymbols)
+  if VERSION < v"0.5-dev"
+    return invoke(make_overloaded_call, (Any,Any,Any), :call, argtypes, argsymbols)
+  end
+  return :(invoke($(fn._type), ($(argtypes...),), $([:(convert($t, $a)) for (t,a) in zip(argtypes, argsymbols)]...)))
+end
+
+function make_overloaded_call(fn::CallOpOverload, argtypes, argsymbols)
+  if VERSION < v"0.5-dev"
+    return invoke(make_overloaded_call, (Any,Any,Any), :call, argtypes, argsymbols)
+  end
+  return :(invoke(arg1, ($((argtypes[2:end])...),), $([:(convert($t, $a)) for (t,a) in zip(argtypes[2:end], argsymbols[2:end])]...)))
+end
+
+# By default, no argument overloading happens
+argument_overloads(t::DataType) = DataType[]
+argument_overloads(t::Type{Cint}) = [Int]
+argument_overloads(t::Type{Cuint}) = [UInt, Int]
+argument_overloads(t::Type{Float64}) = [Int]
+function argument_overloads(t::Type{Array{AbstractString,1}})
+  @static if VERSION < v"0.5-dev"
+    return [Array{ASCIIString,1}]
+  else
+    return [Array{String,1}]
+  end
+end
+
 # Build the expression to wrap the given function
 function build_function_expression(func::CppFunctionInfo)
   # Arguments and types
@@ -155,30 +186,15 @@ function build_function_expression(func::CppFunctionInfo)
   end
   assert(call_exp != nothing)
 
-  # Generate overloads for some types
-  string_overloads = []
-  @static if VERSION < v"0.5-dev"
-    string_overloads = [Array{ASCIIString,1}]
-  else
-    string_overloads = [Array{String,1}]
-  end
-  overload_map = Dict([(Cint,[Int]), (Cuint,[UInt,Int]), (Float64,[Int]), (Array{AbstractString,1}, string_overloads)])
   nargs = length(argtypes)
-
-  counters = ones(Int, nargs);
-  for i in 1:nargs
-    if haskey(overload_map, argtypes[i])
-        counters[i] += length(overload_map[argtypes[i]])
-    end
-  end
 
   function recurse_overloads!(idx::Int, newargs, results)
     if idx > nargs
         push!(results, deepcopy(newargs))
         return
     end
-    for i in 1:counters[idx]
-        newargs[idx] = i == 1 ? argtypes[idx] : overload_map[argtypes[idx]][i-1]
+    for i in 1:(length(argument_overloads(argtypes[idx]))+1)
+        newargs[idx] = i == 1 ? argtypes[idx] : argument_overloads(argtypes[idx])[i-1]
         recurse_overloads!(idx+1, newargs, results)
     end
   end
@@ -187,14 +203,18 @@ function build_function_expression(func::CppFunctionInfo)
   overload_sigs = Array{Array{DataType,1},1}();
   recurse_overloads!(1, newargs, overload_sigs);
 
-  function_expressions = quote end
-  for overloaded_signature in overload_sigs
-    argmap = Expr[]
-    for (t, s) in zip(overloaded_signature, argsymbols)
-      push!(argmap, :($s::$(map_julia_arg_type(t))))
+  # Build an array of arg1::Type1... expressions
+  function argmap(signature)
+    result = Expr[]
+    for (t, s) in zip(signature, argsymbols)
+      push!(result, :($s::$(map_julia_arg_type(t))))
     end
-    func_declaration = make_func_declaration(func.name, argmap)
-    push!(function_expressions.args, :($func_declaration = $call_exp))
+    return result
+  end
+
+  function_expressions = [:($(make_func_declaration(func.name, argmap(argtypes))) = $call_exp)]
+  for signature in overload_sigs[2:end] # the first "overload" is the same as the base signature, so skip it
+    push!(function_expressions, :($(make_func_declaration(func.name, argmap(signature))) = $(make_overloaded_call(func.name, argtypes, argsymbols))))
   end
   return function_expressions
 end
@@ -213,9 +233,13 @@ function wrap_functions(functions, julia_mod)
   ])
   for func in functions
     if in(func.name, basenames)
-      Base.eval(build_function_expression(func))
+      for f in build_function_expression(func)
+        Base.eval(f)
+      end
     else
-      julia_mod.eval(build_function_expression(func))
+      for f in build_function_expression(func)
+        julia_mod.eval(f)
+      end
     end
   end
 end
@@ -226,7 +250,12 @@ function wrap_modules(registry::Ptr{Void}, parent_mod=Main)
   jl_modules = Module[]
   for mod_name in module_names
     modsym = Symbol(mod_name)
-    jl_mod = parent_mod.eval(:(module $modsym end))
+    jl_mod = nothing
+    try
+      jl_mod = parent_mod.eval(:($modsym))
+    catch
+      jl_mod = parent_mod.eval(:(module $modsym end))
+    end
     push!(jl_modules, jl_mod)
     bind_types(registry, jl_mod)
   end
@@ -249,8 +278,7 @@ function wrap_modules(so_path::AbstractString, parent_mod=Main)
 end
 
 # Place the functions and types into the current module
-function wrap_module(so_path::AbstractString, parent_mod=Main)
-  registry = CxxWrap.load_modules(lib_path(so_path))
+function wrap_module(registry, parent_mod=Main)
   module_names = get_module_names(registry)
   mod_idx = 0
   wanted_name = string(module_name(current_module()))
@@ -273,6 +301,11 @@ function wrap_module(so_path::AbstractString, parent_mod=Main)
   current_module().eval(:(export $(exps...)))
 end
 
+function wrap_module(so_path::AbstractString, parent_mod=Main)
+  registry = CxxWrap.load_modules(lib_path(so_path))
+  wrap_module(registry, parent_mod)
+end
+
 immutable SafeCFunction
   fptr::Ptr{Void}
   return_type::DataType
@@ -281,6 +314,6 @@ end
 
 safe_cfunction(f::Function, rt::DataType, args::Tuple) = SafeCFunction(cfunction(f, rt, args), rt, [t for t in args])
 
-export wrap_modules, wrap_module, safe_cfunction
+export wrap_modules, wrap_module, safe_cfunction, load_modules
 
 end # module
