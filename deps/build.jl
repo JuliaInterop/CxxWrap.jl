@@ -84,6 +84,7 @@ makeopts = ["--", "-j", "$(Sys.CPU_CORES+2)"]
 
 # Set generator if on windows
 genopt = "Unix Makefiles"
+@show get(ENV, "MINGW_CHOST", "") == ""
 @static if is_windows()
   if get(ENV, "MINGW_CHOST", "") == ""
     makeopts = "--"
@@ -96,6 +97,7 @@ genopt = "Unix Makefiles"
     lib_prefix = "lib" #Makefiles on windows do keep the lib prefix
   end
 end
+@show genopt
 
 # Functions library for testing
 example_labels = [:containers, :except, :extended, :functions, :hello, :inheritance, :parametric, :types]
