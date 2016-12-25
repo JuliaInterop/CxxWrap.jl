@@ -79,7 +79,7 @@ CppTestFunctions.test_safe_cfunction(c_func)
 CppTestFunctions.test_safe_cfunction2(c_func)
 
 # Performance tests
-const test_size = 50000000
+const test_size = Sys.ARCH == :armv7l ? 1000000 : 50000000
 const numbers = rand(test_size)
 output = zeros(test_size)
 

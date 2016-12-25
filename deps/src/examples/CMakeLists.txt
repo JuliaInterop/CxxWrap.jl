@@ -29,8 +29,8 @@ target_link_libraries(parametric CxxWrap::cxx_wrap)
 add_library(extended SHARED extended.cpp)
 target_link_libraries(extended CxxWrap::cxx_wrap)
 
-add_library(containers SHARED containers.cpp)
-target_link_libraries(containers CxxWrap::cxx_wrap)
+add_library(cxxwrap_containers SHARED containers.cpp)
+target_link_libraries(cxxwrap_containers CxxWrap::cxx_wrap)
 
 get_property(JULIA_LIBRARY TARGET CxxWrap::cxx_wrap PROPERTY INTERFACE_LINK_LIBRARIES)
 get_property(JULIA_INCLUDES TARGET CxxWrap::cxx_wrap PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
@@ -39,7 +39,7 @@ target_include_directories(except PRIVATE ${JULIA_INCLUDES})
 target_link_libraries(except ${JULIA_LIBRARY})
 
 install(TARGETS
-  containers
+  cxxwrap_containers
   except
   extended
   functions

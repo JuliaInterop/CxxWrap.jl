@@ -133,8 +133,14 @@ end
 
 # By default, no argument overloading happens
 argument_overloads(t::DataType) = DataType[]
-argument_overloads(t::Type{Cint}) = [Int]
-argument_overloads(t::Type{Cuint}) = [UInt, Int]
+@static if Int != Cint
+  argument_overloads(t::Type{Cint}) = [Int]
+end
+@static if UInt != Cuint
+  argument_overloads(t::Type{Cuint}) = [UInt, Int]
+else
+  argument_overloads(t::Type{Cuint}) = [Int]
+end
 argument_overloads(t::Type{Float64}) = [Int]
 function argument_overloads(t::Type{Array{AbstractString,1}})
   @static if VERSION < v"0.5-dev"

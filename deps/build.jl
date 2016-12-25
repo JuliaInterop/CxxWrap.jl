@@ -80,7 +80,7 @@ if !isdir(julia_include_dir)  # then we're running directly from build
   julia_include_dir *= ";" * joinpath(julia_base_dir_aux, "src" )
 end
 
-makeopts = ["--", "-j", "$(Sys.CPU_CORES+2)"]
+makeopts = ["--", "-j", "$(Sys.ARCH == :armv7l ? 2 : Sys.CPU_CORES+2)"]
 
 # Set generator if on windows
 genopt = "Unix Makefiles"
@@ -98,7 +98,7 @@ genopt = "Unix Makefiles"
 end
 
 # Functions library for testing
-example_labels = [:containers, :except, :extended, :functions, :hello, :inheritance, :parametric, :types]
+example_labels = [:cxxwrap_containers, :except, :extended, :functions, :hello, :inheritance, :parametric, :types]
 examples = BinDeps.LibraryDependency[]
 for l in example_labels
   @eval $l = $(library_dependency(string(l), aliases=["lib"*string(l)]))
@@ -160,7 +160,7 @@ provides(BuildProcess,
 end
 
 @BinDeps.install Dict([(:cxx_wrap, :_l_cxx_wrap),
-                       (:containers, :_l_containers),
+                       (:cxxwrap_containers, :_l_containers),
                        (:except, :_l_except),
                        (:extended, :_l_extended),
                        (:functions, :_l_functions),
