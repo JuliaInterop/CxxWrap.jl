@@ -922,9 +922,16 @@ struct JuliaUnpacker
 template<typename CppT>
 struct ConvertToCpp<CppT, false, false, true>
 {
+  // Boxed variant
   CppT operator()(jl_value_t* julia_value) const
   {
     return *reinterpret_cast<CppT*>(jl_data_ptr(julia_value));
+  }
+
+  // Direct variant
+  CppT operator()(const CppT julia_value) const
+  {
+    return julia_value;
   }
 };
 
