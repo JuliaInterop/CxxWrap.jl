@@ -150,8 +150,18 @@ template<typename T> struct IsValueType
   static constexpr bool value = IsImmutable<T>::value || IsBits<T>::value || IsFundamental<T>::value;
 };
 
+namespace detail
+{
+  // MSVC needs this helper
+  template<typename T>
+  struct MappedReferenceType
+  {
+    typedef typename detail::StaticIf<IsValueType<remove_const_ref<T>>::value, remove_const_ref<T>, T >::type type;
+  };
+}
+
 /// Remove reference and const from value types only, pass-through otherwise
-template<typename T> using mapped_reference_type = typename detail::StaticIf<IsValueType<remove_const_ref<T>>::value, remove_const_ref<T>, T >::type;
+template<typename T> using mapped_reference_type = typename detail::MappedReferenceType<T>::type;
 
 /// Base class to specialize for conversion to C++
 template<typename CppT, bool Fundamental=false, bool Immutable=false, bool Bits=false>
