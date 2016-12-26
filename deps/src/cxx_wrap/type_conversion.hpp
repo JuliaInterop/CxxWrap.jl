@@ -25,6 +25,26 @@
 namespace cxx_wrap
 {
 
+namespace detail
+{
+  template<bool, typename T1, typename T2>
+  struct StaticIf;
+
+  // non-bits
+  template<typename T1, typename T2>
+  struct StaticIf<false, T1, T2>
+  {
+    typedef T2 type;
+  };
+
+  // bits type
+  template<typename T1, typename T2>
+  struct StaticIf<true, T1, T2>
+  {
+    typedef T1 type;
+  };
+}
+
 CXX_WRAP_EXPORT jl_array_t* gc_protected();
 CXX_WRAP_EXPORT std::stack<std::size_t>& gc_free_stack();
 CXX_WRAP_EXPORT std::map<jl_value_t*, std::size_t>& gc_index_map();
@@ -98,9 +118,6 @@ inline std::string julia_type_name(jl_datatype_t* dt)
   return jl_typename_str((jl_value_t*)dt);
 }
 
-/// Helper to easily remove a ref to a const
-template<typename T> using remove_const_ref = typename std::remove_const<typename std::remove_reference<T>::type>::type;
-
 /// Base type for all wrapped classes
 struct CppAny
 {
@@ -112,17 +129,8 @@ template<typename T> struct IsImmutable : std::false_type {};
 /// Trait to determine if the given type is to be treated as a bits type
 template<typename T> struct IsBits : std::false_type {};
 
-/// Base class to specialize for conversion to C++
-template<typename CppT, bool Fundamental=false, bool Immutable=false, bool Bits=false>
-struct ConvertToCpp
-{
-  template<typename JuliaT>
-  CppT* operator()(JuliaT&& julia_val) const
-  {
-    static_assert(sizeof(CppT)==0, "No appropriate specialization for ConvertToCpp");
-    return nullptr; // not reached
-  }
-};
+/// Remove reference and const from a type
+template<typename T> using remove_const_ref = typename std::remove_const<typename std::remove_reference<T>::type>::type;
 
 template<typename T>
 struct IsFundamental
@@ -134,6 +142,27 @@ template<>
 struct IsFundamental<void*>
 {
   static constexpr bool value = true;
+};
+
+/// Trait to determine if the given type is to be treated as a value type, i.e. if the reference should be stripped when passed as argument
+template<typename T> struct IsValueType
+{
+  static constexpr bool value = IsImmutable<T>::value || IsBits<T>::value || IsFundamental<T>::value;
+};
+
+/// Remove reference and const from value types only, pass-through otherwise
+template<typename T> using mapped_reference_type = typename detail::StaticIf<IsValueType<remove_const_ref<T>>::value, remove_const_ref<T>, T >::type;
+
+/// Base class to specialize for conversion to C++
+template<typename CppT, bool Fundamental=false, bool Immutable=false, bool Bits=false>
+struct ConvertToCpp
+{
+  template<typename JuliaT>
+  CppT* operator()(JuliaT&& julia_val) const
+  {
+    static_assert(sizeof(CppT)==0, "No appropriate specialization for ConvertToCpp");
+    return nullptr; // not reached
+  }
 };
 
 template<typename T> using cpp_converter_type = ConvertToCpp<T, IsFundamental<remove_const_ref<T>>::value, IsImmutable<remove_const_ref<T>>::value, IsBits<remove_const_ref<T>>::value>;
@@ -151,23 +180,6 @@ namespace detail
   struct WrappedCppPtr {
     JL_DATA_TYPE
     jl_value_t* voidptr;
-  };
-
-  template<bool, typename T1, typename T2>
-  struct DispatchBits;
-
-  // non-bits
-  template<typename T1, typename T2>
-  struct DispatchBits<false, T1, T2>
-  {
-    typedef T2 type;
-  };
-
-  // bits type
-  template<typename T1, typename T2>
-  struct DispatchBits<true, T1, T2>
-  {
-    typedef T1 type;
   };
 
   /// Finalizer function for type T
@@ -216,7 +228,6 @@ template<typename SourceT> struct CXX_WRAP_EXPORT static_type_mapping
 {
   typedef jl_value_t* type;
 
-  template<typename T> using remove_const_ref = typename detail::DispatchBits<IsImmutable<cxx_wrap::remove_const_ref<T>>::value || IsBits<cxx_wrap::remove_const_ref<T>>::value, cxx_wrap::remove_const_ref<T>, T>::type;
   static jl_datatype_t* julia_type()
   {
     if(type_pointer() == nullptr)
@@ -330,17 +341,17 @@ struct SingletonType
 {
 };
 
+template<typename T> struct IsValueType<SingletonType<T>> : std::true_type {};
+
 template<typename T>
 struct static_type_mapping<SingletonType<T>>
 {
   typedef jl_datatype_t* type;
   static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_type((jl_value_t*)jl_type_type, jl_svec1(static_type_mapping<T>::julia_type())); }
-  template<typename T2> using remove_const_ref = cxx_wrap::remove_const_ref<T2>;
 };
 
 /// Using declarations to avoid having to write typename all the time
 template<typename SourceT> using mapped_julia_type = typename static_type_mapping<SourceT>::type;
-template<typename T> using mapped_reference_type = typename static_type_mapping<remove_const_ref<T>>::template remove_const_ref<T>;
 
 /// Specializations
 
@@ -351,77 +362,66 @@ template<> struct CXX_WRAP_EXPORT static_type_mapping<CppAny>
 {
   typedef jl_value_t* type;
   static jl_datatype_t* julia_type() { return get_any_type(); }
-  template<typename T> using remove_const_ref = T;
 };
 
 template<> struct static_type_mapping<void>
 {
   typedef void type;
   static jl_datatype_t* julia_type() { return jl_void_type; }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 template<> struct static_type_mapping<bool>
 {
   typedef bool type;
   static jl_datatype_t* julia_type() { return jl_bool_type; }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 template<> struct static_type_mapping<double>
 {
   typedef double type;
   static jl_datatype_t* julia_type() { return jl_float64_type; }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 template<> struct static_type_mapping<float>
 {
   typedef float type;
   static jl_datatype_t* julia_type() { return jl_float32_type; }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 template<> struct static_type_mapping<int32_t*>
 {
   typedef jl_array_t* type;
   static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_array_type(jl_int32_type, 1); }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 template<> struct static_type_mapping<int64_t*>
 {
   typedef jl_array_t* type;
   static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_array_type(jl_int64_type, 1); }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 template<> struct static_type_mapping<char*>
 {
   typedef jl_array_t* type;
   static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_array_type(jl_uint8_type, 1); }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 template<> struct static_type_mapping<unsigned char*>
 {
   typedef jl_array_t* type;
   static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_array_type(jl_uint8_type, 1); }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 template<> struct static_type_mapping<float*>
 {
   typedef jl_array_t* type;
   static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_array_type(jl_float32_type, 1); }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 template<> struct static_type_mapping<double*>
 {
   typedef jl_array_t* type;
   static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_array_type(jl_float64_type, 1); }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 template<> struct static_type_mapping<short>
@@ -429,7 +429,6 @@ template<> struct static_type_mapping<short>
   static_assert(sizeof(short) == 2, "short is expected to be 16 bits");
   typedef short type;
   static jl_datatype_t* julia_type() { return jl_int16_type; }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 template<> struct static_type_mapping<int>
@@ -437,7 +436,6 @@ template<> struct static_type_mapping<int>
   static_assert(sizeof(int) == 4, "int is expected to be 32 bits");
   typedef int type;
   static jl_datatype_t* julia_type() { return jl_int32_type; }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 template<> struct static_type_mapping<unsigned int>
@@ -445,28 +443,24 @@ template<> struct static_type_mapping<unsigned int>
   static_assert(sizeof(unsigned int) == 4, "unsigned int is expected to be 32 bits");
   typedef unsigned int type;
   static jl_datatype_t* julia_type() { return jl_uint32_type; }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 template<> struct static_type_mapping<unsigned char>
 {
   typedef unsigned char type;
   static jl_datatype_t* julia_type() { return jl_uint8_type; }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 template<> struct static_type_mapping<int64_t>
 {
   typedef int64_t type;
   static jl_datatype_t* julia_type() { return jl_int64_type; }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 template<> struct static_type_mapping<uint64_t>
 {
   typedef uint64_t type;
   static jl_datatype_t* julia_type() { return jl_uint64_type; }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 template<> struct static_type_mapping<detail::define_if_different<long, int64_t>>
@@ -474,7 +468,6 @@ template<> struct static_type_mapping<detail::define_if_different<long, int64_t>
   static_assert(sizeof(long) == 8 || sizeof(long) == 4, "long is expected to be 64 bits or 32 bits");
   typedef long type;
   static jl_datatype_t* julia_type() { return sizeof(long) == 8 ? jl_int64_type : jl_int32_type; }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 template<> struct static_type_mapping<detail::define_if_different<long long, int64_t>>
@@ -482,7 +475,6 @@ template<> struct static_type_mapping<detail::define_if_different<long long, int
   static_assert(sizeof(long long) == 8, " long long is expected to be 64 bits or 32 bits");
   typedef long long type;
   static jl_datatype_t* julia_type() { return jl_int64_type; }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 template<> struct static_type_mapping<detail::define_if_different<unsigned long, uint64_t>>
@@ -490,42 +482,37 @@ template<> struct static_type_mapping<detail::define_if_different<unsigned long,
   static_assert(sizeof(unsigned long) == 8 || sizeof(unsigned long) == 4, "unsigned long is expected to be 64 bits or 32 bits");
   typedef unsigned long type;
   static jl_datatype_t* julia_type() { return sizeof(unsigned long) == 8 ? jl_uint64_type : jl_uint32_type; }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
+template<> struct IsValueType<std::string> : std::true_type {};
 template<> struct static_type_mapping<std::string>
 {
   typedef jl_value_t* type;
   static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_get_global(jl_base_module, jl_symbol("AbstractString")); }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 template<> struct static_type_mapping<const char*>
 {
   typedef jl_value_t* type;
   static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_get_global(jl_base_module, jl_symbol("AbstractString")); }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 template<> struct static_type_mapping<void*>
 {
   typedef void* type;
   static jl_datatype_t* julia_type() { return jl_voidpointer_type; }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 template<> struct static_type_mapping<jl_datatype_t*>
 {
   typedef jl_datatype_t* type; // Debatable if this should be jl_value_t*
   static jl_datatype_t* julia_type() { return jl_datatype_type; }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 template<> struct static_type_mapping<jl_value_t*>
 {
   typedef jl_value_t* type;
   static jl_datatype_t* julia_type() { return jl_any_type; }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 #if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 5
@@ -533,18 +520,18 @@ template<> struct static_type_mapping<jl_function_t*>
 {
   typedef jl_function_t* type;
   static jl_datatype_t* julia_type() { return jl_any_type; }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 #endif
 
 // Helper for ObjectIdDict
 struct ObjectIdDict {};
 
+template<> struct IsValueType<ObjectIdDict> : std::true_type {};
+
 template<> struct static_type_mapping<ObjectIdDict>
 {
   typedef jl_value_t* type;
   static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_get_global(jl_base_module, jl_symbol("ObjectIdDict")); }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 /// Base class to specialize for conversion to Julia
@@ -1092,12 +1079,13 @@ struct TypeVar
   }
 };
 
+template<int I> struct IsValueType<TypeVar<I>> : std::true_type {};
+
 template<int I>
 struct static_type_mapping<TypeVar<I>>
 {
   typedef jl_tvar_t* type;
   static jl_tvar_t* julia_type() { return TypeVar<I>::tvar(); }
-  template<typename T2> using remove_const_ref = cxx_wrap::remove_const_ref<T2>;
 };
 
 /// Convenience function to get the julia data type associated with T
@@ -1123,7 +1111,6 @@ template<typename NumberT> struct static_type_mapping<StrictlyTypedNumber<Number
 {
   typedef NumberT type;
   static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_type((jl_value_t*)::cxx_wrap::julia_type("StrictlyTypedNumber"), jl_svec1(static_type_mapping<NumberT>::julia_type())); }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 template<typename NumberT>

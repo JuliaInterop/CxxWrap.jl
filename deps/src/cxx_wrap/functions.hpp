@@ -116,7 +116,6 @@ template<> struct static_type_mapping<SafeCFunction>
 {
   typedef SafeCFunction type;
   static jl_datatype_t* julia_type() { return cxx_wrap::julia_type("SafeCFunction"); }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 template<>
@@ -202,7 +201,6 @@ template<typename R, typename...ArgsT> struct static_type_mapping<R(*)(ArgsT...)
 {
   typedef SafeCFunction type;
   static jl_datatype_t* julia_type() { return cxx_wrap::julia_type("SafeCFunction"); }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 template<typename R, typename...ArgsT>

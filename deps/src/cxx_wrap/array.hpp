@@ -222,12 +222,13 @@ public:
   }
 };
 
+template<typename T, int Dim> struct IsValueType<ArrayRef<T,Dim>> : std::true_type {};
+
 // Conversions
 template<typename T, int Dim> struct static_type_mapping<ArrayRef<T, Dim>>
 {
   typedef jl_array_t* type;
   static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_array_type(static_type_mapping<T>::julia_type(), Dim); }
-  template<typename T2> using remove_const_ref = cxx_wrap::remove_const_ref<T2>;
 };
 
 template<typename ValueT, int Dim>
@@ -325,6 +326,8 @@ std::ptrdiff_t operator-(const array_iterator_base<T,T>& l, const array_iterator
 /// Julia Matrix parametric singleton type
 struct JuliaMatrix {};
 
+template<> struct IsValueType<JuliaMatrix> : std::true_type {};
+
 template<> struct static_type_mapping<JuliaMatrix>
 {
   typedef jl_datatype_t* type;
@@ -341,7 +344,6 @@ template<> struct static_type_mapping<JuliaMatrix>
     JL_GC_POP();
     return result;
   }
-  template<typename T> using remove_const_ref = cxx_wrap::remove_const_ref<T>;
 };
 
 template<>

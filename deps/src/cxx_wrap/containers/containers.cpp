@@ -23,7 +23,6 @@ struct static_type_mapping<ConstPtr<TypeVar<I>>>
     }
     return result;
   }
-  template<typename T2> using remove_const_ref = cxx_wrap::remove_const_ref<T2>;
 };
 
 RegisterHook const_array_reg([]() {

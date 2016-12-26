@@ -86,8 +86,6 @@ template<typename... TypesT> struct static_type_mapping<std::tuple<TypesT...>>
     }
     return tuple_type;
   }
-
-  template<typename T2> using remove_const_ref = cxx_wrap::remove_const_ref<T2>;
 };
 
 template<typename... TypesT>
@@ -117,7 +115,6 @@ struct static_type_mapping<NTuple<N,T>>
     return (jl_datatype_t*)jl_apply_tuple_type(jl_svec1(jl_apply_type((jl_value_t*)jl_vararg_type, jl_svec2(static_type_mapping<T>::julia_type(), static_type_mapping<N>::julia_type()))));
 #endif
   }
-  template<typename T2> using remove_const_ref = cxx_wrap::remove_const_ref<T2>;
 };
 
 } // namespace cxx_wrap
