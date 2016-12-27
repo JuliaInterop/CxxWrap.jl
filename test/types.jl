@@ -82,13 +82,6 @@ bitsval2 = CppTypes.ImmutableDouble(2)
 @test typeof(bitsval1 + bitsval2) == CppTypes.ImmutableDouble
 @test (bitsval1 + bitsval2) == 3.
 
-println("creating bc")
-bc = make_bits(1, 2)
-println("created bc")
-@test sizeof(bc)==16
-@test get_bits_a(bc)==1
-@test get_bits_b(bc)==2
-
 @test value(value(ReturnConstRef())) == 42
 
 @test CppTypes.greet(ConstPtrConstruct(World())) == "default hello"

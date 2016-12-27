@@ -236,7 +236,7 @@ template<typename T1, typename T2> using define_if_different = typename DefineIf
 /// Static mapping base template
 template<typename SourceT> struct CXX_WRAP_EXPORT static_type_mapping
 {
-  typedef jl_value_t* type;
+  typedef typename detail::StaticIf<IsBits<remove_const_ref<SourceT>>::value, remove_const_ref<SourceT>, jl_value_t*>::type type;
 
   static jl_datatype_t* julia_type()
   {
@@ -566,7 +566,7 @@ struct ConvertToJulia<T, true, false, false>
   }
 };
 
-// Immutable type
+// Boxed immutable type
 template<typename T>
 struct ConvertToJulia<T, false, true, false>
 {
@@ -577,14 +577,23 @@ struct ConvertToJulia<T, false, true, false>
   }
 };
 
+// isbits immutable
+template<typename T>
+struct ConvertToJulia<T, false, true, true>
+{
+  T operator()(const T& cpp_val) const
+  {
+    return cpp_val;
+  }
+};
+
 // Bits type
 template<typename T>
 struct ConvertToJulia<T, false, false, true>
 {
-  template<typename T2>
-  jl_value_t* operator()(T2&& cpp_val) const
+  T operator()(const T& cpp_val) const
   {
-    return jl_new_bits((jl_value_t*)static_type_mapping<T>::julia_type(), &cpp_val);
+    return cpp_val;
   }
 };
 
@@ -691,9 +700,16 @@ inline jl_value_t* convert_to_julia(std::unique_ptr<T> cpp_val);
 
 // Pass-through for already boxed types
 template<typename CppT>
-inline jl_value_t* box(const CppT& v)
+inline typename std::enable_if<!IsBits<CppT>::value, jl_value_t*>::type box(const CppT& cpp_val)
 {
-  return (jl_value_t*)convert_to_julia(v);
+  return (jl_value_t*)convert_to_julia(cpp_val);
+}
+
+// Generic bits type conversion
+template<typename CppT>
+inline typename std::enable_if<IsBits<remove_const_ref<CppT>>::value, jl_value_t*>::type box(CppT&& cpp_val)
+{
+  return jl_new_bits((jl_value_t*)static_type_mapping<remove_const_ref<CppT>>::julia_type(), &cpp_val);
 }
 
 template<>
@@ -831,13 +847,23 @@ struct ConvertToCpp<CppT, true, false, false>
   }
 };
 
-// Immutable-as-bits type conversion
+// Boxed immutable conversion
 template<typename CppT>
 struct ConvertToCpp<CppT, false, true, false>
 {
   CppT operator()(jl_value_t* julia_value) const
   {
     return *reinterpret_cast<CppT*>(jl_data_ptr(julia_value));
+  }
+};
+
+// Immutable-as-bits conversion
+template<typename CppT>
+struct ConvertToCpp<CppT, false, true, true>
+{
+  CppT operator()(const CppT julia_value) const
+  {
+    return julia_value;
   }
 };
 

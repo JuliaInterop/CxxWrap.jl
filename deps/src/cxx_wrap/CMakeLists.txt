@@ -28,7 +28,6 @@ add_library(cxx_wrap SHARED
   functions.cpp
   type_conversion.hpp
   containers/const_array.hpp
-  containers/containers.cpp
   containers/tuple.hpp
 )
 target_include_directories(cxx_wrap PUBLIC ${JULIA_INCLUDE_DIRECTORY})

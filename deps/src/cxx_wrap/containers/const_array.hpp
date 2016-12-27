@@ -124,7 +124,7 @@ struct ConvertToJulia<ConstArray<T,N>, false, true, false>
     jl_value_t* ptr = nullptr;
     jl_value_t* size = nullptr;
     JL_GC_PUSH3(&result, &ptr, &size);
-    ptr = convert_to_julia(ConstPtr<T>({arr.ptr()}));
+    ptr = box(ConstPtr<T>({arr.ptr()}));
     size = convert_to_julia(arr.size());
     result = jl_new_struct(julia_type<ConstArray<T,N>>(), ptr, size);
     JL_GC_POP();

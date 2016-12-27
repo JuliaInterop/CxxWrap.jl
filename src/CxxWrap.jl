@@ -26,6 +26,7 @@ const cxx_wrap_path = _l_cxx_wrap
 
 # Base type for wrapped C++ types
 abstract CppAny
+abstract CppBits <: CppAny
 abstract CppDisplay <: Display
 abstract CppArray{T,N} <: AbstractArray{T,N}
 
@@ -41,6 +42,15 @@ end
 
 immutable StrictlyTypedNumber{NumberT}
   value::NumberT
+end
+
+immutable ConstPtr{T} <: CppBits
+  ptr::Ptr{T}
+end
+
+immutable ConstArray{T,N} <: CppArray{T,N}
+  ptr::ConstPtr{T}
+  size::NTuple{N,Int}
 end
 
 # Encapsulate information about a function
@@ -164,6 +174,9 @@ function build_function_expression(func::CppFunctionInfo)
   thunk = func.thunk_pointer
 
   function map_c_arg_type(t::DataType)
+    if(t <: CppBits)
+      return t
+    end
     if ((t <: CppAny) || (t <: CppDisplay) || (t <: Tuple)) || (t <: CppArray)
       return Any
     end

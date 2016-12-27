@@ -135,7 +135,7 @@ template<>
 struct CreateChooser<true>
 {
   template<typename T, typename... ArgsT>
-  static jl_value_t* create(SingletonType<T>, ArgsT&&... args)
+  static typename static_type_mapping<T>::type create(SingletonType<T>, ArgsT&&... args)
   {
     assert(jl_isbits(static_type_mapping<T>::julia_type()));
     T result(std::forward<ArgsT>(args)...);
@@ -145,7 +145,7 @@ struct CreateChooser<true>
 
 /// Convenience function to create an object with a finalizer attached
 template<typename T, typename... ArgsT>
-jl_value_t* create(ArgsT&&... args)
+typename static_type_mapping<T>::type create(ArgsT&&... args)
 {
   return CreateChooser<IsImmutable<T>::value>::create(SingletonType<T>(), std::forward<ArgsT>(args)...);
 }
@@ -374,7 +374,7 @@ public:
   TypeWrapper<T> add_immutable(const std::string& name, FieldListT&& field_list, jl_datatype_t* super = julia_type<CppAny>());
 
   template<typename T>
-  TypeWrapper<T> add_bits(const std::string& name, jl_datatype_t* super = julia_type<CppAny>());
+  TypeWrapper<T> add_bits(const std::string& name, jl_datatype_t* super = julia_type("Any"));
 
   const std::string& name() const
   {

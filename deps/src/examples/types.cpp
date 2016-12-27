@@ -43,24 +43,6 @@ private:
   double m_value;
 };
 
-struct BitsClass
-{
-  double a;
-  double b;
-
-  double get_b() const
-  {
-    return b;
-  }
-
-  void set_b(const double x)
-  {
-    b = x;
-  }
-
-  ~BitsClass() {}
-};
-
 struct AConstRef
 {
   int value() const
@@ -116,7 +98,7 @@ void call_testype_function()
 namespace cxx_wrap
 {
   template<> struct IsImmutable<cpp_types::ImmutableDouble> : std::true_type {};
-  template<> struct IsBits<cpp_types::BitsClass> : std::true_type {};
+  template<> struct IsBits<cpp_types::ImmutableDouble> : std::true_type {};
 }
 
 JULIA_CPP_MODULE_BEGIN(registry)
@@ -155,32 +137,13 @@ JULIA_CPP_MODULE_BEGIN(registry)
   types.add_type<NonCopyable>("NonCopyable");
 
   // ImmutableDouble
-  types.add_immutable<ImmutableDouble>("ImmutableDouble", cxx_wrap::FieldList<double>("value"))
+  types.add_immutable<ImmutableDouble>("ImmutableDouble", cxx_wrap::FieldList<double>("value"), cxx_wrap::julia_type("CppBits"))
     .constructor<double>()
     .method("getvalue", &ImmutableDouble::get_value);
   types.method("convert", [](cxx_wrap::SingletonType<double>, const ImmutableDouble& a) { return a.get_value(); });
   types.method("+", [](const ImmutableDouble& a, const ImmutableDouble& b) { return ImmutableDouble(a.get_value() + b.get_value()); });
   types.method("==", [](const ImmutableDouble& a, const double b) { return a.get_value() == b; } );
   types.method("==", [](const double b, const ImmutableDouble& a) { return a.get_value() == b; } );
-
-  types.add_bits<BitsClass>("BitsClass");
-  types.method("make_bits", [](const double a, const double b)
-  {
-    BitsClass result;
-    result.a = a;
-    result.set_b(b);
-    return result;
-  });
-
-  types.method("get_bits_a", [](const BitsClass bits)
-  {
-    return bits.a;
-  });
-
-  types.method("get_bits_b", [](const BitsClass bits)
-  {
-    return bits.get_b();
-  });
 
   types.add_type<AConstRef>("AConstRef").method("value", &AConstRef::value);
   types.add_type<ReturnConstRef>("ReturnConstRef").method("value", &ReturnConstRef::operator());
