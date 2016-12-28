@@ -98,7 +98,6 @@ enum CppEnum
 namespace cxx_wrap
 {
   template<> struct IsImmutable<cpp_types::ImmutableDouble> : std::true_type {};
-  template<> struct IsBits<cpp_types::ImmutableDouble> : std::true_type {};
   template<> struct IsBits<cpp_types::CppEnum> : std::true_type {};
 }
 
