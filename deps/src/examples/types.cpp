@@ -27,19 +27,13 @@ struct NonCopyable
   NonCopyable(const NonCopyable&) = delete;
 };
 
-class ImmutableDouble
+struct ImmutableDouble
 {
-public:
-  ImmutableDouble(const double value = 0) : m_value(value)
-  {
-  }
-
   double get_value() const
   {
     return m_value;
   }
 
-private:
   double m_value;
 };
 
@@ -93,12 +87,19 @@ void call_testype_function()
   cxx_wrap::JuliaFunction("julia_test_func")(result);
 }
 
+enum CppEnum
+{
+  EnumValA,
+  EnumValB
+};
+
 } // namespace cpp_types
 
 namespace cxx_wrap
 {
   template<> struct IsImmutable<cpp_types::ImmutableDouble> : std::true_type {};
   template<> struct IsBits<cpp_types::ImmutableDouble> : std::true_type {};
+  template<> struct IsBits<cpp_types::CppEnum> : std::true_type {};
 }
 
 JULIA_CPP_MODULE_BEGIN(registry)
@@ -137,11 +138,11 @@ JULIA_CPP_MODULE_BEGIN(registry)
   types.add_type<NonCopyable>("NonCopyable");
 
   // ImmutableDouble
-  types.add_immutable<ImmutableDouble>("ImmutableDouble", cxx_wrap::FieldList<double>("value"), cxx_wrap::julia_type("CppBits"))
-    .constructor<double>()
+  types.add_immutable<ImmutableDouble>("ImmutableDouble", cxx_wrap::FieldList<double>("value"))
     .method("getvalue", &ImmutableDouble::get_value);
+  types.method("ImmutableDouble", [](const double d) { return ImmutableDouble({d}); });
   types.method("convert", [](cxx_wrap::SingletonType<double>, const ImmutableDouble& a) { return a.get_value(); });
-  types.method("+", [](const ImmutableDouble& a, const ImmutableDouble& b) { return ImmutableDouble(a.get_value() + b.get_value()); });
+  types.method("+", [](const ImmutableDouble& a, const ImmutableDouble& b) { return ImmutableDouble({a.get_value() + b.get_value()}); });
   types.method("==", [](const ImmutableDouble& a, const double b) { return a.get_value() == b; } );
   types.method("==", [](const double b, const ImmutableDouble& a) { return a.get_value() == b; } );
 
@@ -154,6 +155,11 @@ JULIA_CPP_MODULE_BEGIN(registry)
     .constructor<const World*>()
     .method("greet", &ConstPtrConstruct::greet);
 
-  types.export_symbols("get_bits_a", "get_bits_b", "make_bits", "World");
-  types.export_symbols("BitsClass", "AConstRef", "ReturnConstRef", "value", "CallOperator", "ConstPtrConstruct");
+  // Enum
+  cxx_wrap::set_julia_type<CppEnum>(cxx_wrap::julia_type("CppEnum"));
+  types.method("enum_to_int", [] (const CppEnum e) { return static_cast<int>(e); });
+  types.method("get_enum_b", [] () { return EnumValB; });
+
+  types.export_symbols("enum_to_int", "get_enum_b", "World");
+  types.export_symbols("AConstRef", "ReturnConstRef", "value", "CallOperator", "ConstPtrConstruct");
 JULIA_CPP_MODULE_END

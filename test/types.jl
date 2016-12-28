@@ -1,11 +1,17 @@
 # Hello world example, similar to the Boost.Python hello world
 
-using CxxWrap
 using Base.Test
 using Compat
 
+module CppTypes
+using CxxWrap
+
+@enum CppEnum EnumValA=0 EnumValB=1
+
 # Wrap the functions defined in C++
-wrap_modules(CxxWrap._l_types)
+wrap_module(CxxWrap._l_types)
+
+end
 
 using CppTypes
 using CppTypes.World
@@ -101,3 +107,7 @@ function julia_test_func(data)
 end
 
 CppTypes.call_testype_function()
+
+@test enum_to_int(CppTypes.EnumValA) == 0
+@test enum_to_int(CppTypes.EnumValB) == 1
+@test get_enum_b() == CppTypes.EnumValB

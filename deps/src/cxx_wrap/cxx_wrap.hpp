@@ -371,10 +371,10 @@ public:
 
   /// Add type T as a struct that can be captured as bits type, using an immutable in Julia
   template<typename T, typename FieldListT>
-  TypeWrapper<T> add_immutable(const std::string& name, FieldListT&& field_list, jl_datatype_t* super = julia_type<CppAny>());
+  TypeWrapper<T> add_immutable(const std::string& name, FieldListT&& field_list, jl_datatype_t* super = IsBits<T>::value ? julia_type("CppBits") : julia_type<CppAny>());
 
   template<typename T>
-  TypeWrapper<T> add_bits(const std::string& name, jl_datatype_t* super = julia_type("Any"));
+  TypeWrapper<T> add_bits(const std::string& name, jl_datatype_t* super = julia_type("CppBits"));
 
   const std::string& name() const
   {
@@ -687,8 +687,15 @@ TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t*
 {
   static constexpr bool is_parametric = detail::IsParametric<T>::value;
   static_assert(((!IsImmutable<T>::value && !AddBits) || AddBits) || is_parametric, "Immutable types (marked with IsImmutable) can't be added using add_type, use add_immutable instead");
-  static_assert(((std::is_standard_layout<T>::value && AddBits) || !AddBits) || is_parametric, "Immutable types must be standard layout");
+  static_assert(((std::is_trivial<T>::value && AddBits) || !AddBits) || is_parametric, "Immutable types must be trivial");
   static_assert(((IsImmutable<T>::value && AddBits) || !AddBits) || is_parametric, "Immutable types must be marked as such by specializing the IsImmutable template");
+  if(IsBits<T>::value)
+  {
+    if(!jl_type_morespecific((jl_value_t*)super, (jl_value_t*)julia_type("CppBits")))
+    {
+      throw std::runtime_error("Immutable bits types must use CppBits as a super type");
+    }
+  }
   if(m_jl_datatypes.count(name) > 0)
   {
     throw std::runtime_error("Duplicate registration of type " + name);
