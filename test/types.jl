@@ -74,19 +74,21 @@ println("completed noncopyable test")
 
 import CppTypes.ImmutableDouble
 
-@test sizeof(ImmutableDouble) == 8
-@test isbits(ImmutableDouble)
-@test length(fieldnames(ImmutableDouble)) == 1
-println("creating bitsval1")
-bitsval1 = ImmutableDouble(1)
-println("created bitsval1")
-@test bitsval1.value == 1.
-@test bitsval1 == 1.
-@test CppTypes.getvalue(bitsval1) == 1
-bitsval2 = CppTypes.ImmutableDouble(2)
-@test bitsval2 == 2
-@test typeof(bitsval1 + bitsval2) == CppTypes.ImmutableDouble
-@test (bitsval1 + bitsval2) == 3.
+if VERSION >= v"0.5" # not supported on 0.4 anymore
+  @test sizeof(ImmutableDouble) == 8
+  @test isbits(ImmutableDouble)
+  @test length(fieldnames(ImmutableDouble)) == 1
+  println("creating bitsval1")
+  bitsval1 = ImmutableDouble(1)
+  println("created bitsval1")
+  @test bitsval1.value == 1.
+  @test bitsval1 == 1.
+  @test CppTypes.getvalue(bitsval1) == 1
+  bitsval2 = CppTypes.ImmutableDouble(2)
+  @test bitsval2 == 2
+  @test typeof(bitsval1 + bitsval2) == CppTypes.ImmutableDouble
+  @test (bitsval1 + bitsval2) == 3.
+end
 
 @test value(value(ReturnConstRef())) == 42
 
