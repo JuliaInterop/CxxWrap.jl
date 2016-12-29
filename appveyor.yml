@@ -1,18 +1,19 @@
 environment:
   matrix:
-  - JULIAVERSION: "julialang/bin/winnt/x64/0.5/julia-0.5-latest-win64.exe"
+  - JULIAVERSION: "julialang/bin/winnt/x64/0.4/julia-0.4-latest-win64.exe"
     BUILD_ON_WINDOWS: 1
     MSYSTEM: MINGW64
   - JULIAVERSION: "julialang/bin/winnt/x64/0.5/julia-0.5-latest-win64.exe"
+    BUILD_ON_WINDOWS: 1
+    MSYSTEM: MINGW64
+  - JULIAVERSION: "julialang/bin/winnt/x86/0.4/julia-0.4-latest-win32.exe"
+    BUILD_ON_WINDOWS: 1
+    MSYSTEM: MINGW32
+  - JULIAVERSION: "julialang/bin/winnt/x86/0.5/julia-0.5-latest-win32.exe"
+    BUILD_ON_WINDOWS: 1
+    MSYSTEM: MINGW32
+  - JULIAVERSION: "julialang/bin/winnt/x64/0.5/julia-0.5-latest-win64.exe"
     BUILD_ON_WINDOWS: 1 # Test MSVC on 0.5 64bit only
-
-  # matrix:
-  # - JULIAVERSION: "julialang/bin/winnt/x86/0.4/julia-0.4-latest-win32.exe"
-  # - JULIAVERSION: "julialang/bin/winnt/x64/0.4/julia-0.4-latest-win64.exe"
-  # - JULIAVERSION: "julialang/bin/winnt/x86/0.5/julia-0.5-latest-win32.exe"
-  # - JULIAVERSION: "julialang/bin/winnt/x64/0.5/julia-0.5-latest-win64.exe"
-  # - JULIAVERSION: "julianightlies/bin/winnt/x86/julia-latest-win32.exe"
-  # - JULIAVERSION: "julianightlies/bin/winnt/x64/julia-latest-win64.exe"
 
 branches:
   only:
@@ -32,7 +33,7 @@ install:
         "C:\projects\julia-binary.exe")
 # Run installer silently, output to C:\projects\julia
   - C:\projects\julia-binary.exe /S /D=C:\projects\julia
-  - IF DEFINED MSYSTEM C:\msys64\usr\bin\bash.exe -l -c "pacman --needed --noconfirm -S mingw-w64-x86_64-cmake mingw-w64-x86_64-gcc make"
+  - IF DEFINED MSYSTEM C:\msys64\usr\bin\bash.exe -l -c "pacman --needed --noconfirm -S mingw-w64-x86_64-cmake mingw-w64-x86_64-gcc mingw-w64-i686-cmake mingw-w64-i686-gcc make"
 
 build_script:
 # Need to convert from shallow to complete for Pkg.clone to work
@@ -42,3 +43,8 @@ build_script:
 
 test_script:
   - C:\projects\julia\bin\julia --check-bounds=yes -e "Pkg.test(\"CxxWrap\")"
+
+artifacts:
+  - path: deps\usr
+    name: CxxWrap-$(MSYSTEM).zip
+    type: zip
