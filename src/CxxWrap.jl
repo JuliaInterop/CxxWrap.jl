@@ -253,11 +253,11 @@ function wrap_functions(functions, julia_mod)
   for func in functions
     if in(func.name, basenames)
       for f in build_function_expression(func)
-        Base.eval(f)
+        Core.eval(Base, f)
       end
     else
       for f in build_function_expression(func)
-        julia_mod.eval(f)
+        Core.eval(julia_mod, f)
       end
     end
   end
@@ -269,11 +269,10 @@ function wrap_modules(registry::Ptr{Void}, parent_mod=Main)
   jl_modules = Module[]
   for mod_name in module_names
     modsym = Symbol(mod_name)
-    jl_mod = nothing
-    try
-      jl_mod = parent_mod.eval(:($modsym))
-    catch
-      jl_mod = parent_mod.eval(:(module $modsym end))
+    if isdefined(parent_mod, modsym)
+      jl_mod = getfield(parent_mod, modsym)
+    else
+      jl_mod = Core.eval(parent_mod, :(module $modsym end))
     end
     push!(jl_modules, jl_mod)
     bind_types(registry, jl_mod)
@@ -286,7 +285,7 @@ function wrap_modules(registry::Ptr{Void}, parent_mod=Main)
 
   for (jl_mod, mod_name) in zip(jl_modules, module_names)
     exps = [Symbol(s) for s in exported_symbols(registry, mod_name)]
-    jl_mod.eval(:(export $(exps...)))
+    Core.eval(jl_mod, :(export $(exps...)))
   end
 end
 
@@ -317,7 +316,7 @@ function wrap_module(registry, parent_mod=Main)
   wrap_functions(module_functions[mod_idx], current_module())
 
   exps = [Symbol(s) for s in exported_symbols(registry, wanted_name)]
-  current_module().eval(:(export $(exps...)))
+  Core.eval(current_module(), :(export $(exps...)))
 end
 
 function wrap_module(so_path::AbstractString, parent_mod=Main)
