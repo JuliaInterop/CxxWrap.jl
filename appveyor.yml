@@ -24,7 +24,7 @@ notifications:
   - provider: Email
     on_build_success: false
     on_build_failure: false
-    on_build_status_changed: false
+    on_build_status_changed: true
 
 install:
 # Download most recent Julia Windows binary
@@ -45,8 +45,8 @@ test_script:
   - C:\projects\julia\bin\julia --check-bounds=yes -e "Pkg.test(\"CxxWrap\")"
 
 after_test:
-  - C:\projects\julia\bin\julia -e "cd(joinpath(Pkg.dir(\"CxxWrap\"), \"deps\"));  run(`7z a $(ENV[\"APPVEYOR_BUILD_FOLDER\"])\\CxxWrap-julia-$(VERSION.major).$(VERSION.minor)-win$(Sys.WORD_SIZE).zip usr`)"
-  - dir
+  - IF DEFINED MSYSTEM C:\projects\julia\bin\julia -e "cd(joinpath(Pkg.dir(\"CxxWrap\"), \"deps\"));  run(`7z a $(ENV[\"APPVEYOR_BUILD_FOLDER\"])\\CxxWrap-julia-$(VERSION.major).$(VERSION.minor)-win$(Sys.WORD_SIZE).zip usr`)"
+  - echo %APPVEYOR_JOB_NAME%
 
 artifacts:
   - path: 'CxxWrap-julia*.zip'

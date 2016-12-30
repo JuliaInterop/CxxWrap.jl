@@ -15,7 +15,7 @@ add_definitions(-DJULIA_ENABLE_THREADING)
 
 if(WIN32 AND DEFINED ENV{MSYSTEM})
   if($ENV{MSYSTEM} STREQUAL "MINGW32")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=pentium4")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=pentium4 -static-libstdc++")
   endif()
 endif()
 
