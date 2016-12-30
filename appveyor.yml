@@ -45,7 +45,8 @@ test_script:
   - C:\projects\julia\bin\julia --check-bounds=yes -e "Pkg.test(\"CxxWrap\")"
 
 after_test:
-  - C:\projects\julia\bin\julia -e "cd(joinpath(Pkg.dir(\"CxxWrap\"), \"deps\"));  run(`7z a CxxWrap-julia-$(VERSION.major).$(VERSION.minor)-win$(Sys.WORD_SIZE).zip usr`)"
+  - C:\projects\julia\bin\julia -e "cd(joinpath(Pkg.dir(\"CxxWrap\"), \"deps\"));  run(`7z a $(ENV[\"APPVEYOR_BUILD_FOLDER\"])\\CxxWrap-julia-$(VERSION.major).$(VERSION.minor)-win$(Sys.WORD_SIZE).zip usr`)"
+  - dir
 
 artifacts:
-  - path: '**\CxxWrap-julia*.zip'
+  - path: 'CxxWrap-julia*.zip'

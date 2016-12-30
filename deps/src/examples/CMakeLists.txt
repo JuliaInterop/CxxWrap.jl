@@ -8,8 +8,10 @@ set(CMAKE_MACOSX_RPATH 1)
 list(APPEND CMAKE_CXX_FLAGS "-std=c++11")
 add_definitions(-DJULIA_ENABLE_THREADING)
 
-if(WIN32 AND $ENV{MSYSTEM} STREQUAL "MINGW32")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=pentium4")
+if(WIN32 AND DEFINED ENV{MSYSTEM})
+  if($ENV{MSYSTEM} STREQUAL "MINGW32")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=pentium4")
+  endif()
 endif()
 
 set(CxxWrap_DIR "${CMAKE_CURRENT_BINARY_DIR}/../../usr/lib/cmake")
