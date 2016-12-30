@@ -173,5 +173,9 @@ end
   if haskey(ENV, "BUILD_ON_WINDOWS") && ENV["BUILD_ON_WINDOWS"] == "1"
     empty!(BinDeps.defaults)
     append!(BinDeps.defaults, saved_defaults)
+    if get(ENV, "MSYSTEM", "") == "MINGW32"
+      run(`cp -f $(joinpath(ENV["MINGW_PREFIX"], "bin", "libwinpthread-1.dll")) $(joinpath(prefix,"lib$libdir_opt"))`)
+      run(`cp -f $(joinpath(ENV["MINGW_PREFIX"], "bin", "libgcc_s_dw2-1.dll")) $(joinpath(prefix,"lib$libdir_opt"))`)
+    end
   end
 end
