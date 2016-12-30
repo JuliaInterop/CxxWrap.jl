@@ -44,7 +44,8 @@ build_script:
 test_script:
   - C:\projects\julia\bin\julia --check-bounds=yes -e "Pkg.test(\"CxxWrap\")"
 
+after_test:
+  - C:\projects\julia\bin\julia -e "cd(joinpath(Pkg.dir(\"CxxWrap\"), \"deps\"));  run(`7z a CxxWrap-julia-$(VERSION.major).$(VERSION.minor)-win$(Sys.WORD_SIZE).zip usr`)"
+
 artifacts:
-  - path: deps\usr
-    name: CxxWrap-$(MSYSTEM).zip
-    type: zip
+  - path: '**\CxxWrap-julia*.zip'

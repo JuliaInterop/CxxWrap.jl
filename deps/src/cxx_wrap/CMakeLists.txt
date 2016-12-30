@@ -13,6 +13,10 @@ include(GenerateExportHeader)
 list(APPEND CMAKE_CXX_FLAGS "-std=c++11")
 add_definitions(-DJULIA_ENABLE_THREADING)
 
+if(WIN32 AND $ENV{MSYSTEM} STREQUAL "MINGW32")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=pentium4")
+endif()
+
 # TODO Figure out why this doesn't work on OS X:
 #set(CMAKE_CXX_STANDARD 11)
 #set(CMAKE_CXX_STANDARD_REQUIRED ON)
