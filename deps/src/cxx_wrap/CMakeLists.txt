@@ -10,7 +10,7 @@ set(CxxWrap_VERSION 0.1)
 
 include(GenerateExportHeader)
 
-list(APPEND CMAKE_CXX_FLAGS "-std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 add_definitions(-DJULIA_ENABLE_THREADING)
 
 if(WIN32 AND DEFINED ENV{MSYSTEM})
