@@ -376,16 +376,27 @@ public:
   template<typename T>
   TypeWrapper<T> add_bits(const std::string& name, jl_datatype_t* super = julia_type("CppBits"));
 
+  /// Set a global constant value at the module level
+  template<typename T>
+  void set_const(const std::string& name, T&& value)
+  {
+    if(m_jl_constants.count(name) != 0)
+    {
+      throw std::runtime_error("Duplicate registration of constant " + name);
+    }
+    m_jl_constants[name] = box(std::forward<T>(value));
+  }
+
   const std::string& name() const
   {
     return m_name;
   }
 
-  void bind_types(jl_module_t* mod)
+  void bind_constants(jl_module_t* mod)
   {
-    for(auto& dt_pair : m_jl_datatypes)
+    for(auto& dt_pair : m_jl_constants)
     {
-      jl_set_const(mod, jl_symbol(dt_pair.first.c_str()), (jl_value_t*)dt_pair.second);
+      jl_set_const(mod, jl_symbol(dt_pair.first.c_str()), dt_pair.second);
     }
   }
 
@@ -403,9 +414,9 @@ public:
 
   jl_datatype_t* get_julia_type(const char* name)
   {
-    if(m_jl_datatypes.count(name) != 0)
+    if(m_jl_constants.count(name) != 0 && jl_is_datatype(m_jl_constants[name]))
     {
-      return m_jl_datatypes[name];
+      return (jl_datatype_t*)m_jl_constants[name];
     }
 
     return nullptr;
@@ -451,7 +462,7 @@ private:
 
   std::string m_name;
   std::vector<std::shared_ptr<FunctionWrapperBase>> m_functions;
-  std::map<std::string, jl_datatype_t*> m_jl_datatypes;
+  std::map<std::string, jl_value_t*> m_jl_constants;
   std::vector<std::string> m_exported_symbols;
 
   template<class T> friend class TypeWrapper;
@@ -696,9 +707,9 @@ TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t*
       throw std::runtime_error("Immutable bits types must use CppBits as a super type");
     }
   }
-  if(m_jl_datatypes.count(name) > 0)
+  if(m_jl_constants.count(name) > 0)
   {
-    throw std::runtime_error("Duplicate registration of type " + name);
+    throw std::runtime_error("Duplicate registration of type or constant " + name);
   }
 
   jl_svec_t* parameters = nullptr;
@@ -745,7 +756,7 @@ TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t*
     }
   }
 
-  m_jl_datatypes[name] = dt;
+  m_jl_constants[name] = (jl_value_t*)dt;
   JL_GC_POP();
   return TypeWrapper<T>(*this, dt);
 }
@@ -802,14 +813,14 @@ TypeWrapper<T> Module::add_bits(const std::string& name, jl_datatype_t* super)
 {
   static constexpr bool is_parametric = detail::IsParametric<T>::value;
   static_assert(IsBits<T>::value || is_parametric, "Bits types must be marked as such by specializing the IsBits template");
-  static_assert(std::is_standard_layout<T>::value, "Bits types must be standard layout");
+  static_assert(std::is_scalar<T>::value, "Bits types must be a scalar type");
   jl_svec_t* params = is_parametric ? parameter_list<T>()() : jl_emptysvec;
   JL_GC_PUSH1(&params);
   jl_datatype_t* dt = jl_new_bitstype((jl_value_t*)jl_symbol(name.c_str()), super, params, 8*sizeof(T));
   protect_from_gc(dt);
   JL_GC_POP();
   detail::dispatch_set_julia_type<T, is_parametric>()(dt);
-  m_jl_datatypes[name] = dt;
+  m_jl_constants[name] = (jl_value_t*)dt;
   return TypeWrapper<T>(*this, dt);
 }
 

@@ -88,8 +88,8 @@ function get_module_functions(registry::Ptr{Void})
   ccall((:get_module_functions, cxx_wrap_path), Array{CppFunctionInfo}, (Ptr{Void},), registry)
 end
 
-function bind_types(registry::Ptr{Void}, m::Module)
-  ccall((:bind_module_types, cxx_wrap_path), Void, (Ptr{Void},Any), registry, m)
+function bind_constants(registry::Ptr{Void}, m::Module)
+  ccall((:bind_module_constants, cxx_wrap_path), Void, (Ptr{Void},Any), registry, m)
 end
 
 function exported_symbols(registry::Ptr{Void}, modname::AbstractString)
@@ -275,7 +275,7 @@ function wrap_modules(registry::Ptr{Void}, parent_mod=Main)
       jl_mod = Core.eval(parent_mod, :(module $modsym end))
     end
     push!(jl_modules, jl_mod)
-    bind_types(registry, jl_mod)
+    bind_constants(registry, jl_mod)
   end
 
   module_functions = get_module_functions(registry)
@@ -302,7 +302,7 @@ function wrap_module(registry, parent_mod=Main)
   wanted_name = string(module_name(current_module()))
   for (i,mod_name) in enumerate(module_names)
     if mod_name == wanted_name
-      bind_types(registry, current_module())
+      bind_constants(registry, current_module())
       mod_idx = i
       break
     end

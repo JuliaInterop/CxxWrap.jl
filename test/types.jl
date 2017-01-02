@@ -2,16 +2,10 @@
 
 using Base.Test
 using Compat
-
-module CppTypes
 using CxxWrap
 
-@enum CppEnum EnumValA=0 EnumValB=1
-
 # Wrap the functions defined in C++
-wrap_module(CxxWrap._l_types)
-
-end
+wrap_modules(CxxWrap._l_types)
 
 using CppTypes
 using CppTypes.World

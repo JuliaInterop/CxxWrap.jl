@@ -50,13 +50,13 @@ CXX_WRAP_EXPORT jl_array_t* get_module_names(void* void_registry)
 }
 
 /// Bind jl_datatype_t structures to corresponding Julia symbols in the given module
-CXX_WRAP_EXPORT void bind_module_types(void* void_registry, jl_value_t* module_any)
+CXX_WRAP_EXPORT void bind_module_constants(void* void_registry, jl_value_t* module_any)
 {
   assert(void_registry != nullptr);
   ModuleRegistry& registry = *reinterpret_cast<ModuleRegistry*>(void_registry);
   jl_module_t* mod = (jl_module_t*)module_any;
   const std::string mod_name = symbol_name(mod->name);
-  registry.get_module(mod_name).bind_types(mod);
+  registry.get_module(mod_name).bind_constants(mod);
 }
 
 /// Get the functions defined in the modules. Any classes used by these functions must be defined on the Julia side first

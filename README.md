@@ -19,8 +19,7 @@ Boost.Python also uses the latter (C++-only) approach, so translating existing P
 ## Features
 * Support for C++ functions, member functions and lambdas
 * Classes with single inheritance, using abstract base classes on the Julia side
-* Standard-layout C++ classes can be converted to a Julia isbits immutable
-* Standard-layout C++ classes can be converted to an opaque Julia bits type
+* Trivial C++ classes can be converted to a Julia isbits immutable
 * Template classes map to parametric types, for the instantiations listed in the wrapper
 * Automatic wrapping of default and copy constructor (mapped to deepcopy) if defined on the wrapped C++ class
 * Facilitate calling Julia functions from C++
@@ -106,6 +105,36 @@ CppTypes.set(w, "hello")
 
 The full code for this example and more info on immutables and bits types can be found in [`deps/src/examples/types.cpp`](deps/src/examples/types.cpp) and [`test/types.jl`](test/types.jl).
 
+## Enum types
+
+Enum types are converted to strongly-typed bits types on the Julia side. Consider the C++ enum:
+
+```c++
+enum CppEnum
+{
+  EnumValA,
+  EnumValB
+};
+```
+
+This is registered as follows:
+
+```c++
+namespace cxx_wrap
+{
+  template<> struct IsBits<CppEnum> : std::true_type {};
+}
+
+JULIA_CPP_MODULE_BEGIN(registry)
+  cxx_wrap::Module& types = registry.create_module("CppTypes");
+  types.add_bits<CppEnum>("CppEnum");
+  types.set_const("EnumValA", EnumValA);
+  types.set_const("EnumValB", EnumValB);
+JULIA_CPP_MODULE_END
+```
+
+The enum constants will be available on the Julia side as `CppTypes.EnumValA` and `CppTypes.EnumValB`, both of type `CppTypes.CppEnum`. Wrapped C++ functions taking a `CppEnum` will only accept a value of type `CppTypes.CppEnum` in Julia.
+
 ## Inheritance
 See the test at [`deps/src/examples/inheritance.cpp`](deps/src/examples/inheritance.cpp) and [`test/inheritance.jl`](test/inheritance.jl).
 
@@ -187,7 +216,7 @@ call_op = CallOperator()
 
 The C++ function does not even have to be `operator()`, but of course it is most logical use case.
 
-## Number type conversion
+## Automatic argument conversion
 By default, overloaded signatures for wrapper methods are generated, so a method taking a `double` in C++ can be called with e.g. an `Int` in Julia. Wrapping a function like this:
 
 ```c++
@@ -214,6 +243,13 @@ strict_half(arg1::Float64)
 ```
 
 Note that in C++ the number value is accessed using the `value` member of `StrictlyTypedNumber`.
+
+### Customization
+The automatic overloading can be customized. For example, to allow passing an `Int64` where a `UInt64` is normally expected, the following method can be added:
+
+```julia
+CxxWrap.argument_overloads(t::Type{UInt64}) = [Int64]
+```
 
 ## Smart pointers
 Currently, `std::shared_ptr` and `std::unique_ptr` are supported transparently. Returning one of these pointer types will return an object of type `SharedPtr{T}` (or `UniquePtr{T}`), and a `get` method is added automatically to the module that wraps `T` to extract the pointer. Example from the types test:
