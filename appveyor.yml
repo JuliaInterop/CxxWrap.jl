@@ -50,3 +50,11 @@ after_test:
 
 artifacts:
   - path: 'CxxWrap-julia*.zip'
+
+deploy:
+  provider: GitHub
+  auth_token:
+    secure: gT/6HUmJMkLU89J2qu3FZ/OR2Velz//TSA/GJr65M1iNRjTimZLnAk73oRPGtA7d # your encrypted token from GitHub
+  on:
+    branch: master                 # release from master branch only
+    appveyor_repo_tag: true        # deploy on tag push only
