@@ -233,7 +233,7 @@ function build_function_expression(func::CppFunctionInfo)
 
   function_expressions = [:($(make_func_declaration(func.name, argmap(argtypes))) = $call_exp)]
   for signature in overload_sigs[2:end] # the first "overload" is the same as the base signature, so skip it
-    push!(function_expressions, :($(make_func_declaration(func.name, argmap(signature))) = $(make_overloaded_call(func.name, argtypes, argsymbols))))
+    push!(function_expressions, :($(make_func_declaration(func.name, argmap(signature))) = $(make_overloaded_call(func.name, [map_julia_arg_type(t) for t in argtypes], argsymbols))))
   end
   return function_expressions
 end
