@@ -505,7 +505,7 @@ struct GetJlType
 {
   jl_datatype_t* operator()() const
   {
-    return julia_type<T>();
+    return julia_type<remove_const_ref<T>>();
   }
 };
 

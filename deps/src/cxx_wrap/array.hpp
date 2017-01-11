@@ -216,6 +216,11 @@ public:
     return (ValueT*)jl_array_data(wrapped());
   }
 
+  ValueT* data()
+  {
+    return (ValueT*)jl_array_data(wrapped());
+  }
+
   std::size_t size() const
   {
     return jl_array_len(wrapped());
