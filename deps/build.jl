@@ -187,6 +187,12 @@ end
     if get(ENV, "MSYSTEM", "") == "MINGW32"
       run(`cp -f $(joinpath("/mingw32", "bin", "libwinpthread-1.dll")) $(joinpath(prefix,"lib$libdir_opt"))`)
       run(`cp -f $(joinpath("/mingw32", "bin", "libgcc_s_dw2-1.dll")) $(joinpath(prefix,"lib$libdir_opt"))`)
+    else
+      redist_dlls = ["concrt140.dll", "msvcp140.dll", "vccorlib140.dll", "vcruntime140.dll"]
+      redistbasepath = "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\redist\\$(Sys.WORD_SIZE == 64 ? "x64" : "x86")\\Microsoft.VC140.CRT"
+      for dll in redist_dlls
+        cp(joinpath(redistbasepath, dll), joinpath(prefix,"lib$libdir_opt", dll), remove_destination=true)
+      end
     end
   end
 end
