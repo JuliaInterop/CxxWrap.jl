@@ -25,6 +25,9 @@ dump(p1)
 @test typeof(ParametricTypes.get_first(p2)) == Float64
 @test typeof(ParametricTypes.get_second(p1)) == Float64
 
+@test length(ParametricTypes.TemplateDefaultType.parameters) == 1
+@test ParametricTypes.TemplateDefaultType{ParametricTypes.P1}() != nothing
+
 nontype1 = ParametricTypes.NonTypeParam{Int32, Int32(1)}()
 @test ParametricTypes.get_nontype(nontype1) == 1
 

@@ -2,18 +2,15 @@ environment:
   matrix:
   - JULIAVERSION: "julialang/bin/winnt/x64/0.4/julia-0.4-latest-win64.exe"
     BUILD_ON_WINDOWS: 1
-    MSYSTEM: MINGW64
   - JULIAVERSION: "julialang/bin/winnt/x64/0.5/julia-0.5-latest-win64.exe"
     BUILD_ON_WINDOWS: 1
-    MSYSTEM: MINGW64
   - JULIAVERSION: "julialang/bin/winnt/x86/0.4/julia-0.4-latest-win32.exe"
     BUILD_ON_WINDOWS: 1
-    MSYSTEM: MINGW32
   - JULIAVERSION: "julialang/bin/winnt/x86/0.5/julia-0.5-latest-win32.exe"
     BUILD_ON_WINDOWS: 1
-    MSYSTEM: MINGW32
   - JULIAVERSION: "julialang/bin/winnt/x64/0.5/julia-0.5-latest-win64.exe"
-    BUILD_ON_WINDOWS: 1 # Test MSVC on 0.5 64bit only
+    BUILD_ON_WINDOWS: 1 # Test Mingw on 0.5 64bit only
+    MSYSTEM: MINGW64
 
 branches:
   only:
@@ -45,7 +42,7 @@ test_script:
   - C:\projects\julia\bin\julia --check-bounds=yes -e "Pkg.test(\"CxxWrap\")"
 
 after_test:
-  - IF DEFINED MSYSTEM C:\projects\julia\bin\julia -e "cd(joinpath(Pkg.dir(\"CxxWrap\"), \"deps\"));  run(`7z a $(ENV[\"APPVEYOR_BUILD_FOLDER\"])\\CxxWrap-julia-$(VERSION.major).$(VERSION.minor)-win$(Sys.WORD_SIZE).zip usr`)"
+  - IF NOT DEFINED MSYSTEM C:\projects\julia\bin\julia -e "cd(joinpath(Pkg.dir(\"CxxWrap\"), \"deps\"));  run(`7z a $(ENV[\"APPVEYOR_BUILD_FOLDER\"])\\CxxWrap-julia-$(VERSION.major).$(VERSION.minor)-win$(Sys.WORD_SIZE).zip usr`)"
   - echo %APPVEYOR_JOB_NAME%
 
 artifacts:

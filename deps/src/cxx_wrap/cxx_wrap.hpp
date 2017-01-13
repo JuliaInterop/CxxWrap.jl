@@ -492,7 +492,15 @@ struct GetJlType
 {
   jl_datatype_t* operator()() const
   {
-    return julia_type<remove_const_ref<T>>();
+    try
+    {
+      return julia_type<remove_const_ref<T>>();
+    }
+    catch(...)
+    {
+      // The assumption here is that unmapped types are not needed, i.e. in default argument lists
+      return nullptr;
+    }
   }
 };
 
@@ -534,9 +542,17 @@ struct ParameterList
 {
   static constexpr int nb_parameters = sizeof...(ParametersT);
 
-  jl_svec_t* operator()()
+  jl_svec_t* operator()(const int n = nb_parameters)
   {
-    return jl_svec(sizeof...(ParametersT), detail::GetJlType<ParametersT>()()...);
+    jl_svec_t* result = jl_svec(n, detail::GetJlType<ParametersT>()()...);
+    for(int i = 0; i != n; ++i)
+    {
+      if(jl_svecref(result,i) == nullptr)
+      {
+        throw std::runtime_error("Attempt to use unmapped type in parameter list");
+      }
+    }
+    return result;
   }
 };
 
@@ -661,8 +677,8 @@ private:
   int apply_internal(FunctorT&& apply_ftor)
   {
     static_assert(parameter_list<AppliedT>::nb_parameters != 0, "No parameters found when applying type. Specialize cxx_wrap::BuildParameterList for your combination of type and non-type parameters.");
-    static_assert(parameter_list<AppliedT>::nb_parameters == parameter_list<T>::nb_parameters, "Parametric type applied to wrong number of parameters.");
-    jl_datatype_t* app_dt = (jl_datatype_t*)jl_apply_type((jl_value_t*)m_dt, parameter_list<AppliedT>()());
+    static_assert(parameter_list<AppliedT>::nb_parameters >= parameter_list<T>::nb_parameters, "Parametric type applied to wrong number of parameters.");
+    jl_datatype_t* app_dt = (jl_datatype_t*)jl_apply_type((jl_value_t*)m_dt, parameter_list<AppliedT>()(parameter_list<T>::nb_parameters));
 
     set_julia_type<AppliedT>(app_dt);
     m_module.add_default_constructor<AppliedT>(std::is_default_constructible<AppliedT>(), app_dt);

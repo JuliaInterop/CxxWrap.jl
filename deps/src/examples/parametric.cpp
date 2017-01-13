@@ -52,6 +52,11 @@ struct NonTypeParam
   T i = I;
 };
 
+template<typename A, typename B=void>
+struct TemplateDefaultType
+{
+};
+
 // Helper to wrap TemplateType instances. May also be a C++14 lambda, see README.md
 struct WrapTemplateType
 {
@@ -61,6 +66,14 @@ struct WrapTemplateType
     typedef typename TypeWrapperT::type WrappedT;
     wrapped.method("get_first", &WrappedT::get_first);
     wrapped.method("get_second", &WrappedT::get_second);
+  }
+};
+
+struct WrapTemplateDefaultType
+{
+  template<typename TypeWrapperT>
+  void operator()(TypeWrapperT&& wrapped)
+  {
   }
 };
 
@@ -99,6 +112,9 @@ JULIA_CPP_MODULE_BEGIN(registry)
 
   types.add_type<Parametric<TypeVar<1>, TypeVar<2>>>("TemplateType")
     .apply<TemplateType<P1,P2>, TemplateType<P2,P1>>(WrapTemplateType());
+
+  types.add_type<Parametric<TypeVar<1>>>("TemplateDefaultType")
+    .apply<TemplateDefaultType<P1>, TemplateDefaultType<P2>>(WrapTemplateDefaultType());
 
 
   types.add_type<Parametric<cxx_wrap::TypeVar<1>, cxx_wrap::TypeVar<2>>>("NonTypeParam")
