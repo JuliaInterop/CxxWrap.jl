@@ -152,11 +152,22 @@ template<typename T> struct IsValueType
 
 namespace detail
 {
-  // MSVC needs this helper
   template<typename T>
   struct MappedReferenceType
   {
-    typedef typename detail::StaticIf<IsValueType<remove_const_ref<T>>::value, remove_const_ref<T>, T >::type type;
+    typedef typename std::remove_const<T>::type type;
+  };
+
+  template<typename T>
+  struct MappedReferenceType<T&>
+  {
+    typedef T& type;
+  };
+
+  template<typename T>
+  struct MappedReferenceType<const T&>
+  {
+    typedef typename detail::StaticIf<IsValueType<T>::value, T, const T&>::type type;
   };
 }
 
@@ -234,7 +245,7 @@ template<typename T1, typename T2> using define_if_different = typename DefineIf
 }
 
 /// Static mapping base template
-template<typename SourceT> struct CXX_WRAP_EXPORT static_type_mapping
+template<typename SourceT, typename Enable=void> struct CXX_WRAP_EXPORT static_type_mapping
 {
   typedef typename detail::StaticIf<IsBits<remove_const_ref<SourceT>>::value, remove_const_ref<SourceT>, jl_value_t*>::type type;
 
@@ -360,8 +371,31 @@ struct static_type_mapping<SingletonType<T>>
   static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_type((jl_value_t*)jl_type_type, jl_svec1(static_type_mapping<T>::julia_type())); }
 };
 
-/// Using declarations to avoid having to write typename all the time
-template<typename SourceT> using mapped_julia_type = typename static_type_mapping<SourceT>::type;
+
+namespace detail
+{
+  // Helper to deal with references
+  template<typename T>
+  struct JuliaReferenceMapping
+  {
+    typedef static_type_mapping<T> type;
+  };
+
+  template<typename T>
+  struct JuliaReferenceMapping<T&>
+  {
+    typedef typename StaticIf<IsFundamental<T>::value, static_type_mapping<T&>, static_type_mapping<T>>::type type;
+  };
+
+  template<typename T>
+  struct JuliaReferenceMapping<const T&>
+  {
+    typedef static_type_mapping<T> type;
+  };
+}
+
+template<typename SourceT> using dereferenced_type_mapping = typename detail::JuliaReferenceMapping<SourceT>::type;
+template<typename SourceT> using mapped_julia_type = typename dereferenced_type_mapping<SourceT>::type;
 
 /// Specializations
 
@@ -566,6 +600,16 @@ struct ConvertToJulia<T, true, false, false>
   }
 };
 
+// Non-const reference to fundamental type
+template<typename T>
+struct ConvertToJulia<T&, true, false, false>
+{
+  T* operator()(T& cpp_val) const
+  {
+    return &cpp_val;
+  }
+};
+
 // Boxed immutable type
 template<typename T>
 struct ConvertToJulia<T, false, true, false>
@@ -614,6 +658,16 @@ struct ConvertToJulia<T*, false, false, false>
     assert(convert_to_cpp<T*>(result) == cpp_obj);
     JL_GC_POP();
     return result;
+  }
+};
+
+// Reference to wrapped type
+template<typename T>
+struct ConvertToJulia<T&, false, false, false>
+{
+  jl_value_t* operator()(T& cpp_obj) const
+  {
+    return ConvertToJulia<T*, false, false, false>()(&cpp_obj);
   }
 };
 
@@ -680,19 +734,34 @@ struct ConvertToJulia<jl_datatype_t*, false, false, false>
   }
 };
 
-template<typename T> using julia_converter_type = ConvertToJulia<remove_const_ref<T>, IsFundamental<remove_const_ref<T>>::value, IsImmutable<remove_const_ref<T>>::value, IsBits<remove_const_ref<T>>::value>;
+namespace detail
+{
+  template<typename T>
+  struct StrippedConversionType
+  {
+    typedef mapped_reference_type<T> type;
+  };
+
+  template<typename T>
+  struct StrippedConversionType<T*&>
+  {
+    typedef T* type;
+  };
+
+  template<typename T>
+  struct StrippedConversionType<T* const &>
+  {
+    typedef T* type;
+  };
+}
+
+template<typename T> using julia_converter_type = ConvertToJulia<typename detail::StrippedConversionType<T>::type, IsFundamental<remove_const_ref<T>>::value, IsImmutable<remove_const_ref<T>>::value, IsBits<remove_const_ref<T>>::value>;
 
 /// Conversion to the statically mapped target type.
 template<typename T>
 inline auto convert_to_julia(T&& cpp_val) -> decltype(julia_converter_type<T>()(cpp_val))
 {
   return julia_converter_type<T>()(std::forward<T>(cpp_val));
-}
-
-template<typename T>
-inline auto convert_to_julia(const T& cpp_val) -> decltype(julia_converter_type<T>()(cpp_val))
-{
-  return julia_converter_type<T>()(cpp_val);
 }
 
 template<typename T>
@@ -844,6 +913,16 @@ struct ConvertToCpp<CppT, true, false, false>
   CppT operator()(jl_value_t* julia_val) const
   {
     return unbox<CppT>(julia_val);
+  }
+};
+
+// Non-const reference to fundamental type
+template<typename CppT>
+struct ConvertToCpp<CppT&, true, false, false>
+{
+  CppT& operator()(CppT* julia_val) const
+  {
+    return *julia_val;
   }
 };
 
@@ -1156,6 +1235,13 @@ struct ConvertToCpp<StrictlyTypedNumber<NumberT>, false, false, true>
   {
     return {julia_value};
   }
+};
+
+// Match references to fundamental types (e.g. double&)
+template<typename T> struct static_type_mapping<T&, typename std::enable_if<IsFundamental<T>::value>::type>
+{
+  typedef T* type;
+  static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_type((jl_value_t*)::cxx_wrap::julia_type("Ref"), jl_svec1(static_type_mapping<T>::julia_type())); }
 };
 
 }

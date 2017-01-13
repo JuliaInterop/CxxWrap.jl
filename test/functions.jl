@@ -78,6 +78,16 @@ testf(x,y) = x+y
 CppTestFunctions.test_safe_cfunction(c_func)
 CppTestFunctions.test_safe_cfunction2(c_func)
 
+dref = Ref(0.0)
+CppTestFunctions.test_double_ref(dref)
+@test dref[] == 1.0
+
+@test CppTestFunctions.get_test_double() == 0.0
+cppdref = CppTestFunctions.get_test_double_ref()
+@test unsafe_load(cppdref) == 0.0
+unsafe_store!(cppdref, 1.0)
+@test CppTestFunctions.get_test_double() == 1.0
+
 # Performance tests
 const test_size = Sys.ARCH == :armv7l ? 1000000 : 50000000
 const numbers = rand(test_size)

@@ -189,12 +189,15 @@ function build_function_expression(func::CppFunctionInfo)
   end
   map_c_arg_type{T}(a::Type{StrictlyTypedNumber{T}}) = T
 
+  map_return_type(t) = map_c_arg_type(t)
+  map_return_type{T}(t::Type{Ref{T}}) = Ptr{T}
+
   map_julia_arg_type(t::DataType) = t
   map_julia_arg_type{T}(a::Type{StrictlyTypedNumber{T}}) = T
 
   # Build the types for the ccall argument list
   c_arg_types = [map_c_arg_type(t) for t in argtypes]
-  return_type = map_c_arg_type(func.return_type)
+  return_type = map_return_type(func.return_type)
 
   # Build the final call expression
   call_exp = nothing

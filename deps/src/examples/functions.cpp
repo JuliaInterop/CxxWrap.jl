@@ -139,6 +139,17 @@ std::string concatenate_strings(const int n, std::string s, const std::string& s
   return result;
 }
 
+double g_test_double = 0.0;
+double& get_test_double_ref()
+{
+  return g_test_double;
+}
+
+double get_test_double()
+{
+  return g_test_double;
+}
+
 void init_test_module(cxx_wrap::Module& mod)
 {
   mod.method("concatenate_numbers", &concatenate_numbers);
@@ -188,6 +199,10 @@ void init_test_module(cxx_wrap::Module& mod)
       throw std::runtime_error("Incorrect callback result, expected 3");
     }
   });
+  // Write to reference
+  mod.method("test_double_ref", [](double& d) { d = 1.0; });
+  mod.method("get_test_double_ref", get_test_double_ref);
+  mod.method("get_test_double", get_test_double);
 }
 
 }

@@ -24,7 +24,7 @@ namespace detail
 template<typename R, typename... Args>
 struct ReturnTypeAdapter
 {
-  inline mapped_julia_type<remove_const_ref<R>> operator()(const void* functor, mapped_julia_type<mapped_reference_type<Args>>... args)
+  inline mapped_julia_type<R> operator()(const void* functor, mapped_julia_type<Args>... args)
   {
     auto std_func = reinterpret_cast<const std::function<R(Args...)>*>(functor);
     assert(std_func != nullptr);
@@ -32,23 +32,10 @@ struct ReturnTypeAdapter
   }
 };
 
-// Reference return type
-template<typename R, typename... Args>
-struct ReturnTypeAdapter<R&, Args...>
-{
-  inline mapped_julia_type<remove_const_ref<R>> operator()(const void* functor, mapped_julia_type<mapped_reference_type<Args>>... args)
-  {
-    auto std_func = reinterpret_cast<const std::function<R&(Args...)>*>(functor);
-    assert(std_func != nullptr);
-    R& result = (*std_func)(convert_to_cpp<mapped_reference_type<Args>>(args)...);
-    return convert_to_julia(&result);
-  }
-};
-
 template<typename... Args>
 struct ReturnTypeAdapter<void, Args...>
 {
-  inline void operator()(const void* functor, mapped_julia_type<mapped_reference_type<Args>>... args)
+  inline void operator()(const void* functor, mapped_julia_type<Args>... args)
   {
     auto std_func = reinterpret_cast<const std::function<void(Args...)>*>(functor);
     assert(std_func != nullptr);
@@ -58,7 +45,7 @@ struct ReturnTypeAdapter<void, Args...>
 
 /// Call a C++ std::function, passed as a void pointer since it comes from Julia
 template<typename R, typename... Args>
-mapped_julia_type<remove_const_ref<R>> call_functor(const void* functor, mapped_julia_type<remove_const_ref<Args>>... args)
+mapped_julia_type<R> call_functor(const void* functor, mapped_julia_type<Args>... args)
 {
   try
   {
@@ -69,14 +56,14 @@ mapped_julia_type<remove_const_ref<R>> call_functor(const void* functor, mapped_
     jl_error(err.what());
   }
 
-  return mapped_julia_type<remove_const_ref<R>>();
+  return mapped_julia_type<R>();
 }
 
 /// Make a vector with the types in the variadic template parameter pack
 template<typename... Args>
 std::vector<jl_datatype_t*> typeid_vector()
 {
-  return {static_type_mapping<remove_const_ref<Args>>::julia_type()...};
+  return {dereferenced_type_mapping<Args>::julia_type()...};
 }
 
 template<typename... Args>
@@ -84,7 +71,7 @@ struct NeedConvertHelper
 {
   bool operator()()
   {
-    for(const bool b : {std::is_same<mapped_julia_type<remove_const_ref<Args>>,remove_const_ref<Args>>::value...})
+    for(const bool b : {std::is_same<remove_const_ref<dereferenced_type_mapping<Args>>,remove_const_ref<Args>>::value...})
     {
       if(!b)
         return true;
@@ -215,7 +202,7 @@ public:
 
   virtual jl_datatype_t* return_type() const
   {
-    return static_type_mapping<remove_const_ref<R>>::julia_type();
+    return dereferenced_type_mapping<R>::julia_type();
   }
 
 private:
