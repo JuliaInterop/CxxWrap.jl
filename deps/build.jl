@@ -165,7 +165,7 @@ provides(BuildProcess,
   if endswith(pkgverstring,"+")
     bin_uri = URI("https://ci.appveyor.com/api/projects/barche/cxxwrap-jl/artifacts/$(zipfilename)?job=Environment%3a+JULIAVERSION%3djulialang%2fbin%2fwinnt%2f$(archname)%2f$(shortversion)%2fjulia-$(shortversion)-latest-win$(Sys.WORD_SIZE).exe%2c+BUILD_ON_WINDOWS%3d1")
   else
-    bin_uri = URI("https://github.com/JuliaInterop/CxxWrap.jl/releases/download/$(pkgverstring)/CxxWrap-julia-$(VERSION.major).$(VERSION.minor)-win$(Sys.WORD_SIZE).zip")
+    bin_uri = URI("https://github.com/JuliaInterop/CxxWrap.jl/releases/download/v$(pkgverstring)/CxxWrap-julia-$(VERSION.major).$(VERSION.minor)-win$(Sys.WORD_SIZE).zip")
   end
   provides(Binaries, Dict(bin_uri => deps), os = :Windows)
 end
