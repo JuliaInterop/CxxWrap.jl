@@ -595,6 +595,18 @@ namespace detail
   }
 }
 
+/// Trait to allow user-controlled disabling of the default constructor
+template<typename T>
+struct DefaultConstructible : std::is_default_constructible<T>
+{
+};
+
+/// Trait to allow user-controlled disabling of the copy constructor
+template<typename T>
+struct CopyConstructible : std::is_copy_constructible<T>
+{
+};
+
 /// Helper class to wrap type methods
 template<typename T>
 class TypeWrapper
@@ -681,10 +693,10 @@ private:
     jl_datatype_t* app_dt = (jl_datatype_t*)jl_apply_type((jl_value_t*)m_dt, parameter_list<AppliedT>()(parameter_list<T>::nb_parameters));
 
     set_julia_type<AppliedT>(app_dt);
-    m_module.add_default_constructor<AppliedT>(std::is_default_constructible<AppliedT>(), app_dt);
+    m_module.add_default_constructor<AppliedT>(DefaultConstructible<AppliedT>(), app_dt);
     if(!IsImmutable<AppliedT>::value)
     {
-      m_module.add_copy_constructor<AppliedT>(std::is_copy_constructible<AppliedT>(), app_dt);
+      m_module.add_copy_constructor<AppliedT>(CopyConstructible<AppliedT>(), app_dt);
       detail::add_smart_pointer_types<AppliedT>(app_dt, m_module);
     }
 
@@ -750,10 +762,10 @@ TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t*
     set_julia_type<T>(dt);
     if(!abstract)
     {
-      add_default_constructor<T>(std::is_default_constructible<T>(), dt);
+      add_default_constructor<T>(DefaultConstructible<T>(), dt);
       if(!AddBits)
       {
-        add_copy_constructor<T>(std::is_copy_constructible<T>(), dt);
+        add_copy_constructor<T>(CopyConstructible<T>(), dt);
         detail::add_smart_pointer_types<T>(dt, *this);
       }
     }
