@@ -203,6 +203,9 @@ void init_test_module(cxx_wrap::Module& mod)
   mod.method("test_double_ref", [](double& d) { d = 1.0; });
   mod.method("get_test_double_ref", get_test_double_ref);
   mod.method("get_test_double", get_test_double);
+
+  // Const string return
+  mod.method("test_const_string_return", []() -> const std::string { return "test"; });
 }
 
 }

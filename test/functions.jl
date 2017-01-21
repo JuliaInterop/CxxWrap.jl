@@ -88,6 +88,8 @@ cppdref = CppTestFunctions.get_test_double_ref()
 unsafe_store!(cppdref, 1.0)
 @test CppTestFunctions.get_test_double() == 1.0
 
+@test CppTestFunctions.test_const_string_return() == "test"
+
 # Performance tests
 const test_size = Sys.ARCH == :armv7l ? 1000000 : 50000000
 const numbers = rand(test_size)

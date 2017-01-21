@@ -392,6 +392,12 @@ namespace detail
   {
     typedef static_type_mapping<T> type;
   };
+
+  template<typename T>
+  struct JuliaReferenceMapping<const T>
+  {
+    typedef static_type_mapping<T> type;
+  };
 }
 
 template<typename SourceT> using dereferenced_type_mapping = typename detail::JuliaReferenceMapping<SourceT>::type;
