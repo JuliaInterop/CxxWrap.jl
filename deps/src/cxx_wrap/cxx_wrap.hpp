@@ -51,7 +51,7 @@ mapped_julia_type<R> call_functor(const void* functor, mapped_julia_type<Args>..
   {
     return ReturnTypeAdapter<R, Args...>()(functor, args...);
   }
-  catch(const std::runtime_error& err)
+  catch(const std::exception& err)
   {
     jl_error(err.what());
   }
