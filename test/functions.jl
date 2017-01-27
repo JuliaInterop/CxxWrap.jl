@@ -89,6 +89,7 @@ unsafe_store!(cppdref, 1.0)
 @test CppTestFunctions.get_test_double() == 1.0
 
 @test CppTestFunctions.test_const_string_return() == "test"
+@test CppTestFunctions.test_datatype_conversion(Float64) == Float64
 
 # Performance tests
 const test_size = Sys.ARCH == :armv7l ? 1000000 : 50000000

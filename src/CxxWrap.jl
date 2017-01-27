@@ -185,6 +185,10 @@ function build_function_expression(func::CppFunctionInfo)
       return Any
     end
 
+    if t == DataType
+      return Any
+    end
+
     return t
   end
   map_c_arg_type{T}(a::Type{StrictlyTypedNumber{T}}) = T

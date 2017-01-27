@@ -1091,7 +1091,7 @@ struct ConvertToCpp<const char*, false, false, false>
   {
     if(jstr == nullptr || !is_julia_string(jstr))
     {
-      throw std::runtime_error("Any type to convert to string is not a string");
+      throw std::runtime_error("Any type to convert to string is not a string but a " + julia_type_name((jl_datatype_t*)jl_typeof(jstr)));
     }
     return julia_string(jstr);
   }
