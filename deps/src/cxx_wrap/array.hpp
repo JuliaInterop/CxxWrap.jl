@@ -86,13 +86,13 @@ class Array
 public:
   Array(const size_t n = 0)
   {
-    jl_value_t* array_type = jl_apply_array_type(static_type_mapping<ValueT>::julia_type(), 1);
+    jl_value_t* array_type = apply_array_type(static_type_mapping<ValueT>::julia_type(), 1);
     m_array = jl_alloc_array_1d(array_type, n);
   }
 
   Array(jl_datatype_t* applied_type, const size_t n = 0)
   {
-    jl_value_t* array_type = jl_apply_array_type(applied_type, 1);
+    jl_value_t* array_type = apply_array_type(applied_type, 1);
     m_array = jl_alloc_array_1d(array_type, n);
   }
 
@@ -233,7 +233,7 @@ template<typename T, int Dim> struct IsValueType<ArrayRef<T,Dim>> : std::true_ty
 template<typename T, int Dim> struct static_type_mapping<ArrayRef<T, Dim>>
 {
   typedef jl_array_t* type;
-  static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_array_type(static_type_mapping<T>::julia_type(), Dim); }
+  static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_array_type(static_type_mapping<T>::julia_type(), Dim); }
 };
 
 template<typename ValueT, int Dim>
@@ -343,8 +343,8 @@ template<> struct static_type_mapping<JuliaMatrix>
     jl_value_t* boxed_2 = jl_box_long(2);
     jl_value_t* arr_t = nullptr;
     JL_GC_PUSH2(&boxed_2, &arr_t);
-    arr_t = jl_apply_type((jl_value_t*)jl_array_type, jl_svec2(this_tvar, jl_box_long(2)));
-    jl_datatype_t* result = (jl_datatype_t*)jl_apply_type((jl_value_t*)jl_type_type,
+    arr_t = apply_type((jl_value_t*)jl_array_type, jl_svec2(this_tvar, jl_box_long(2)));
+    jl_datatype_t* result = (jl_datatype_t*)apply_type((jl_value_t*)jl_type_type,
                                               jl_svec1(arr_t));
     JL_GC_POP();
     return result;

@@ -461,9 +461,9 @@ namespace detail
 template<typename T>
 void add_smart_pointer_types(jl_datatype_t* dt, Module& mod)
 {
-  jl_datatype_t* sp_dt = (jl_datatype_t*)jl_apply_type(jl_get_global(get_cxxwrap_module(), jl_symbol("SharedPtr")), jl_svec1(static_type_mapping<T>::julia_type()));
+  jl_datatype_t* sp_dt = (jl_datatype_t*)apply_type(jl_get_global(get_cxxwrap_module(), jl_symbol("SharedPtr")), jl_svec1(static_type_mapping<T>::julia_type()));
   set_julia_type<std::shared_ptr<T>>(sp_dt);
-  jl_datatype_t* up_dt = (jl_datatype_t*)jl_apply_type(jl_get_global(get_cxxwrap_module(), jl_symbol("UniquePtr")), jl_svec1(static_type_mapping<T>::julia_type()));
+  jl_datatype_t* up_dt = (jl_datatype_t*)apply_type(jl_get_global(get_cxxwrap_module(), jl_symbol("UniquePtr")), jl_svec1(static_type_mapping<T>::julia_type()));
   set_julia_type<std::unique_ptr<T>>(up_dt);
 
   mod.method("get", [](const std::shared_ptr<T>& ptr)
@@ -690,7 +690,7 @@ private:
   {
     static_assert(parameter_list<AppliedT>::nb_parameters != 0, "No parameters found when applying type. Specialize cxx_wrap::BuildParameterList for your combination of type and non-type parameters.");
     static_assert(parameter_list<AppliedT>::nb_parameters >= parameter_list<T>::nb_parameters, "Parametric type applied to wrong number of parameters.");
-    jl_datatype_t* app_dt = (jl_datatype_t*)jl_apply_type((jl_value_t*)m_dt, parameter_list<AppliedT>()(parameter_list<T>::nb_parameters));
+    jl_datatype_t* app_dt = (jl_datatype_t*)apply_type((jl_value_t*)m_dt, parameter_list<AppliedT>()(parameter_list<T>::nb_parameters));
 
     set_julia_type<AppliedT>(app_dt);
     m_module.add_default_constructor<AppliedT>(DefaultConstructible<AppliedT>(), app_dt);
@@ -742,7 +742,7 @@ TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t*
 
   if(is_parametric && jl_nparams(super) == jl_svec_len(parameters))
   {
-    super = (jl_datatype_t*)jl_apply_type((jl_value_t*)super, parameters);
+    super = (jl_datatype_t*)apply_type((jl_value_t*)super, parameters);
   }
 
   // Create the datatype

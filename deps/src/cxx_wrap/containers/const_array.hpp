@@ -64,7 +64,7 @@ struct InstantiateParametricType<ConstPtr<T>>
     // Register the Julia type if not already instantiated
     if(!static_type_mapping<ConstPtr<T>>::has_julia_type())
     {
-      jl_datatype_t* dt = (jl_datatype_t*)jl_apply_type((jl_value_t*)julia_type("ConstPtr"), jl_svec1(static_type_mapping<T>::julia_type()));
+      jl_datatype_t* dt = (jl_datatype_t*)apply_type((jl_value_t*)julia_type("ConstPtr"), jl_svec1(static_type_mapping<T>::julia_type()));
       set_julia_type<ConstPtr<T>>(dt);
       protect_from_gc(dt);
     }
@@ -143,7 +143,7 @@ struct InstantiateParametricType<ConstArray<T,N>>
       jl_datatype_t* pdt = julia_type("ConstArray");
       jl_value_t* boxed_n = box(N);
       JL_GC_PUSH1(&boxed_n);
-      jl_datatype_t* app_dt = (jl_datatype_t*)jl_apply_type((jl_value_t*)pdt, jl_svec2(julia_type<T>(), boxed_n));
+      jl_datatype_t* app_dt = (jl_datatype_t*)apply_type((jl_value_t*)pdt, jl_svec2(julia_type<T>(), boxed_n));
       protect_from_gc(app_dt);
       set_julia_type<ConstArray<T,N>>(app_dt);
       TypeWrapper<ConstArray<T,N>> wrapped(m, app_dt);

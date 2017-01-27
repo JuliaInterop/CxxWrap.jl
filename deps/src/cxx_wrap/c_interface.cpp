@@ -64,7 +64,7 @@ CXX_WRAP_EXPORT jl_array_t* get_module_functions(void* void_registry)
 {
   assert(void_registry != nullptr);
   const ModuleRegistry& registry = *reinterpret_cast<ModuleRegistry*>(void_registry);
-  Array<jl_value_t*> module_array((jl_datatype_t*)jl_apply_array_type(g_cppfunctioninfo_type,1));
+  Array<jl_value_t*> module_array((jl_datatype_t*)apply_array_type(g_cppfunctioninfo_type,1));
   JL_GC_PUSH1(module_array.gc_pointer());
   registry.for_each_module([&](Module& module)
   {

@@ -17,7 +17,7 @@ CXX_WRAP_EXPORT jl_array_t* gc_protected()
   if (m_arr == nullptr)
   {
 #if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR > 4
-    jl_value_t* array_type = jl_apply_array_type(jl_any_type, 1);
+    jl_value_t* array_type = apply_array_type(jl_any_type, 1);
     m_arr = jl_alloc_array_1d(array_type, 0);
 #else
     m_arr = jl_alloc_cell_1d(0);
@@ -63,7 +63,11 @@ CXX_WRAP_EXPORT jl_datatype_t* julia_type(const std::string& name, const std::st
     }
 
     jl_value_t* gval = jl_get_global(mod, jl_symbol(name.c_str()));
+#if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 6
     if(gval != nullptr && jl_is_datatype(gval))
+#else
+    if(gval != nullptr && (jl_is_datatype(gval) || jl_is_unionall(gval)))
+#endif
     {
       return (jl_datatype_t*)gval;
     }

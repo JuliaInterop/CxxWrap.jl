@@ -94,6 +94,27 @@ inline std::string symbol_name(jl_sym_t* symbol)
 #endif
 }
 
+/// Backwards-compatible apply_type
+inline jl_value_t* apply_type(jl_value_t* tc, jl_svec_t* params)
+{
+#if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 6
+  return jl_apply_type(tc, params);
+#else
+  return jl_apply_type(tc, jl_svec_data(params), jl_svec_len(params));
+#endif
+}
+
+/// Backwards-compatible apply_array_type
+template<typename T>
+inline jl_value_t* apply_array_type(T* type, std::size_t dim)
+{
+#if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 6
+  return jl_apply_array_type((jl_datatype_t*)type, dim);
+#else
+  return jl_apply_array_type((jl_value_t*)type, dim);
+#endif
+}
+
 /// Check if we have a string
 inline bool is_julia_string(jl_value_t* v)
 {
@@ -368,7 +389,7 @@ template<typename T>
 struct static_type_mapping<SingletonType<T>>
 {
   typedef jl_datatype_t* type;
-  static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_type((jl_value_t*)jl_type_type, jl_svec1(static_type_mapping<T>::julia_type())); }
+  static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_type((jl_value_t*)jl_type_type, jl_svec1(static_type_mapping<T>::julia_type())); }
 };
 
 
@@ -441,37 +462,37 @@ template<> struct static_type_mapping<float>
 template<> struct static_type_mapping<int32_t*>
 {
   typedef jl_array_t* type;
-  static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_array_type(jl_int32_type, 1); }
+  static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_array_type(jl_int32_type, 1); }
 };
 
 template<> struct static_type_mapping<int64_t*>
 {
   typedef jl_array_t* type;
-  static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_array_type(jl_int64_type, 1); }
+  static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_array_type(jl_int64_type, 1); }
 };
 
 template<> struct static_type_mapping<char*>
 {
   typedef jl_array_t* type;
-  static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_array_type(jl_uint8_type, 1); }
+  static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_array_type(jl_uint8_type, 1); }
 };
 
 template<> struct static_type_mapping<unsigned char*>
 {
   typedef jl_array_t* type;
-  static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_array_type(jl_uint8_type, 1); }
+  static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_array_type(jl_uint8_type, 1); }
 };
 
 template<> struct static_type_mapping<float*>
 {
   typedef jl_array_t* type;
-  static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_array_type(jl_float32_type, 1); }
+  static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_array_type(jl_float32_type, 1); }
 };
 
 template<> struct static_type_mapping<double*>
 {
   typedef jl_array_t* type;
-  static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_array_type(jl_float64_type, 1); }
+  static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_array_type(jl_float64_type, 1); }
 };
 
 template<> struct static_type_mapping<short>
@@ -1231,7 +1252,7 @@ template<typename NumberT> struct IsBits<StrictlyTypedNumber<NumberT>> : std::tr
 template<typename NumberT> struct static_type_mapping<StrictlyTypedNumber<NumberT>>
 {
   typedef NumberT type;
-  static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_type((jl_value_t*)::cxx_wrap::julia_type("StrictlyTypedNumber"), jl_svec1(static_type_mapping<NumberT>::julia_type())); }
+  static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_type((jl_value_t*)::cxx_wrap::julia_type("StrictlyTypedNumber"), jl_svec1(static_type_mapping<NumberT>::julia_type())); }
 };
 
 template<typename NumberT>
@@ -1247,7 +1268,7 @@ struct ConvertToCpp<StrictlyTypedNumber<NumberT>, false, false, true>
 template<typename T> struct static_type_mapping<T&, typename std::enable_if<IsFundamental<T>::value>::type>
 {
   typedef T* type;
-  static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_apply_type((jl_value_t*)::cxx_wrap::julia_type("Ref"), jl_svec1(static_type_mapping<T>::julia_type())); }
+  static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_type((jl_value_t*)::cxx_wrap::julia_type("Ref"), jl_svec1(static_type_mapping<T>::julia_type())); }
 };
 
 }
