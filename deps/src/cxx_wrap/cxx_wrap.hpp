@@ -770,8 +770,11 @@ TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t*
       }
     }
   }
-
+#if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 6
   m_jl_constants[name] = (jl_value_t*)dt;
+#else
+  m_jl_constants[name] = is_parametric ? dt->name->wrapper : (jl_value_t*)dt;
+#endif
   JL_GC_POP();
   return TypeWrapper<T>(*this, dt);
 }

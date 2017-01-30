@@ -95,14 +95,7 @@ inline std::string symbol_name(jl_sym_t* symbol)
 }
 
 /// Backwards-compatible apply_type
-inline jl_value_t* apply_type(jl_value_t* tc, jl_svec_t* params)
-{
-#if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 6
-  return jl_apply_type(tc, params);
-#else
-  return jl_apply_type(tc, jl_svec_data(params), jl_svec_len(params));
-#endif
-}
+CXX_WRAP_EXPORT jl_value_t* apply_type(jl_value_t* tc, jl_svec_t* params);
 
 /// Backwards-compatible apply_array_type
 template<typename T>
