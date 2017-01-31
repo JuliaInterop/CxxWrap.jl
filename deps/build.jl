@@ -1,6 +1,8 @@
 using Compat
 using BinDeps
 
+const CXXWRAP_JL_VERSION = v"0.2.3"
+
 function prompt_cmake()
   try
     run(pipeline(`cmake --version`, stdout=DevNull, stderr=DevNull))
@@ -85,6 +87,9 @@ makeopts = ["--", "-j", "$(Sys.ARCH == :armv7l ? 2 : Sys.CPU_CORES+2)"]
 # Set generator if on windows
 genopt = "Unix Makefiles"
 @static if is_windows()
+  if isdir(prefix)
+    rm(prefix, recursive=true)
+  end
   if get(ENV, "MSYSTEM", "") == ""
     makeopts = "--"
     if Sys.WORD_SIZE == 64
@@ -161,11 +166,11 @@ provides(BuildProcess,
   shortversion = "$(VERSION.major).$(VERSION.minor)"
   zipfilename = "CxxWrap-julia-$(shortversion)-win$(Sys.WORD_SIZE).zip"
   archname = Sys.WORD_SIZE == 64 ? "x64" : "x86"
-  pkgverstring = string(Pkg.installed("CxxWrap"))
+  pkgverstring = string(CXXWRAP_JL_VERSION)
   if endswith(pkgverstring,"+")
     bin_uri = URI("https://ci.appveyor.com/api/projects/barche/cxxwrap-jl/artifacts/$(zipfilename)?job=Environment%3a+JULIAVERSION%3djulialang%2fbin%2fwinnt%2f$(archname)%2f$(shortversion)%2fjulia-$(shortversion)-latest-win$(Sys.WORD_SIZE).exe%2c+BUILD_ON_WINDOWS%3d1")
   else
-    bin_uri = URI("https://github.com/JuliaInterop/CxxWrap.jl/releases/download/v$(pkgverstring)/CxxWrap-julia-$(VERSION.major).$(VERSION.minor)-win$(Sys.WORD_SIZE).zip")
+    bin_uri = URI("https://github.com/JuliaInterop/CxxWrap.jl/releases/download/v$(pkgverstring)/CxxWrapv$(pkgverstring)-julia-$(VERSION.major).$(VERSION.minor)-win$(Sys.WORD_SIZE).zip")
   end
   provides(Binaries, Dict(bin_uri => deps), os = :Windows)
 end

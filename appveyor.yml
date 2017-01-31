@@ -42,7 +42,7 @@ test_script:
   - C:\projects\julia\bin\julia --check-bounds=yes -e "Pkg.test(\"CxxWrap\")"
 
 after_test:
-  - IF NOT DEFINED MSYSTEM C:\projects\julia\bin\julia -e "cd(joinpath(Pkg.dir(\"CxxWrap\"), \"deps\"));  run(`7z a $(ENV[\"APPVEYOR_BUILD_FOLDER\"])\\CxxWrap-julia-$(VERSION.major).$(VERSION.minor)-win$(Sys.WORD_SIZE).zip usr`)"
+  - IF NOT DEFINED MSYSTEM C:\projects\julia\bin\julia -e "cd(joinpath(Pkg.dir(\"CxxWrap\"), \"deps\"));  run(`7z a $(ENV[\"APPVEYOR_BUILD_FOLDER\"])\\CxxWrap$(get(ENV, \"APPVEYOR_REPO_TAG_NAME\", \"\"))-julia-$(VERSION.major).$(VERSION.minor)-win$(Sys.WORD_SIZE).zip usr`)"
   - echo %APPVEYOR_JOB_NAME%
 
 artifacts:
