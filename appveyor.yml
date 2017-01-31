@@ -46,7 +46,7 @@ after_test:
   - echo %APPVEYOR_JOB_NAME%
 
 artifacts:
-  - path: 'CxxWrap-julia*.zip'
+  - path: 'CxxWrap*-julia*.zip'
 
 deploy:
   provider: GitHub
