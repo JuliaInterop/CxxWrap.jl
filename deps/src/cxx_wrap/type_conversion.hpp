@@ -855,6 +855,21 @@ namespace detail
     // never called
     return nullptr;
   }
+
+  inline jl_value_t* box_us_long(unsigned long x)
+  {
+    if(sizeof(unsigned long) == 8)
+    {
+      return jl_box_uint64(x);
+    }
+    return jl_box_uint32(x);
+  }
+
+  inline jl_value_t* box_us_long(unused_type<unsigned long>)
+  {
+    // never called
+    return nullptr;
+  }
 }
 
 template<>
@@ -863,7 +878,11 @@ inline jl_value_t* box(const detail::define_if_different<long, int64_t>& x)
   return detail::box_long(x);
 }
 
-
+template<>
+inline jl_value_t* box(const detail::define_if_different<unsigned long, uint64_t>& x)
+{
+  return detail::box_us_long(x);
+}
 
 // Unbox boxed type
 template<typename CppT>
