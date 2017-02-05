@@ -19,4 +19,11 @@ cm = const_matrix()
 @test cm == [[1.,2.,3.] [4.,5.,6.]]
 println("Displaying const matrix")
 display(cm)
-println("")
+println()
+
+mm = Containers.mutable_array()
+println("Displaying mutable matrix")
+display(mm)
+println()
+mm[:,:] = 1.0
+@test Containers.check_mutable_array(mm)
