@@ -59,12 +59,8 @@ end
 println("completed deepcopy test")
 
 noncopyable = CppTypes.NonCopyable()
-println("noncopyable constructed")
-if !(is_windows() && Sys.WORD_SIZE == 32)
-  @test_throws ErrorException other_noncopyable = deepcopy(noncopyable)
-end
-
-println("completed noncopyable test")
+other_noncopyable = deepcopy(noncopyable)
+@test other_noncopyable.cpp_object == noncopyable.cpp_object
 
 import CppTypes.ImmutableDouble
 

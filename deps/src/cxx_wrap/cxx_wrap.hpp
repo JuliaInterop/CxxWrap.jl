@@ -431,11 +431,6 @@ private:
   template<typename T>
   void add_copy_constructor(std::false_type, jl_datatype_t* dt = nullptr)
   {
-    method("deepcopy_internal", [this](const T& other, ObjectIdDict)
-    {
-      throw std::runtime_error("Copy construction not supported for C++ type ");
-      return static_cast<jl_value_t*>(nullptr);
-    });
   }
 
   template<typename T, bool AddBits, typename FieldListT=FieldList<>>
