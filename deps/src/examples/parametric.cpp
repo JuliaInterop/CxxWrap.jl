@@ -57,6 +57,16 @@ struct TemplateDefaultType
 {
 };
 
+template<typename T>
+struct AbstractTemplate
+{
+};
+
+template<typename T>
+struct ConcreteTemplate : public AbstractTemplate<T>
+{
+};
+
 // Helper to wrap TemplateType instances. May also be a C++14 lambda, see README.md
 struct WrapTemplateType
 {
@@ -90,6 +100,24 @@ struct WrapNonTypeParam
   }
 };
 
+struct WrapAbstractTemplate
+{
+  template<typename TypeWrapperT>
+  void operator()(TypeWrapperT&&)
+  {
+  }
+};
+
+struct WrapConcreteTemplate
+{
+  template<typename TypeWrapperT>
+  void operator()(TypeWrapperT&& w)
+  {
+    typedef typename TypeWrapperT::type WrappedT;
+    w.module().method("to_base", [] (WrappedT* w) { return static_cast<AbstractTemplate<double>*>(w); });
+  }
+};
+
 } // namespace parametric
 
 namespace cxx_wrap
@@ -119,4 +147,9 @@ JULIA_CPP_MODULE_BEGIN(registry)
 
   types.add_type<Parametric<cxx_wrap::TypeVar<1>, cxx_wrap::TypeVar<2>>>("NonTypeParam")
     .apply<NonTypeParam<int, 1>, NonTypeParam<unsigned int, 2>, NonTypeParam<int64_t, 64>>(WrapNonTypeParam());
+
+  auto abstract_template = types.add_abstract<Parametric<cxx_wrap::TypeVar<1>>>("AbstractTemplate");
+  abstract_template.apply<AbstractTemplate<double>>(WrapAbstractTemplate());
+
+  types.add_type<Parametric<cxx_wrap::TypeVar<1>>>("ConcreteTemplate", abstract_template.dt()).apply<ConcreteTemplate<double>>(WrapConcreteTemplate());
 JULIA_CPP_MODULE_END

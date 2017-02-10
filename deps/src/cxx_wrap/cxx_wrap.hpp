@@ -685,7 +685,19 @@ private:
   {
     static_assert(parameter_list<AppliedT>::nb_parameters != 0, "No parameters found when applying type. Specialize cxx_wrap::BuildParameterList for your combination of type and non-type parameters.");
     static_assert(parameter_list<AppliedT>::nb_parameters >= parameter_list<T>::nb_parameters, "Parametric type applied to wrong number of parameters.");
+    const bool is_abstract = jl_is_abstracttype(m_dt);
     jl_datatype_t* app_dt = (jl_datatype_t*)apply_type((jl_value_t*)m_dt, parameter_list<AppliedT>()(parameter_list<T>::nb_parameters));
+
+    if(is_abstract)
+    {
+      if(jl_isbits(app_dt))
+      {
+        throw std::runtime_error("Abstract parametric bits not supported");
+      }
+      jl_datatype_t* concrete_app_dt = jl_new_datatype(jl_symbol((julia_type_name(m_dt)+"DefaultImplementation").c_str()), app_dt, jl_emptysvec, jl_svec1(jl_symbol("cpp_object")), jl_svec1(jl_voidpointer_type), 0, 1, 1);
+      protect_from_gc(concrete_app_dt);
+      static_type_mapping<AppliedT>::set_instantiable_julia_type(concrete_app_dt);
+    }
 
     set_julia_type<AppliedT>(app_dt);
     m_module.add_default_constructor<AppliedT>(DefaultConstructible<AppliedT>(), app_dt);
@@ -748,7 +760,10 @@ TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t*
   {
     jl_datatype_t* concrete_dt = jl_new_datatype(jl_symbol((name+"DefaultImplementation").c_str()), dt, parameters, fnames, ftypes, 0, mutabl, ninitialized);
     protect_from_gc(concrete_dt);
-    static_type_mapping<T>::set_instantiable_julia_type(concrete_dt);
+    if(!is_parametric)
+    {
+      static_type_mapping<T>::set_instantiable_julia_type(concrete_dt);
+    }
   }
 
   // Register the type

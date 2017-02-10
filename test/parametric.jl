@@ -38,3 +38,11 @@ nontype3 = ParametricTypes.NonTypeParam{Int32, Int32(1)}(3)
 
 nontype4 = ParametricTypes.NonTypeParam{Int64, Int64(64)}()
 @test ParametricTypes.get_nontype(nontype4) == Int64(64)
+
+concr = ParametricTypes.ConcreteTemplate{Float64}()
+@test isa(concr, ParametricTypes.AbstractTemplate{Float64})
+@test isa(concr, ParametricTypes.AbstractTemplate)
+@test isa(concr, ParametricTypes.ConcreteTemplate)
+abst = ParametricTypes.to_base(concr)
+@test isa(abst, ParametricTypes.AbstractTemplate{Float64})
+@test isa(abst, ParametricTypes.AbstractTemplate)
