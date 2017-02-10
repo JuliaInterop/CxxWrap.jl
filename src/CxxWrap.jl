@@ -4,6 +4,8 @@ module CxxWrap
 
 using Compat
 
+export wrap_modules, wrap_module, wrap_module_types, wrap_module_functions, safe_cfunction, load_modules
+
 # Convert path if it contains lib prefix on windows
 function lib_path(so_path::AbstractString)
   path_copy = so_path
@@ -29,6 +31,7 @@ abstract CppAny
 abstract CppBits <: CppAny
 abstract CppDisplay <: Display
 abstract CppArray{T,N} <: AbstractArray{T,N}
+abstract CppAssociative{K,V} <: Associative{K,V}
 
 # C++ std::shared_ptr
 type SharedPtr{T} <: CppAny
@@ -123,22 +126,30 @@ function make_func_declaration(fn::CallOpOverload, argmap)
   return :($(process_fname(fn))($((argmap[2:end])...)))
 end
 
+function make_argtypes(t)
+  if VERSION < v"0.6-dev"
+    return :(($(t...),))
+  else
+    return :(Tuple{$(t...)})
+  end
+end
+
 function make_overloaded_call(fn, argtypes, argsymbols)
-  return :(invoke($(process_fname(fn)), ($(argtypes...),), $([:(convert($t, $a)) for (t,a) in zip(argtypes, argsymbols)]...)))
+  return :(invoke($(process_fname(fn)), $(make_argtypes(argtypes)), $([:(convert($t, $a)) for (t,a) in zip(argtypes, argsymbols)]...)))
 end
 
 function make_overloaded_call(fn::ConstructorFname, argtypes, argsymbols)
   if VERSION < v"0.5-dev"
     return invoke(make_overloaded_call, (Any,Any,Any), :call, argtypes, argsymbols)
   end
-  return :(invoke($(fn._type), ($(argtypes...),), $([:(convert($t, $a)) for (t,a) in zip(argtypes, argsymbols)]...)))
+  return :(invoke($(fn._type), $(make_argtypes(argtypes)), $([:(convert($t, $a)) for (t,a) in zip(argtypes, argsymbols)]...)))
 end
 
 function make_overloaded_call(fn::CallOpOverload, argtypes, argsymbols)
   if VERSION < v"0.5-dev"
     return invoke(make_overloaded_call, (Any,Any,Any), :call, argtypes, argsymbols)
   end
-  return :(invoke(arg1, ($((argtypes[2:end])...),), $([:(convert($t, $a)) for (t,a) in zip(argtypes[2:end], argsymbols[2:end])]...)))
+  return :(invoke(arg1, $(make_argtypes(argtypes[2:end])), $([:(convert($t, $a)) for (t,a) in zip(argtypes[2:end], argsymbols[2:end])]...)))
 end
 
 # By default, no argument overloading happens
@@ -177,7 +188,7 @@ function build_function_expression(func::CppFunctionInfo)
     if(t <: CppBits)
       return t
     end
-    if ((t <: CppAny) || (t <: CppDisplay) || (t <: Tuple)) || (t <: CppArray)
+    if ((t <: CppAny) || (t <: CppDisplay) || (t <: Tuple)) || (t <: CppArray) || (t <: CppAssociative)
       return Any
     end
 
@@ -302,8 +313,8 @@ function wrap_modules(so_path::AbstractString, parent_mod=Main)
   wrap_modules(registry, parent_mod)
 end
 
-# Place the functions and types into the current module
-function wrap_module(registry, parent_mod=Main)
+# Place the types for the module with the name corresponding to the current module name in the current module
+function wrap_module_types(registry, parent_mod=Main)
   module_names = get_module_names(registry)
   mod_idx = 0
   wanted_name = string(module_name(current_module()))
@@ -319,11 +330,33 @@ function wrap_module(registry, parent_mod=Main)
     error("Module $wanted_name not found in C++")
   end
 
-  module_functions = get_module_functions(registry)
-  wrap_functions(module_functions[mod_idx], current_module())
-
   exps = [Symbol(s) for s in exported_symbols(registry, wanted_name)]
   Core.eval(current_module(), :(export $(exps...)))
+end
+
+function wrap_module_functions(registry, parent_mod=Main)
+  module_names = get_module_names(registry)
+  mod_idx = 0
+  wanted_name = string(module_name(current_module()))
+  for (i,mod_name) in enumerate(module_names)
+    if mod_name == wanted_name
+      mod_idx = i
+      break
+    end
+  end
+
+  if mod_idx == 0
+    error("Module $wanted_name not found in C++")
+  end
+
+  module_functions = get_module_functions(registry)
+  wrap_functions(module_functions[mod_idx], current_module())
+end
+
+# Place the functions and types into the current module
+function wrap_module(registry, parent_mod=Main)
+  wrap_module_types(registry, parent_mod)
+  wrap_module_functions(registry, parent_mod)
 end
 
 function wrap_module(so_path::AbstractString, parent_mod=Main)
@@ -338,7 +371,5 @@ immutable SafeCFunction
 end
 
 safe_cfunction(f::Function, rt::DataType, args::Tuple) = SafeCFunction(cfunction(f, rt, args), rt, [t for t in args])
-
-export wrap_modules, wrap_module, safe_cfunction, load_modules
 
 end # module

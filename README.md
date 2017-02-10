@@ -439,6 +439,8 @@ end
 ```
 Here, `ExtendedTypes` is a name that matches the module name passed to `create_module` on the C++ side. The `wrap_module` call works as before, but now the functions and types are defined in the existing `ExtendedTypes` module, and additional Julia code such as exports and macros can be defined.
 
+It is also possible to split the `wrap_module` into the steps `wrap_module_types` and `wrap_module_functions`. This allows using the types before the functions get called, which is useful for overloading the `argument_overloads` with types defined on the C++ side.
+
 ## Linking with the C++ library
 The library (in [`deps/src/cxx_wrap`](deps/src/cxx_wrap)) is built using CMake, so it can be found from another CMake project using the following line in a `CMakeLists.txt`:
 
