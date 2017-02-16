@@ -371,7 +371,12 @@ public:
     {
       throw std::runtime_error("Duplicate registration of constant " + name);
     }
-    m_jl_constants[name] = box(std::forward<T>(value));
+    jl_value_t* boxed_const = box(std::forward<T>(value));
+    if(gc_index_map().count(boxed_const) == 0)
+    {
+      protect_from_gc(boxed_const);
+    }
+    m_jl_constants[name] = boxed_const;
   }
 
   const std::string& name() const
@@ -753,7 +758,7 @@ TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t*
   }
 
   // Create the datatype
-  jl_datatype_t* dt = jl_new_datatype(jl_symbol(name.c_str()), super, parameters, fnames, ftypes, abstract, mutabl, ninitialized);
+  jl_datatype_t* dt = jl_new_datatype(jl_symbol(name.c_str()), super, parameters, abstract ? jl_emptysvec : fnames, abstract ? jl_emptysvec : ftypes, abstract, mutabl, ninitialized);
   protect_from_gc(dt);
 
   if(abstract)

@@ -32,9 +32,12 @@ struct BWrapper
   }
 };
 
+B b;
+
 A* create_abstract()
 {
-  return new B();
+  b = B();
+  return &b;
 }
 
 JULIA_CPP_MODULE_BEGIN(registry)

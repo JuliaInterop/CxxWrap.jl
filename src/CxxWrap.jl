@@ -236,9 +236,9 @@ function build_function_expression(func::CppFunctionInfo)
     end
   end
 
-  newargs = Array{DataType,1}(nargs);
-  overload_sigs = Array{Array{DataType,1},1}();
-  recurse_overloads!(1, newargs, overload_sigs);
+  newargs = Array{DataType,1}(nargs)
+  overload_sigs = Array{Array{DataType,1},1}()
+  recurse_overloads!(1, newargs, overload_sigs)
 
   # Build an array of arg1::Type1... expressions
   function argmap(signature)
