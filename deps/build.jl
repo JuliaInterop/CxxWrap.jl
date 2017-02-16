@@ -32,22 +32,26 @@ end
 
 @BinDeps.setup
 
+build_type = get(ENV, "CXXWRAP_BUILD_TYPE", "Release")
+
+libname = build_type == "Debug" ? "libjulia-debug" : "libjulia"
+
 function find_julia_lib(lib_suffix::AbstractString, julia_base_dir::AbstractString)
-  julia_lib = joinpath(julia_base_dir, "lib", "julia", "libjulia.$lib_suffix")
+  julia_lib = joinpath(julia_base_dir, "lib", "julia", "$libname.$lib_suffix")
   if !isfile(julia_lib)
-    julia_lib = joinpath(julia_base_dir, "lib", "libjulia.$lib_suffix")
+    julia_lib = joinpath(julia_base_dir, "lib", "$libname.$lib_suffix")
   end
   if !isfile(julia_lib)
-    julia_lib = joinpath(julia_base_dir, "lib64", "julia", "libjulia.$lib_suffix")
+    julia_lib = joinpath(julia_base_dir, "lib64", "julia", "$libname.$lib_suffix")
   end
   if !isfile(julia_lib)
-    julia_lib = joinpath(julia_base_dir, "lib64", "libjulia.$lib_suffix")
+    julia_lib = joinpath(julia_base_dir, "lib64", "$libname.$lib_suffix")
   end
   if !isfile(julia_lib)
-    julia_lib = joinpath(julia_base_dir, "lib", "x86_64-linux-gnu", "julia", "libjulia.$lib_suffix")
+    julia_lib = joinpath(julia_base_dir, "lib", "x86_64-linux-gnu", "julia", "$libname.$lib_suffix")
   end
   if !isfile(julia_lib)
-    julia_lib = joinpath(julia_base_dir, "lib", "x86_64-linux-gnu", "libjulia.$lib_suffix")
+    julia_lib = joinpath(julia_base_dir, "lib", "x86_64-linux-gnu", "$libname.$lib_suffix")
   end
   return julia_lib
 end
@@ -112,8 +116,6 @@ end
 examples_srcdir = joinpath(BinDeps.depsdir(functions),"src","examples")
 examples_builddir = joinpath(BinDeps.depsdir(functions),"builds","examples")
 deps = [cxx_wrap; examples]
-
-build_type = get(ENV, "CXXWRAP_BUILD_TYPE", "Release")
 
 cxx_steps = @build_steps begin
   `cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="$build_type"  -DJULIA_INCLUDE_DIRECTORY="$julia_include_dir" -DJULIA_LIBRARY="$julia_lib" -DLIBDIR_SUFFIX=$libdir_opt $cxx_wrap_srcdir`
