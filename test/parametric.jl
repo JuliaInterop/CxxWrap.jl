@@ -46,3 +46,6 @@ concr = ParametricTypes.ConcreteTemplate{Float64}()
 abst = ParametricTypes.to_base(concr)
 @test isa(abst, ParametricTypes.AbstractTemplate{Float64})
 @test isa(abst, ParametricTypes.AbstractTemplate)
+
+f3 = ParametricTypes.Foo3{Int32, Bool, Float32}()
+@test length(methods(ParametricTypes.foo3_method)) == 6

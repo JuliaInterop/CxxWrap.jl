@@ -593,6 +593,49 @@ namespace detail
 
     return name;
   }
+
+  template<typename... Types>
+  struct DoApply;
+
+  template<>
+  struct DoApply<>
+  {
+    template<typename WrapperT, typename FunctorT>
+    void operator()(WrapperT&, FunctorT&&)
+    {
+    }
+  };
+
+  template<typename AppT>
+  struct DoApply<AppT>
+  {
+    template<typename WrapperT, typename FunctorT>
+    void operator()(WrapperT& w, FunctorT&& ftor)
+    {
+      w.template apply<AppT>(std::forward<FunctorT>(ftor));
+    }
+  };
+
+  template<typename... Types>
+  struct DoApply<ParameterList<Types...>>
+  {
+    template<typename WrapperT, typename FunctorT>
+    void operator()(WrapperT& w, FunctorT&& ftor)
+    {
+      DoApply<Types...>()(w, std::forward<FunctorT>(ftor));
+    }
+  };
+
+  template<typename T1, typename... Types>
+  struct DoApply<T1, Types...>
+  {
+    template<typename WrapperT, typename FunctorT>
+    void operator()(WrapperT& w, FunctorT&& ftor)
+    {
+      DoApply<T1>()(w, std::forward<FunctorT>(ftor));
+      DoApply<Types...>()(w, std::forward<FunctorT>(ftor));
+    }
+  };
 }
 
 /// Trait to allow user-controlled disabling of the default constructor
@@ -672,6 +715,10 @@ public:
     return *this;
   }
 
+  /// Apply all possible combinations of the given types (see example)
+  template<template<typename...> class TemplateT, typename... TypeLists, typename FunctorT>
+  void apply_combination(FunctorT&& ftor);
+
   // Access to the module
   Module& module()
   {
@@ -684,6 +731,34 @@ public:
   }
 
 private:
+
+  template<typename... Types>
+  struct UnpackedTypeList
+  {
+  };
+
+  template<template<typename...> class TemplateT, typename... TypeLists>
+  struct CombineTypes;
+
+  template<template<typename...> class TemplateT, typename... UnpackedTypes>
+  struct CombineTypes<TemplateT, UnpackedTypeList<UnpackedTypes...>>
+  {
+    typedef TemplateT<UnpackedTypes...> type;
+  };
+
+  template<template<typename...> class TemplateT, typename... UnpackedTypes, typename... Types, typename... OtherTypeLists>
+  struct CombineTypes<TemplateT, UnpackedTypeList<UnpackedTypes...>, ParameterList<Types...>, OtherTypeLists...>
+  {
+    template<typename T1> using type_unpack = CombineTypes<TemplateT, UnpackedTypeList<UnpackedTypes..., T1>, OtherTypeLists...>;
+    typedef ParameterList<typename type_unpack<Types>::type...> type;
+  };
+
+  template<template<typename...> class TemplateT, typename... Types, typename... OtherTypeLists>
+  struct CombineTypes<TemplateT, ParameterList<Types...>, OtherTypeLists...>
+  {
+    template<typename T1> using type_unpack = CombineTypes<TemplateT, UnpackedTypeList<T1>, OtherTypeLists...>;
+    typedef ParameterList<typename type_unpack<Types>::type...> type;
+  };
 
   template<typename AppliedT, typename FunctorT>
   int apply_internal(FunctorT&& apply_ftor)
@@ -719,6 +794,14 @@ private:
   Module& m_module;
   jl_datatype_t* m_dt;
 };
+
+template<typename T>
+template<template<typename...> class TemplateT, typename... TypeLists, typename FunctorT>
+void TypeWrapper<T>::apply_combination(FunctorT&& ftor)
+{
+  typedef typename CombineTypes<TemplateT, TypeLists...>::type applied_list;
+  detail::DoApply<applied_list>()(*this, std::forward<FunctorT>(ftor));
+}
 
 template<typename T, bool AddBits, typename FieldListT>
 TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t* super, int abstract, FieldListT&& field_list)
