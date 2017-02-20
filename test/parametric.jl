@@ -49,3 +49,5 @@ abst = ParametricTypes.to_base(concr)
 
 f3 = ParametricTypes.Foo3{Int32, Bool, Float32}()
 @test length(methods(ParametricTypes.foo3_method)) == 6
+f2 = ParametricTypes.Foo2{Float64}()
+@test length(methods(ParametricTypes.foo2_method)) == 2

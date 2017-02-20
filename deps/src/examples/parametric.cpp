@@ -133,6 +133,26 @@ struct WrapFoo3
   }
 };
 
+template<typename T1, bool B = false>
+struct Foo2
+{
+};
+
+struct ApplyFoo2
+{
+  template<typename T> using apply = Foo2<T>;
+};
+
+struct WrapFoo2
+{
+  template<typename TypeWrapperT>
+  void operator()(TypeWrapperT&& wrapped)
+  {
+    typedef typename TypeWrapperT::type WrappedT;
+    wrapped.module().method("foo2_method", [] (const WrappedT&) {});
+  }
+};
+
 } // namespace parametric
 
 namespace cxx_wrap
@@ -142,6 +162,12 @@ namespace cxx_wrap
   struct BuildParameterList<T<NonTT, Val>>
   {
     typedef ParameterList<NonTT, std::integral_constant<NonTT, Val>> type;
+  };
+
+  template<typename T>
+  struct BuildParameterList<parametric::Foo2<T>>
+  {
+    typedef ParameterList<T> type;
   };
 } // namespace cxx_wrap
 
@@ -169,4 +195,7 @@ JULIA_CPP_MODULE_BEGIN(registry)
 
   types.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("Foo3")
     .apply_combination<Foo3, ParameterList<int32_t, double>, ParameterList<P1,P2,bool>, ParameterList<float>>(WrapFoo3());
+
+  types.add_type<Parametric<TypeVar<1>>>("Foo2")
+    .apply_combination<ApplyFoo2, ParameterList<int32_t, double>>(WrapFoo2());
 JULIA_CPP_MODULE_END
