@@ -759,15 +759,17 @@ private:
   template<typename ApplyT, typename... UnpackedTypes, typename... Types, typename... OtherTypeLists>
   struct CombineTypes<ApplyT, UnpackedTypeList<UnpackedTypes...>, ParameterList<Types...>, OtherTypeLists...>
   {
+    typedef CombineTypes<ApplyT, UnpackedTypeList<UnpackedTypes...>, ParameterList<Types...>, OtherTypeLists...> ThisT;
     template<typename T1> using type_unpack = CombineTypes<ApplyT, UnpackedTypeList<UnpackedTypes..., T1>, OtherTypeLists...>;
-    typedef ParameterList<typename type_unpack<Types>::type...> type;
+    typedef ParameterList<typename ThisT::template type_unpack<Types>::type...> type;
   };
 
   template<typename ApplyT, typename... Types, typename... OtherTypeLists>
   struct CombineTypes<ApplyT, ParameterList<Types...>, OtherTypeLists...>
   {
+    typedef CombineTypes<ApplyT, ParameterList<Types...>, OtherTypeLists...> ThisT;
     template<typename T1> using type_unpack = CombineTypes<ApplyT, UnpackedTypeList<T1>, OtherTypeLists...>;
-    typedef ParameterList<typename type_unpack<Types>::type...> type;
+    typedef ParameterList<typename ThisT::template type_unpack<Types>::type...> type;
   };
 
   template<typename AppliedT, typename FunctorT>
