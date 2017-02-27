@@ -1264,7 +1264,16 @@ template<typename NumberT> struct IsBits<StrictlyTypedNumber<NumberT>> : std::tr
 template<typename NumberT> struct static_type_mapping<StrictlyTypedNumber<NumberT>>
 {
   typedef NumberT type;
-  static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_type((jl_value_t*)::cxx_wrap::julia_type("StrictlyTypedNumber"), jl_svec1(static_type_mapping<NumberT>::julia_type())); }
+  static jl_datatype_t* julia_type()
+  {
+    static jl_datatype_t* dt = nullptr;
+    if(dt == nullptr)
+    {
+      dt = (jl_datatype_t*)apply_type((jl_value_t*)::cxx_wrap::julia_type("StrictlyTypedNumber"), jl_svec1(static_type_mapping<NumberT>::julia_type()));
+      protect_from_gc(dt);
+    }
+    return dt;
+  }
 };
 
 template<typename NumberT>
