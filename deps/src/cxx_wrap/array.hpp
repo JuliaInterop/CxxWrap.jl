@@ -243,7 +243,7 @@ ArrayRef<ValueT, Dim>::ArrayRef(ValueT* c_ptr, const SizesT... sizes) : IndexedA
   jl_datatype_t* dt = static_type_mapping<ArrayRef<ValueT, Dim>>::julia_type();
   jl_value_t *dims = nullptr;
   JL_GC_PUSH1(&dims);
-  dims = convert_to_julia(std::make_tuple(static_cast<long>(sizes)...));
+  dims = convert_to_julia(std::make_tuple(static_cast<size_t>(sizes)...));
   IndexedArrayRef<julia_t, ValueT>::m_array = jl_ptr_to_array((jl_value_t*)dt, c_ptr, dims, 0);
   JL_GC_POP();
 }

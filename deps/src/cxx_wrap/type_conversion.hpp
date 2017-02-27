@@ -1260,10 +1260,11 @@ struct StrictlyTypedNumber
 };
 
 template<typename NumberT> struct IsBits<StrictlyTypedNumber<NumberT>> : std::true_type {};
+template<typename NumberT> struct IsImmutable<StrictlyTypedNumber<NumberT>> : std::true_type {};
 
 template<typename NumberT> struct static_type_mapping<StrictlyTypedNumber<NumberT>>
 {
-  typedef NumberT type;
+  typedef StrictlyTypedNumber<NumberT> type;
   static jl_datatype_t* julia_type()
   {
     static jl_datatype_t* dt = nullptr;
@@ -1273,15 +1274,6 @@ template<typename NumberT> struct static_type_mapping<StrictlyTypedNumber<Number
       protect_from_gc(dt);
     }
     return dt;
-  }
-};
-
-template<typename NumberT>
-struct ConvertToCpp<StrictlyTypedNumber<NumberT>, false, false, true>
-{
-  inline StrictlyTypedNumber<NumberT> operator()(NumberT julia_value) const
-  {
-    return {julia_value};
   }
 };
 
