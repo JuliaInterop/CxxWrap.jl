@@ -26,7 +26,7 @@ wrap_modules(functions_lib_path)
 
 # Test functions from the CppTestFunctions module
 @test CppTestFunctions.concatenate_numbers(4, 2.) == "42"
-@test length(methods(CppTestFunctions.concatenate_numbers)) == (Sys.WORD_SIZE == 64 ? 4 : 2) # due to overloads
+@test method_exists(CppTestFunctions.concatenate_numbers, (Union{Cint,CxxWrap.argument_overloads(Cint)...},Union{Cdouble,CxxWrap.argument_overloads(Cdouble)...}))
 @test CppTestFunctions.concatenate_strings(2, "ho", "la") == "holahola"
 @test CppTestFunctions.test_int32_array(Int32[1,2])
 @test CppTestFunctions.test_int64_array(Int64[1,2])

@@ -46,6 +46,7 @@ end
 immutable StrictlyTypedNumber{NumberT}
   value::NumberT
 end
+Base.convert{NumberT}(::Type{StrictlyTypedNumber{NumberT}}, n::NumberT) = StrictlyTypedNumber{NumberT}(n)
 
 immutable ConstPtr{T} <: CppBits
   ptr::Ptr{T}
@@ -134,24 +135,6 @@ function make_argtypes(t)
   end
 end
 
-function make_overloaded_call(fn, argtypes, argsymbols)
-  return :(invoke($(process_fname(fn)), $(make_argtypes(argtypes)), $([:(convert($t, $a)) for (t,a) in zip(argtypes, argsymbols)]...)))
-end
-
-function make_overloaded_call(fn::ConstructorFname, argtypes, argsymbols)
-  if VERSION < v"0.5-dev"
-    return invoke(make_overloaded_call, (Any,Any,Any), :call, argtypes, argsymbols)
-  end
-  return :(invoke($(fn._type), $(make_argtypes(argtypes)), $([:(convert($t, $a)) for (t,a) in zip(argtypes, argsymbols)]...)))
-end
-
-function make_overloaded_call(fn::CallOpOverload, argtypes, argsymbols)
-  if VERSION < v"0.5-dev"
-    return invoke(make_overloaded_call, (Any,Any,Any), :call, argtypes, argsymbols)
-  end
-  return :(invoke(arg1, $(make_argtypes(argtypes[2:end])), $([:(convert($t, $a)) for (t,a) in zip(argtypes[2:end], argsymbols[2:end])]...)))
-end
-
 # By default, no argument overloading happens
 argument_overloads(t::DataType) = DataType[]
 @static if Int != Cint
@@ -170,6 +153,9 @@ function argument_overloads(t::Type{Array{AbstractString,1}})
     return [Array{String,1}]
   end
 end
+
+map_julia_arg_type(t::DataType) = Union{t,argument_overloads(t)...}
+map_julia_arg_type{T}(a::Type{StrictlyTypedNumber{T}}) = T
 
 # Build the expression to wrap the given function
 function build_function_expression(func::CppFunctionInfo)
@@ -202,43 +188,24 @@ function build_function_expression(func::CppFunctionInfo)
 
     return t
   end
-  map_c_arg_type{T}(a::Type{StrictlyTypedNumber{T}}) = T
 
   map_return_type(t) = map_c_arg_type(t)
   map_return_type{T}(t::Type{Ref{T}}) = Ptr{T}
-
-  map_julia_arg_type(t::DataType) = t
-  map_julia_arg_type{T}(a::Type{StrictlyTypedNumber{T}}) = T
 
   # Build the types for the ccall argument list
   c_arg_types = [map_c_arg_type(t) for t in argtypes]
   return_type = map_return_type(func.return_type)
 
+  converted_args = ([:(convert($t,$a)) for (t,a) in zip(argtypes,argsymbols)]...)
+
   # Build the final call expression
   call_exp = nothing
   if thunk == C_NULL
-    call_exp = :(ccall($fpointer, $return_type, ($(c_arg_types...),), $(argsymbols...))) # Direct pointer call
+    call_exp = :(ccall($fpointer, $return_type, ($(c_arg_types...),), $(converted_args...))) # Direct pointer call
   else
-    call_exp = :(ccall($fpointer, $return_type, (Ptr{Void}, $(c_arg_types...)), $thunk, $(argsymbols...))) # use thunk (= std::function)
+    call_exp = :(ccall($fpointer, $return_type, (Ptr{Void}, $(c_arg_types...)), $thunk, $(converted_args...))) # use thunk (= std::function)
   end
   assert(call_exp != nothing)
-
-  nargs = length(argtypes)
-
-  function recurse_overloads!(idx::Int, newargs, results)
-    if idx > nargs
-        push!(results, deepcopy(newargs))
-        return
-    end
-    for i in 1:(length(argument_overloads(argtypes[idx]))+1)
-        newargs[idx] = i == 1 ? argtypes[idx] : argument_overloads(argtypes[idx])[i-1]
-        recurse_overloads!(idx+1, newargs, results)
-    end
-  end
-
-  newargs = Array{DataType,1}(nargs)
-  overload_sigs = Array{Array{DataType,1},1}()
-  recurse_overloads!(1, newargs, overload_sigs)
 
   # Build an array of arg1::Type1... expressions
   function argmap(signature)
@@ -249,11 +216,8 @@ function build_function_expression(func::CppFunctionInfo)
     return result
   end
 
-  function_expressions = [:($(make_func_declaration(func.name, argmap(argtypes))) = $call_exp)]
-  for signature in overload_sigs[2:end] # the first "overload" is the same as the base signature, so skip it
-    push!(function_expressions, :($(make_func_declaration(func.name, argmap(signature))) = $(make_overloaded_call(func.name, [map_julia_arg_type(t) for t in argtypes], argsymbols))))
-  end
-  return function_expressions
+  function_expression = :($(make_func_declaration(func.name, argmap(argtypes))) = $call_exp)
+  return function_expression
 end
 
 # Wrap functions from the cpp module to the passed julia module
@@ -269,14 +233,10 @@ function wrap_functions(functions, julia_mod)
     :(==)
   ])
   for func in functions
-    if in(func.name, basenames)
-      for f in build_function_expression(func)
-        Core.eval(Base, f)
-      end
+    if func.name ∈ basenames
+      Core.eval(Base, build_function_expression(func))
     else
-      for f in build_function_expression(func)
-        Core.eval(julia_mod, f)
-      end
+      Core.eval(julia_mod, build_function_expression(func))
     end
   end
 end
