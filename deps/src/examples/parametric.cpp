@@ -193,7 +193,7 @@ JULIA_CPP_MODULE_BEGIN(registry)
 
   types.add_type<Parametric<cxx_wrap::TypeVar<1>>>("ConcreteTemplate", abstract_template.dt()).apply<ConcreteTemplate<double>>(WrapConcreteTemplate());
 
-  types.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>>("Foo3")
+  types.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>, ParameterList<TypeVar<1>>>("Foo3", abstract_template.dt())
     .apply_combination<Foo3, ParameterList<int32_t, double>, ParameterList<P1,P2,bool>, ParameterList<float>>(WrapFoo3());
 
   types.add_type<Parametric<TypeVar<1>>>("Foo2")

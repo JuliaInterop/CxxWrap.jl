@@ -6,6 +6,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <sstream>
 #include <typeinfo>
 #include <typeindex>
 #include <vector>
@@ -286,6 +287,78 @@ void instantiate_parametric_types(Module& m)
   auto unused = {InstantiateParametricType<remove_const_ref<TypesT>>()(m)...};
 }
 
+namespace detail
+{
+
+template<typename T>
+struct GetJlType
+{
+  jl_datatype_t* operator()() const
+  {
+    try
+    {
+      return julia_type<remove_const_ref<T>>();
+    }
+    catch(...)
+    {
+      // The assumption here is that unmapped types are not needed, i.e. in default argument lists
+      return nullptr;
+    }
+  }
+};
+
+template<int I>
+struct GetJlType<TypeVar<I>>
+{
+  jl_tvar_t* operator()() const
+  {
+    return TypeVar<I>::tvar();
+  }
+};
+
+template<typename T, T Val>
+struct GetJlType<std::integral_constant<T, Val>>
+{
+  jl_value_t* operator()() const
+   {
+    return box(convert_to_julia(Val));
+  }
+};
+
+template<typename T>
+struct IsParametric
+{
+  static constexpr bool value = false;
+};
+
+template<template<typename...> class T, int I, typename... ParametersT>
+struct IsParametric<T<TypeVar<I>, ParametersT...>>
+{
+  static constexpr bool value = true;
+};
+
+} // namespace detail
+
+// Encapsulate a list of parameters, using types only
+template<typename... ParametersT>
+struct ParameterList
+{
+  static constexpr int nb_parameters = sizeof...(ParametersT);
+
+  jl_svec_t* operator()(const int n = nb_parameters)
+  {
+    jl_svec_t* result = jl_svec(n, detail::GetJlType<ParametersT>()()...);
+    for(int i = 0; i != n; ++i)
+    {
+      if(jl_svecref(result,i) == nullptr)
+      {
+        throw std::runtime_error("Attempt to use unmapped type in parameter list");
+      }
+    }
+    return result;
+  }
+};
+
 /// Store all exposed C++ functions associated with a module
 class CXX_WRAP_EXPORT Module
 {
@@ -349,15 +422,15 @@ public:
   }
 
   /// Add a composite type
-  template<typename T>
+  template<typename T, typename SuperParametersT=ParameterList<>>
   TypeWrapper<T> add_type(const std::string& name, jl_datatype_t* super = julia_type<CppAny>());
 
   /// Add an abstract type
-  template<typename T, typename... ArgsT>
+  template<typename T, typename SuperParametersT=ParameterList<>>
   TypeWrapper<T> add_abstract(const std::string& name, jl_datatype_t* super = julia_type<CppAny>());
 
   /// Add type T as a struct that can be captured as bits type, using an immutable in Julia
-  template<typename T, typename FieldListT>
+  template<typename T, typename FieldListT, typename SuperParametersT=ParameterList<>>
   TypeWrapper<T> add_immutable(const std::string& name, FieldListT&& field_list, jl_datatype_t* super = IsBits<T>::value ? julia_type("CppBits") : julia_type<CppAny>());
 
   template<typename T>
@@ -438,7 +511,7 @@ private:
   {
   }
 
-  template<typename T, bool AddBits, typename FieldListT=FieldList<>>
+  template<typename T, bool AddBits, typename SuperParametersT, typename FieldListT=FieldList<>>
   TypeWrapper<T> add_type_internal(const std::string& name, jl_datatype_t* super, int abstract, FieldListT&& = FieldList<>());
 
   template<typename R, typename LambdaRefT, typename LambdaT, typename... ArgsT>
@@ -483,78 +556,6 @@ void Module::add_default_constructor(std::true_type, jl_datatype_t* dt)
 {
   TypeWrapper<T>(*this, dt).template constructor<>();
 }
-
-namespace detail
-{
-
-template<typename T>
-struct GetJlType
-{
-  jl_datatype_t* operator()() const
-  {
-    try
-    {
-      return julia_type<remove_const_ref<T>>();
-    }
-    catch(...)
-    {
-      // The assumption here is that unmapped types are not needed, i.e. in default argument lists
-      return nullptr;
-    }
-  }
-};
-
-template<int I>
-struct GetJlType<TypeVar<I>>
-{
-  jl_tvar_t* operator()() const
-  {
-    return TypeVar<I>::tvar();
-  }
-};
-
-template<typename T, T Val>
-struct GetJlType<std::integral_constant<T, Val>>
-{
-  jl_value_t* operator()() const
-   {
-    return box(convert_to_julia(Val));
-  }
-};
-
-template<typename T>
-struct IsParametric
-{
-  static constexpr bool value = false;
-};
-
-template<template<typename...> class T, int I, typename... ParametersT>
-struct IsParametric<T<TypeVar<I>, ParametersT...>>
-{
-  static constexpr bool value = true;
-};
-
-} // namespace detail
-
-// Encapsulate a list of parameters, using types only
-template<typename... ParametersT>
-struct ParameterList
-{
-  static constexpr int nb_parameters = sizeof...(ParametersT);
-
-  jl_svec_t* operator()(const int n = nb_parameters)
-  {
-    jl_svec_t* result = jl_svec(n, detail::GetJlType<ParametersT>()()...);
-    for(int i = 0; i != n; ++i)
-    {
-      if(jl_svecref(result,i) == nullptr)
-      {
-        throw std::runtime_error("Attempt to use unmapped type in parameter list");
-      }
-    }
-    return result;
-  }
-};
 
 // Specialize this to build the correct parameter list, wrapping non-types in integral constants
 // There is no way to provide a template here that matchs all possible combinations of type and non-type arguments
@@ -822,7 +823,7 @@ void TypeWrapper<T>::apply_combination(FunctorT&& ftor)
   detail::DoApply<applied_list>()(*this, std::forward<FunctorT>(ftor));
 }
 
-template<typename T, bool AddBits, typename FieldListT>
+template<typename T, bool AddBits, typename SuperParametersT, typename FieldListT>
 TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t* super, int abstract, FieldListT&& field_list)
 {
   static constexpr bool is_parametric = detail::IsParametric<T>::value;
@@ -842,9 +843,10 @@ TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t*
   }
 
   jl_svec_t* parameters = nullptr;
+  jl_svec_t* super_parameters = nullptr;
   jl_svec_t* fnames = nullptr;
   jl_svec_t* ftypes = nullptr;
-  JL_GC_PUSH4(&super, &parameters, &fnames, &ftypes);
+  JL_GC_PUSH5(&super, &parameters, &super_parameters, &fnames, &ftypes);
 
   parameters = is_parametric ? parameter_list<T>()() : jl_emptysvec;
   fnames = AddBits ? field_list.field_names : jl_svec1(jl_symbol("cpp_object"));
@@ -854,9 +856,20 @@ TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t*
 
   assert(jl_svec_len(ftypes) == jl_svec_len(fnames));
 
-  if(is_parametric && jl_nparams(super) == jl_svec_len(parameters))
+  size_t n_super_params = jl_nparams(super);
+  if(is_parametric && n_super_params != 0)
   {
-    super = (jl_datatype_t*)apply_type((jl_value_t*)super, parameters);
+    super_parameters = SuperParametersT::nb_parameters == 0 ? parameter_list<T>()() : SuperParametersT()();
+    if(n_super_params == jl_svec_len(super_parameters))
+    {
+      super = (jl_datatype_t*)apply_type((jl_value_t*)super, super_parameters);
+    }
+    else
+    {
+      std::stringstream err_msg;
+      err_msg << "Invalid number of parameters for supertype " << julia_type_name(super) << ": wanted " << n_super_params << " parameters, " << " got " << jl_svec_len(super_parameters) << " parameters" << std::endl;
+      throw std::runtime_error(err_msg.str());
+    }
   }
 
   // Create the datatype
@@ -897,24 +910,24 @@ TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t*
 }
 
 /// Add a composite type
-template<typename T>
+template<typename T, typename SuperParametersT>
 TypeWrapper<T> Module::add_type(const std::string& name, jl_datatype_t* super)
 {
-  return add_type_internal<T, false>(name, super, 0);
+  return add_type_internal<T, false, SuperParametersT>(name, super, 0);
 }
 
 /// Add an abstract type
-template<typename T, typename... ArgsT>
+template<typename T, typename SuperParametersT>
 TypeWrapper<T> Module::add_abstract(const std::string& name, jl_datatype_t* super)
 {
-  return add_type_internal<T, false>(name, super, 1);
+  return add_type_internal<T, false, SuperParametersT>(name, super, 1);
 }
 
 /// Add type T as a struct that can be captured as bits type, using an immutable in Julia
-template<typename T, typename FieldListT>
+template<typename T, typename FieldListT, typename SuperParametersT>
 TypeWrapper<T> Module::add_immutable(const std::string& name, FieldListT&& field_list, jl_datatype_t* super)
 {
-  return add_type_internal<T, true>(name, super, 0, std::forward<FieldListT>(field_list));
+  return add_type_internal<T, true, SuperParametersT>(name, super, 0, std::forward<FieldListT>(field_list));
 }
 
 namespace detail
