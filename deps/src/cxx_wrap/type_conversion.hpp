@@ -152,10 +152,16 @@ struct IsFundamental
   static constexpr bool value = std::is_fundamental<remove_const_ref<T>>::value;
 };
 
-template<>
-struct IsFundamental<void*>
+template<typename T>
+struct IsFundamental<T*>
 {
-  static constexpr bool value = true;
+  static constexpr bool value = IsFundamental<T>::value;
+};
+
+template<>
+struct IsFundamental<const char*>
+{
+  static constexpr bool value = false;
 };
 
 /// Trait to determine if the given type is to be treated as a value type, i.e. if the reference should be stripped when passed as argument
@@ -189,7 +195,7 @@ namespace detail
 template<typename T> using mapped_reference_type = typename detail::MappedReferenceType<T>::type;
 
 /// Base class to specialize for conversion to C++
-template<typename CppT, bool Fundamental=false, bool Immutable=false, bool Bits=false>
+template<typename CppT, bool Fundamental=false, bool Immutable=false, bool Bits=false, typename Enable=void>
 struct ConvertToCpp
 {
   template<typename JuliaT>
@@ -452,42 +458,6 @@ template<> struct static_type_mapping<float>
   static jl_datatype_t* julia_type() { return jl_float32_type; }
 };
 
-template<> struct static_type_mapping<int32_t*>
-{
-  typedef jl_array_t* type;
-  static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_array_type(jl_int32_type, 1); }
-};
-
-template<> struct static_type_mapping<int64_t*>
-{
-  typedef jl_array_t* type;
-  static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_array_type(jl_int64_type, 1); }
-};
-
-template<> struct static_type_mapping<char*>
-{
-  typedef jl_array_t* type;
-  static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_array_type(jl_uint8_type, 1); }
-};
-
-template<> struct static_type_mapping<unsigned char*>
-{
-  typedef jl_array_t* type;
-  static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_array_type(jl_uint8_type, 1); }
-};
-
-template<> struct static_type_mapping<float*>
-{
-  typedef jl_array_t* type;
-  static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_array_type(jl_float32_type, 1); }
-};
-
-template<> struct static_type_mapping<double*>
-{
-  typedef jl_array_t* type;
-  static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_array_type(jl_float64_type, 1); }
-};
-
 template<> struct static_type_mapping<short>
 {
   static_assert(sizeof(short) == 2, "short is expected to be 16 bits");
@@ -555,6 +525,12 @@ template<> struct static_type_mapping<std::string>
   static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_get_global(jl_base_module, jl_symbol("AbstractString")); }
 };
 
+template<typename T> struct static_type_mapping<T*, typename std::enable_if<IsFundamental<T>::value>::type>
+{
+  typedef T* type;
+  static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_type((jl_value_t*)jl_pointer_type, jl_svec1(static_type_mapping<T>::julia_type())); }
+};
+
 template<> struct static_type_mapping<const char*>
 {
   typedef jl_value_t* type;
@@ -599,7 +575,7 @@ template<> struct static_type_mapping<ObjectIdDict>
 };
 
 /// Base class to specialize for conversion to Julia
-template<typename T, bool Fundamental=false, bool Immutable=false, bool Bits=false>
+template<typename T, bool Fundamental=false, bool Immutable=false, bool Bits=false, typename Enable=void>
 struct ConvertToJulia
 {
   template<typename CppT>
@@ -663,7 +639,7 @@ struct ConvertToJulia<T, false, false, true>
 
 // Pointer to wrapped type
 template<typename T>
-struct ConvertToJulia<T*, false, false, false>
+struct ConvertToJulia<T*, false, false, false, typename std::enable_if<!IsFundamental<T>::value>::type>
 {
   jl_value_t* operator()(T* cpp_obj) const
   {
@@ -678,6 +654,16 @@ struct ConvertToJulia<T*, false, false, false>
     assert(convert_to_cpp<T*>(result) == cpp_obj);
     JL_GC_POP();
     return result;
+  }
+};
+
+// Fundamental pointer pass-through
+template<typename T>
+struct ConvertToJulia<T*, false, false, false, typename std::enable_if<IsFundamental<T>::value>::type>
+{
+  inline T* operator()(T* cpp_ptr)
+  {
+    return cpp_ptr;
   }
 };
 
@@ -1136,61 +1122,6 @@ struct ConvertToCpp<std::string, false, false, false>
   std::string operator()(jl_value_t* jstr) const
   {
     return std::string(ConvertToCpp<const char*, false, false, false>()(jstr));
-  }
-};
-
-
-template<>
-struct ConvertToCpp<char*, false, false, false>
-{
-  char* operator()(jl_array_t* julia_array) const
-  {
-    return (char*)jl_array_data(julia_array);
-  }
-};
-
-template<>
-struct ConvertToCpp<unsigned char*, false, false, false>
-{
-  unsigned char* operator()(jl_array_t* julia_array) const
-  {
-    return (unsigned char*)jl_array_data(julia_array);
-  }
-};
-
-template<>
-struct ConvertToCpp<int32_t*, false, false, false>
-{
-  int32_t* operator()(jl_array_t* julia_array) const
-  {
-    return (int32_t*)jl_array_data(julia_array);
-  }
-};
-
-template<>
-struct ConvertToCpp<int64_t*, false, false, false>
-{
-  int64_t* operator()(jl_array_t* julia_array) const
-  {
-    return (int64_t*)jl_array_data(julia_array);
-  }
-};
-
-template<>
-struct ConvertToCpp<float*, false, false, false>
-{
-  float* operator()(jl_array_t* julia_array) const
-  {
-    return (float*)jl_array_data(julia_array);
-  }
-};
-
-template<>
-struct ConvertToCpp<double*, false, false, false>
-{
-  double* operator()(jl_array_t* julia_array) const
-  {
-    return (double*)jl_array_data(julia_array);
   }
 };
 

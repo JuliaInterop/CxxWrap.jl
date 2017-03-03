@@ -93,6 +93,13 @@ unsafe_store!(cppdref, 1.0)
 @test CppTestFunctions.test_const_string_return() == "test"
 @test CppTestFunctions.test_datatype_conversion(Float64) == Float64
 
+@test typeof(CppTestFunctions.test_double_pointer()) == Ptr{Float64}
+@test CppTestFunctions.test_double_pointer() == C_NULL
+@test typeof(CppTestFunctions.test_double2_pointer()) == Ptr{Ptr{Float64}}
+@test CppTestFunctions.test_double2_pointer() == C_NULL
+@test typeof(CppTestFunctions.test_double3_pointer()) == Ptr{Ptr{Ptr{Float64}}}
+@test CppTestFunctions.test_double3_pointer() == C_NULL
+
 # Performance tests
 const test_size = Sys.ARCH == :armv7l ? 1000000 : 50000000
 const numbers = rand(test_size)

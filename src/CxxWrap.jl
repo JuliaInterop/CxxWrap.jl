@@ -153,6 +153,7 @@ function argument_overloads(t::Type{Array{AbstractString,1}})
     return [Array{String,1}]
   end
 end
+argument_overloads{T <: Number}(t::Type{Ptr{T}}) = [Array{T,1}]
 
 map_julia_arg_type(t::DataType) = Union{t,argument_overloads(t)...}
 map_julia_arg_type{T}(a::Type{StrictlyTypedNumber{T}}) = T
@@ -196,7 +197,7 @@ function build_function_expression(func::CppFunctionInfo)
   c_arg_types = [map_c_arg_type(t) for t in argtypes]
   return_type = map_return_type(func.return_type)
 
-  converted_args = ([:(convert($t,$a)) for (t,a) in zip(argtypes,argsymbols)]...)
+  converted_args = ([:(Base.cconvert($t,$a)) for (t,a) in zip(argtypes,argsymbols)]...)
 
   # Build the final call expression
   call_exp = nothing

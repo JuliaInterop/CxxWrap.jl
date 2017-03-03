@@ -207,6 +207,9 @@ void init_test_module(cxx_wrap::Module& mod)
   // Const string return
   mod.method("test_const_string_return", []() -> const std::string { return "test"; });
   mod.method("test_datatype_conversion", [] (cxx_wrap::SingletonType<double>) { return jl_float64_type; });
+  mod.method("test_double_pointer", [] () { return static_cast<double*>(nullptr); });
+  mod.method("test_double2_pointer", [] () { return static_cast<double**>(nullptr); });
+  mod.method("test_double3_pointer", [] () { return static_cast<double***>(nullptr); });
 }
 
 }
