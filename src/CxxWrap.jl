@@ -217,7 +217,7 @@ function build_function_expression(func::CppFunctionInfo)
     return result
   end
 
-  function_expression = :($(make_func_declaration(func.name, argmap(argtypes))) = $call_exp)
+  function_expression = :($(make_func_declaration(func.name, argmap(argtypes)))::$(func.return_type) = $call_exp)
   return function_expression
 end
 

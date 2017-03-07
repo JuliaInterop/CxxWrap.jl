@@ -740,6 +740,15 @@ struct ConvertToJulia<jl_datatype_t*, false, false, false>
   }
 };
 
+template<typename T>
+struct ConvertToJulia<SingletonType<T>, false, false, false>
+{
+  jl_datatype_t* operator()(SingletonType<T>)
+  {
+    return static_type_mapping<SingletonType<T>>::julia_type();
+  }
+};
+
 namespace detail
 {
   template<typename T>
