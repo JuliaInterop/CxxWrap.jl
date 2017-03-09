@@ -146,6 +146,10 @@ extern jl_datatype_t* g_cppfunctioninfo_type;
 class FunctionWrapperBase
 {
 public:
+  FunctionWrapperBase(jl_datatype_t* return_type) : m_return_type(return_type)
+  {
+  }
+
   /// Function pointer as void*, since that's what Julia expects
   virtual void* pointer() = 0;
 
@@ -156,7 +160,9 @@ public:
   virtual std::vector<jl_datatype_t*> argument_types() const = 0;
 
   /// Return type
-  virtual jl_datatype_t* return_type() const = 0;
+  jl_datatype_t* return_type() const { return m_return_type; }
+
+  void set_return_type(jl_datatype_t* dt) { m_return_type = dt; }
 
   virtual ~FunctionWrapperBase() {}
 
@@ -173,6 +179,7 @@ public:
 
 private:
   jl_value_t* m_name;
+  jl_datatype_t* m_return_type = nullptr;
 };
 
 /// Implementation of function storage, case of std::function
@@ -182,7 +189,7 @@ class FunctionWrapper : public FunctionWrapperBase
 public:
   typedef std::function<R(Args...)> functor_t;
 
-  FunctionWrapper(const functor_t& function) : m_function(function)
+  FunctionWrapper(const functor_t& function) : FunctionWrapperBase(dereferenced_type_mapping<R>::julia_type()), m_function(function)
   {
   }
 
@@ -201,11 +208,6 @@ public:
     return detail::typeid_vector<Args...>();
   }
 
-  virtual jl_datatype_t* return_type() const
-  {
-    return dereferenced_type_mapping<R>::julia_type();
-  }
-
 private:
   functor_t m_function;
 };
@@ -217,7 +219,7 @@ class FunctionPtrWrapper : public FunctionWrapperBase
 public:
   typedef std::function<R(Args...)> functor_t;
 
-  FunctionPtrWrapper(R(*f)(Args...)) : m_function(f)
+  FunctionPtrWrapper(R(*f)(Args...)) : FunctionWrapperBase(dereferenced_type_mapping<R>::julia_type()), m_function(f)
   {
   }
 
@@ -234,11 +236,6 @@ public:
   virtual std::vector<jl_datatype_t*> argument_types() const
   {
     return detail::typeid_vector<Args...>();
-  }
-
-  virtual jl_datatype_t* return_type() const
-  {
-    return static_type_mapping<R>::julia_type();
   }
 
 private:

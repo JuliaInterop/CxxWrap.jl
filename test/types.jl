@@ -82,7 +82,8 @@ end
 
 @test value(value(ReturnConstRef())) == 42
 
-@test CppTypes.greet(ConstPtrConstruct(World())) == "default hello"
+wptr = World()
+@test CppTypes.greet(ConstPtrConstruct(wptr)) == "default hello"
 
 call_op = CallOperator()
 @test call_op() == 43
