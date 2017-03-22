@@ -109,11 +109,13 @@ struct static_type_mapping<NTuple<N,T>>
   typedef jl_datatype_t* type;
   static jl_datatype_t* julia_type()
   {
-#if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 5
-    return (jl_datatype_t*)apply_type((jl_value_t*)jl_ntuple_type, jl_svec2(static_type_mapping<N>::julia_type(), static_type_mapping<T>::julia_type()));
-#else
-    return (jl_datatype_t*)jl_apply_tuple_type(jl_svec1(apply_type((jl_value_t*)jl_vararg_type, jl_svec2(static_type_mapping<T>::julia_type(), static_type_mapping<N>::julia_type()))));
-#endif
+    jl_datatype_t* dt = nullptr;
+    if(dt == nullptr)
+    {
+      dt = (jl_datatype_t*)jl_apply_tuple_type(jl_svec1(apply_type((jl_value_t*)jl_vararg_type, jl_svec2(static_type_mapping<T>::julia_type(), static_type_mapping<N>::julia_type()))));
+      protect_from_gc(dt);
+    }
+    return dt;
   }
 };
 

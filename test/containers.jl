@@ -4,6 +4,8 @@ using Base.Test
 wrap_modules(CxxWrap._l_containers)
 using Containers
 
+#println(Base.uncompressed_ast(first(methods(test_tuple))))
+
 @test test_tuple() == (1,2.0,3.0f0)
 
 cptr = const_ptr()

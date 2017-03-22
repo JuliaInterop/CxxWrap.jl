@@ -61,6 +61,7 @@ end
 type CppFunctionInfo
   name::Any
   argument_types::Array{DataType,1}
+  reference_argument_types::Array{DataType,1}
   return_type::DataType
   function_pointer::Ptr{Void}
   thunk_pointer::Ptr{Void}
@@ -74,6 +75,7 @@ function __init__()
 
   Base.linearindexing(::ConstArray) = Base.LinearFast()
   Base.size(arr::ConstArray) = arr.size
+  Base.getindex(arr::ConstArray, i::Integer) = unsafe_load(arr.ptr.ptr, i)
 end
 
 # Load the modules in the shared library located at the given path
@@ -100,6 +102,14 @@ function exported_symbols(registry::Ptr{Void}, modname::AbstractString)
   ccall((:get_exported_symbols, cxx_wrap_path), Array{AbstractString}, (Ptr{Void},AbstractString), registry, modname)
 end
 
+function reference_types(registry::Ptr{Void}, modname::AbstractString)
+  ccall((:get_reference_types, cxx_wrap_path), Array{DataType}, (Ptr{Void},AbstractString), registry, modname)
+end
+
+function allocated_types(registry::Ptr{Void}, modname::AbstractString)
+  ccall((:get_allocated_types, cxx_wrap_path), Array{DataType}, (Ptr{Void},AbstractString), registry, modname)
+end
+
 # Interpreted as a constructor for Julia  > 0.5
 type ConstructorFname
   _type::DataType
@@ -113,26 +123,12 @@ end
 process_fname(fn::Symbol) = fn
 process_fname(fn::ConstructorFname) = :(::$(Type{fn._type}))
 function process_fname(fn::CallOpOverload)
-  if VERSION < v"0.5-dev"
-    return :call
-  end
   return :(arg1::$(fn._type))
 end
 
 make_func_declaration(fn, argmap) = :($(process_fname(fn))($(argmap...)))
 function make_func_declaration(fn::CallOpOverload, argmap)
-  if VERSION < v"0.5-dev"
-    return :($(process_fname(fn))($(argmap...)))
-  end
   return :($(process_fname(fn))($((argmap[2:end])...)))
-end
-
-function make_argtypes(t)
-  if VERSION < v"0.6-dev"
-    return :(($(t...),))
-  else
-    return :(Tuple{$(t...)})
-  end
 end
 
 # By default, no argument overloading happens
@@ -171,33 +167,20 @@ function build_function_expression(func::CppFunctionInfo)
   # Thunk
   thunk = func.thunk_pointer
 
-  function map_c_arg_type(t::DataType)
-    if(t <: CppBits)
-      return t
-    end
-    if ((t <: CppAny) || (t <: CppDisplay) || (t <: Tuple)) || (t <: CppArray) || (t <: CppAssociative)
-      return Any
-    end
-
-    if t == Array{AbstractString,1} || t == Array{String,1}
-      return Any
-    end
-
-    if t == DataType
-      return Any
-    end
-
-    return t
-  end
+  map_c_arg_type(t::DataType) = t
+  map_c_arg_type{T <: AbstractString}(::Type{Array{T,1}}) = Any
+  map_c_arg_type(::Type{DataType}) = Any
+  map_c_arg_type{T <: Tuple}(::Type{T}) = Any
+  map_c_arg_type{T,N}(::Type{ConstArray{T,N}}) = Any
 
   map_return_type(t) = map_c_arg_type(t)
   map_return_type{T}(t::Type{Ref{T}}) = Ptr{T}
 
   # Build the types for the ccall argument list
-  c_arg_types = [map_c_arg_type(t) for t in argtypes]
+  c_arg_types = [map_c_arg_type(t) for t in func.reference_argument_types]
   return_type = map_return_type(func.return_type)
 
-  converted_args = ([:(Base.cconvert($t,$a)) for (t,a) in zip(argtypes,argsymbols)]...)
+  converted_args = ([:(Base.cconvert($t,$a)) for (t,a) in zip(func.reference_argument_types,argsymbols)]...)
 
   # Build the final call expression
   call_exp = nothing
@@ -219,6 +202,15 @@ function build_function_expression(func::CppFunctionInfo)
 
   function_expression = :($(make_func_declaration(func.name, argmap(argtypes)))::$(func.return_type) = $call_exp)
   return function_expression
+end
+
+function wrap_reference_converters(registry, julia_mod)
+  mod_name = string(module_name(julia_mod))
+  reftypes = reference_types(registry, mod_name)
+  alloctypes = allocated_types(registry, mod_name)
+  for (rt, at) in zip(reftypes, alloctypes)
+    Core.eval(Base, :(cconvert(::Type{$rt}, x::$(supertype(at))) = unsafe_load(reinterpret(Ptr{$rt}, pointer_from_objref(x)))))
+  end
 end
 
 # Wrap functions from the cpp module to the passed julia module
@@ -259,6 +251,7 @@ function wrap_modules(registry::Ptr{Void}, parent_mod=Main)
 
   module_functions = get_module_functions(registry)
   for (jl_mod, mod_functions) in zip(jl_modules, module_functions)
+    wrap_reference_converters(registry, jl_mod)
     wrap_functions(mod_functions, jl_mod)
   end
 
@@ -311,6 +304,7 @@ function wrap_module_functions(registry, parent_mod=Main)
   end
 
   module_functions = get_module_functions(registry)
+  wrap_reference_converters(registry, current_module())
   wrap_functions(module_functions[mod_idx], current_module())
 end
 

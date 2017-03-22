@@ -59,6 +59,14 @@ CXX_WRAP_EXPORT void bind_module_constants(void* void_registry, jl_value_t* modu
   registry.get_module(mod_name).bind_constants(mod);
 }
 
+void fill_types_vec(Array<jl_datatype_t*>& types_array, const std::vector<jl_datatype_t*>& types_vec)
+{
+  for(const auto& t : types_vec)
+  {
+    types_array.push_back(t);
+  }
+}
+
 /// Get the functions defined in the modules. Any classes used by these functions must be defined on the Julia side first
 CXX_WRAP_EXPORT jl_array_t* get_module_functions(void* void_registry)
 {
@@ -73,16 +81,13 @@ CXX_WRAP_EXPORT jl_array_t* get_module_functions(void* void_registry)
 
     module.for_each_function([&](FunctionWrapperBase& f)
     {
-      const std::vector<jl_datatype_t*> types_vec = f.argument_types();
-      Array<jl_datatype_t*> arg_types_array;
+      Array<jl_datatype_t*> arg_types_array, ref_arg_types_array;
       jl_value_t* boxed_f = nullptr;
       jl_value_t* boxed_thunk = nullptr;
-      JL_GC_PUSH3(arg_types_array.gc_pointer(), &boxed_f, &boxed_thunk);
+      JL_GC_PUSH4(arg_types_array.gc_pointer(), ref_arg_types_array.gc_pointer(), &boxed_f, &boxed_thunk);
 
-      for(const auto& t : types_vec)
-      {
-        arg_types_array.push_back(t);
-      }
+      fill_types_vec(arg_types_array, f.argument_types());
+      fill_types_vec(ref_arg_types_array, f.reference_argument_types());
 
       boxed_f = jl_box_voidpointer(f.pointer());
       boxed_thunk = jl_box_voidpointer(f.thunk());
@@ -90,6 +95,7 @@ CXX_WRAP_EXPORT jl_array_t* get_module_functions(void* void_registry)
       function_array.push_back(jl_new_struct(g_cppfunctioninfo_type,
         f.name(),
         arg_types_array.wrapped(),
+        ref_arg_types_array.wrapped(),
         f.return_type(),
         boxed_f,
         boxed_thunk
@@ -117,6 +123,32 @@ CXX_WRAP_EXPORT jl_array_t* get_exported_symbols(void* void_registry, jl_value_t
   }
 
   return syms.wrapped();
+}
+
+jl_array_t* convert_type_vector(const std::vector<jl_datatype_t*> types_vec)
+{
+  Array<jl_datatype_t*> datatypes;
+  JL_GC_PUSH1(datatypes.gc_pointer());
+  for(jl_datatype_t* dt : types_vec)
+  {
+    datatypes.push_back(dt);
+  }
+  JL_GC_POP();
+  return datatypes.wrapped();
+}
+
+CXX_WRAP_EXPORT jl_array_t* get_reference_types(void* void_registry, jl_value_t* mod_name)
+{
+  assert(void_registry != nullptr);
+  ModuleRegistry& registry = *reinterpret_cast<ModuleRegistry*>(void_registry);
+  return convert_type_vector(registry.get_module(convert_to_cpp<std::string>(mod_name)).reference_types());
+}
+
+CXX_WRAP_EXPORT jl_array_t* get_allocated_types(void* void_registry, jl_value_t* mod_name)
+{
+  assert(void_registry != nullptr);
+  ModuleRegistry& registry = *reinterpret_cast<ModuleRegistry*>(void_registry);
+  return convert_type_vector(registry.get_module(convert_to_cpp<std::string>(mod_name)).allocated_types());
 }
 
 }

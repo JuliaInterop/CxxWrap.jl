@@ -8,28 +8,7 @@
 namespace cxx_wrap
 {
 
-namespace detail
-{
-  template<std::size_t S>
-  struct IndexTChooser
-  {
-  };
-
-  template<>
-  struct IndexTChooser<4>
-  {
-    typedef int32_t type;
-  };
-
-  template<>
-  struct IndexTChooser<8>
-  {
-    typedef int64_t type;
-  };
-
-}
-
-typedef typename detail::IndexTChooser<sizeof(std::ptrdiff_t)>::type index_t;
+typedef int_t index_t;
 
 namespace detail
 {
@@ -87,7 +66,7 @@ public:
   {
   }
 
-  T getindex(const int i) const
+  T getindex(const int_t i) const
   {
     return m_arr[i-1];
   }
@@ -133,24 +112,22 @@ struct ConvertToJulia<ConstArray<T,N>, false, true, false>
 };
 
 template<typename T, index_t N>
-struct InstantiateParametricType<ConstArray<T,N>>
+struct static_type_mapping<ConstArray<T,N>>
 {
-  int operator()(Module& m) const
+  typedef jl_value_t* type;
+  static jl_datatype_t* julia_type()
   {
-    // Register the Julia type if not already instantiated
-    if(!static_type_mapping<ConstArray<T,N>>::has_julia_type())
+    static jl_datatype_t* app_dt = nullptr;
+    if(app_dt == nullptr)
     {
-      jl_datatype_t* pdt = julia_type("ConstArray");
+      jl_datatype_t* pdt = ::cxx_wrap::julia_type("ConstArray");
       jl_value_t* boxed_n = box(N);
       JL_GC_PUSH1(&boxed_n);
-      jl_datatype_t* app_dt = (jl_datatype_t*)apply_type((jl_value_t*)pdt, jl_svec2(julia_type<T>(), boxed_n));
+      app_dt = (jl_datatype_t*)apply_type((jl_value_t*)pdt, jl_svec2(::cxx_wrap::julia_type<T>(), boxed_n));
       protect_from_gc(app_dt);
-      set_julia_type<ConstArray<T,N>>(app_dt);
-      TypeWrapper<ConstArray<T,N>> wrapped(m, app_dt);
-      wrapped.method("getindex", &ConstArray<T,N>::getindex);
       JL_GC_POP();
     }
-    return 0;
+    return app_dt;
   }
 };
 

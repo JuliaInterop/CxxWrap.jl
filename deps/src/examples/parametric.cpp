@@ -188,7 +188,7 @@ JULIA_CPP_MODULE_BEGIN(registry)
   types.add_type<Parametric<cxx_wrap::TypeVar<1>, cxx_wrap::TypeVar<2>>>("NonTypeParam")
     .apply<NonTypeParam<int, 1>, NonTypeParam<unsigned int, 2>, NonTypeParam<int64_t, 64>>(WrapNonTypeParam());
 
-  auto abstract_template = types.add_abstract<Parametric<cxx_wrap::TypeVar<1>>>("AbstractTemplate");
+  auto abstract_template = types.add_type<Parametric<cxx_wrap::TypeVar<1>>>("AbstractTemplate");
   abstract_template.apply<AbstractTemplate<double>>(WrapAbstractTemplate());
 
   types.add_type<Parametric<cxx_wrap::TypeVar<1>>>("ConcreteTemplate", abstract_template.dt()).apply<ConcreteTemplate<double>>(WrapConcreteTemplate());

@@ -27,16 +27,6 @@ struct NonCopyable
   NonCopyable(const NonCopyable&) = delete;
 };
 
-struct ImmutableDouble
-{
-  double get_value() const
-  {
-    return m_value;
-  }
-
-  double m_value;
-};
-
 struct AConstRef
 {
   int value() const
@@ -97,7 +87,6 @@ enum CppEnum
 
 namespace cxx_wrap
 {
-  template<> struct IsImmutable<cpp_types::ImmutableDouble> : std::true_type {};
   template<> struct IsBits<cpp_types::CppEnum> : std::true_type {};
 }
 
@@ -119,31 +108,22 @@ JULIA_CPP_MODULE_BEGIN(registry)
     return new World("factory hello");
   });
 
-  types.method("shared_world_factory", []()
-  {
-    return std::shared_ptr<World>(new World("shared factory hello"));
-  });
-  // Shared ptr overload for greet
-  types.method("greet", [](const std::shared_ptr<World>& w)
-  {
-    return w->greet();
-  });
-
-  types.method("unique_world_factory", []()
-  {
-    return std::unique_ptr<World>(new World("unique factory hello"));
-  });
+  // types.method("shared_world_factory", []()
+  // {
+  //   return std::shared_ptr<World>(new World("shared factory hello"));
+  // });
+  // // Shared ptr overload for greet
+  // types.method("greet", [](const std::shared_ptr<World>& w)
+  // {
+  //   return w->greet();
+  // });
+  //
+  // types.method("unique_world_factory", []()
+  // {
+  //   return std::unique_ptr<World>(new World("unique factory hello"));
+  // });
 
   types.add_type<NonCopyable>("NonCopyable");
-
-  // ImmutableDouble
-  types.add_immutable<ImmutableDouble>("ImmutableDouble", cxx_wrap::FieldList<double>("value"))
-    .method("getvalue", &ImmutableDouble::get_value);
-  types.method("ImmutableDouble", [](const double d) { return ImmutableDouble({d}); });
-  types.method("convert", [](cxx_wrap::SingletonType<double>, const ImmutableDouble& a) { return a.get_value(); });
-  types.method("+", [](const ImmutableDouble& a, const ImmutableDouble& b) { return ImmutableDouble({a.get_value() + b.get_value()}); });
-  types.method("==", [](const ImmutableDouble& a, const double b) { return a.get_value() == b; } );
-  types.method("==", [](const double b, const ImmutableDouble& a) { return a.get_value() == b; } );
 
   types.add_type<AConstRef>("AConstRef").method("value", &AConstRef::value);
   types.add_type<ReturnConstRef>("ReturnConstRef").method("value", &ReturnConstRef::operator());

@@ -62,17 +62,23 @@ mapped_julia_type<R> call_functor(const void* functor, mapped_julia_type<Args>..
 
 /// Make a vector with the types in the variadic template parameter pack
 template<typename... Args>
-std::vector<jl_datatype_t*> typeid_vector()
+std::vector<jl_datatype_t*> argtype_vector()
 {
-  return {dereferenced_type_mapping<Args>::julia_type()...};
+  return {julia_type<dereference_for_mapping<Args>>()...};
 }
+template<typename... Args>
+std::vector<jl_datatype_t*> reference_argtype_vector()
+{
+  return {julia_reference_type<dereference_for_mapping<Args>>()...};
+}
+
 
 template<typename... Args>
 struct NeedConvertHelper
 {
   bool operator()()
   {
-    for(const bool b : {std::is_same<remove_const_ref<dereferenced_type_mapping<Args>>,remove_const_ref<Args>>::value...})
+    for(const bool b : {std::is_same<remove_const_ref<mapped_julia_type<Args>>,remove_const_ref<Args>>::value...})
     {
       if(!b)
         return true;
@@ -92,50 +98,25 @@ struct NeedConvertHelper<>
 
 } // end namespace detail
 
-template<bool>
-struct CreateChooser
-{};
-
-// Normal types
-template<>
-struct CreateChooser<false>
-{
-  template<typename T, typename... ArgsT>
-  static jl_value_t* create(SingletonType<T>, ArgsT&&... args)
-  {
-    jl_datatype_t* dt = static_type_mapping<T>::julia_type();
-    assert(!jl_isbits(dt));
-
-    T* cpp_obj = new T(std::forward<ArgsT>(args)...);
-
-    jl_value_t* result = convert_to_julia(cpp_obj);
-    JL_GC_PUSH1(&result);
-    jl_gc_add_finalizer(result, static_type_mapping<T>::finalizer());
-    JL_GC_POP();
-
-    assert(convert_to_cpp<T*>(result) == cpp_obj);
-    return result;
-  }
-};
-
-// Immutable-as-bits types
-template<>
-struct CreateChooser<true>
-{
-  template<typename T, typename... ArgsT>
-  static typename static_type_mapping<T>::type create(SingletonType<T>, ArgsT&&... args)
-  {
-    assert(jl_isbits(static_type_mapping<T>::julia_type()));
-    T result(std::forward<ArgsT>(args)...);
-    return convert_to_julia(result);
-  }
-};
-
 /// Convenience function to create an object with a finalizer attached
 template<typename T, typename... ArgsT>
-typename static_type_mapping<T>::type create(ArgsT&&... args)
+jl_value_t* create(ArgsT&&... args)
 {
-  return CreateChooser<IsImmutable<T>::value>::create(SingletonType<T>(), std::forward<ArgsT>(args)...);
+  jl_datatype_t* dt = static_type_mapping<T>::julia_allocated_type();
+  assert(!jl_isbits(dt));
+
+  T* cpp_obj = new T(std::forward<ArgsT>(args)...);
+
+  jl_value_t* result = nullptr;
+  jl_value_t* void_ptr = nullptr;
+  JL_GC_PUSH2(&result, &void_ptr);
+  void_ptr = jl_box_voidpointer(static_cast<void*>(const_cast<typename std::remove_const<T>::type*>(cpp_obj)));
+  result = jl_new_struct(dt, void_ptr);
+
+  jl_gc_add_finalizer(result, static_type_mapping<T>::finalizer());
+  JL_GC_POP();
+
+  return result;
 }
 
 // The CxxWrap Julia module
@@ -156,8 +137,11 @@ public:
   /// The thunk (i.e. std::function) to pass as first argument to the function pointed to by function_pointer
   virtual void* thunk() = 0;
 
-  /// Types of the arguments
+  /// Types of the arguments (used in the wrapper signature)
   virtual std::vector<jl_datatype_t*> argument_types() const = 0;
+
+  /// Reference type for the arguments (used in the ccall type list)
+  virtual std::vector<jl_datatype_t*> reference_argument_types() const = 0;
 
   /// Return type
   jl_datatype_t* return_type() const { return m_return_type; }
@@ -189,7 +173,7 @@ class FunctionWrapper : public FunctionWrapperBase
 public:
   typedef std::function<R(Args...)> functor_t;
 
-  FunctionWrapper(const functor_t& function) : FunctionWrapperBase(dereferenced_type_mapping<R>::julia_type()), m_function(function)
+  FunctionWrapper(const functor_t& function) : FunctionWrapperBase(julia_reference_type<dereference_for_mapping<R>>()), m_function(function)
   {
   }
 
@@ -205,7 +189,12 @@ public:
 
   virtual std::vector<jl_datatype_t*> argument_types() const
   {
-    return detail::typeid_vector<Args...>();
+    return detail::argtype_vector<Args...>();
+  }
+
+  virtual std::vector<jl_datatype_t*> reference_argument_types() const
+  {
+    return detail::reference_argtype_vector<Args...>();
   }
 
 private:
@@ -219,7 +208,7 @@ class FunctionPtrWrapper : public FunctionWrapperBase
 public:
   typedef std::function<R(Args...)> functor_t;
 
-  FunctionPtrWrapper(R(*f)(Args...)) : FunctionWrapperBase(dereferenced_type_mapping<R>::julia_type()), m_function(f)
+  FunctionPtrWrapper(R(*f)(Args...)) : FunctionWrapperBase(julia_reference_type<dereference_for_mapping<R>>()), m_function(f)
   {
   }
 
@@ -235,25 +224,16 @@ public:
 
   virtual std::vector<jl_datatype_t*> argument_types() const
   {
-    return detail::typeid_vector<Args...>();
+    return detail::argtype_vector<Args...>();
+  }
+
+  virtual std::vector<jl_datatype_t*> reference_argument_types() const
+  {
+    return detail::reference_argtype_vector<Args...>();
   }
 
 private:
   R(*m_function)(Args...);
-};
-
-/// Encapsulate a list of fields, for the field list of a Julia composite type
-template<typename... TypesT>
-struct FieldList
-{
-  template<typename... StringT>
-  FieldList(StringT... names)
-  {
-    static_assert(sizeof...(TypesT) == sizeof...(StringT), "Number of types must be equal to number of field names");
-    field_names = jl_svec(sizeof...(TypesT), jl_symbol(names)...);
-  }
-
-  jl_svec_t* field_names;
 };
 
 /// Indicate that a parametric type is to be added
@@ -334,6 +314,18 @@ struct IsParametric<T<TypeVar<I>, ParametersT...>>
   static constexpr bool value = true;
 };
 
+template<typename... ArgsT>
+inline jl_value_t* make_fname(const std::string& nametype, ArgsT... args)
+{
+  jl_value_t* name = nullptr;
+  JL_GC_PUSH1(&name);
+  name = jl_new_struct(julia_type(nametype), args...);
+  protect_from_gc(name);
+  JL_GC_POP();
+
+  return name;
+}
+
 } // namespace detail
 
 // Encapsulate a list of parameters, using types only
@@ -408,6 +400,14 @@ public:
     return add_lambda(name, lambda, &LambdaT::operator());
   }
 
+  /// Add a constructor with the given argument types for the given datatype (used to get the name)
+  template<typename T, typename... ArgsT>
+  void constructor(jl_datatype_t* dt)
+  {
+    FunctionWrapperBase& new_wrapper = method("dummy", [](ArgsT... args) { return create<T>(args...); });
+    new_wrapper.set_name(detail::make_fname("ConstructorFname", dt));
+  }
+
   /// Loop over the functions
   template<typename F>
   void for_each_function(const F f) const
@@ -422,16 +422,8 @@ public:
   template<typename T, typename SuperParametersT=ParameterList<>>
   TypeWrapper<T> add_type(const std::string& name, jl_datatype_t* super = julia_type<CppAny>());
 
-  /// Add an abstract type
-  template<typename T, typename SuperParametersT=ParameterList<>>
-  TypeWrapper<T> add_abstract(const std::string& name, jl_datatype_t* super = julia_type<CppAny>());
-
-  /// Add type T as a struct that can be captured as bits type, using an immutable in Julia
-  template<typename T, typename FieldListT, typename SuperParametersT=ParameterList<>>
-  TypeWrapper<T> add_immutable(const std::string& name, FieldListT&& field_list, jl_datatype_t* super = IsBits<T>::value ? julia_type("CppBits") : julia_type<CppAny>());
-
   template<typename T>
-  TypeWrapper<T> add_bits(const std::string& name, jl_datatype_t* super = julia_type("CppBits"));
+  void add_bits(const std::string& name, jl_datatype_t* super = julia_type("CppBits"));
 
   /// Set a global constant value at the module level
   template<typename T>
@@ -484,6 +476,22 @@ public:
     return nullptr;
   }
 
+  void register_type_pair(jl_datatype_t* reference_type, jl_datatype_t* allocated_type)
+  {
+    m_reference_types.push_back(reference_type);
+    m_allocated_types.push_back(allocated_type);
+  }
+
+  const std::vector<jl_datatype_t*> reference_types() const
+  {
+    return m_reference_types;
+  }
+
+  const std::vector<jl_datatype_t*> allocated_types() const
+  {
+    return m_allocated_types;
+  }
+
 private:
 
   template<typename T>
@@ -499,7 +507,7 @@ private:
   {
     method("deepcopy_internal", [this](const T& other, ObjectIdDict)
     {
-      return CreateChooser<IsImmutable<T>::value>::create(SingletonType<T>(), other);
+      return create<T>(other);
     });
   }
 
@@ -508,8 +516,8 @@ private:
   {
   }
 
-  template<typename T, bool AddBits, typename SuperParametersT, typename FieldListT=FieldList<>>
-  TypeWrapper<T> add_type_internal(const std::string& name, jl_datatype_t* super, int abstract, FieldListT&& = FieldList<>());
+  template<typename T, typename SuperParametersT>
+  TypeWrapper<T> add_type_internal(const std::string& name, jl_datatype_t* super);
 
   template<typename R, typename LambdaRefT, typename LambdaT, typename... ArgsT>
   FunctionWrapperBase& add_lambda(const std::string& name, LambdaRefT&& lambda, R(LambdaT::*f)(ArgsT...) const)
@@ -521,6 +529,8 @@ private:
   std::vector<std::shared_ptr<FunctionWrapperBase>> m_functions;
   std::map<std::string, jl_value_t*> m_jl_constants;
   std::vector<std::string> m_exported_symbols;
+  std::vector<jl_datatype_t*> m_reference_types;
+  std::vector<jl_datatype_t*> m_allocated_types;
 
   template<class T> friend class TypeWrapper;
 };
@@ -551,7 +561,7 @@ void add_smart_pointer_types(jl_datatype_t* dt, Module& mod)
 template<typename T>
 void Module::add_default_constructor(std::true_type, jl_datatype_t* dt)
 {
-  TypeWrapper<T>(*this, dt).template constructor<>();
+  this->constructor<T>(dt);
 }
 
 // Specialize this to build the correct parameter list, wrapping non-types in integral constants
@@ -580,18 +590,6 @@ struct BuildParameterList<T<ParametersT...>>
 
 namespace detail
 {
-  template<typename... ArgsT>
-  inline jl_value_t* make_fname(const std::string& nametype, ArgsT... args)
-  {
-    jl_value_t* name = nullptr;
-    JL_GC_PUSH1(&name);
-    name = jl_new_struct(julia_type(nametype), args...);
-    protect_from_gc(name);
-    JL_GC_POP();
-
-    return name;
-  }
-
   template<typename... Types>
   struct DoApply;
 
@@ -655,7 +653,11 @@ class TypeWrapper
 public:
   typedef T type;
 
-  TypeWrapper(Module& mod, jl_datatype_t* dt) : m_module(mod), m_dt(dt)
+  TypeWrapper(Module& mod, jl_datatype_t* dt, jl_datatype_t* ref_dt, jl_datatype_t* alloc_dt) :
+    m_module(mod),
+    m_dt(dt),
+    m_ref_dt(ref_dt),
+    m_alloc_dt(alloc_dt)
   {
   }
 
@@ -663,13 +665,7 @@ public:
   template<typename... ArgsT>
   TypeWrapper<T>& constructor()
   {
-#if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 5
-    m_module.method("call", [](SingletonType<T>, ArgsT... args) { return create<T>(args...); });
-#else
-    FunctionWrapperBase& new_wrapper = m_module.method("dummy", [](ArgsT... args) { return create<T>(args...); });
-    new_wrapper.set_name(detail::make_fname("ConstructorFname", m_dt));
-#endif
-
+    m_module.constructor<T, ArgsT...>(m_dt);
     return *this;
   }
 
@@ -689,19 +685,23 @@ public:
     return *this;
   }
 
-  /// Call operator overload
+  /// Call operator overload. For both reference and allocated type to work around https://github.com/JuliaLang/julia/issues/14919
   template<typename R, typename CT, typename... ArgsT>
   TypeWrapper<T>& method(R(CT::*f)(ArgsT...))
   {
-    FunctionWrapperBase& new_wrapper = m_module.method("operator()", [f](T& obj, ArgsT... args) -> R { return (obj.*f)(args...); } );
-    new_wrapper.set_name(detail::make_fname("CallOpOverload", m_dt));
+    m_module.method("operator()", [f](T& obj, ArgsT... args) -> R { return (obj.*f)(args...); } )
+      .set_name(detail::make_fname("CallOpOverload", m_ref_dt));
+    m_module.method("operator()", [f](T& obj, ArgsT... args) -> R { return (obj.*f)(args...); } )
+      .set_name(detail::make_fname("CallOpOverload", m_alloc_dt));
     return *this;
   }
   template<typename R, typename CT, typename... ArgsT>
   TypeWrapper<T>& method(R(CT::*f)(ArgsT...) const)
   {
-    FunctionWrapperBase& new_wrapper = m_module.method("operator()", [f](const T& obj, ArgsT... args) -> R { return (obj.*f)(args...); } );
-    new_wrapper.set_name(detail::make_fname("CallOpOverload", m_dt));
+    m_module.method("operator()", [f](const T& obj, ArgsT... args) -> R { return (obj.*f)(args...); } )
+      .set_name(detail::make_fname("CallOpOverload", m_ref_dt));
+    m_module.method("operator()", [f](const T& obj, ArgsT... args) -> R { return (obj.*f)(args...); } )
+      .set_name(detail::make_fname("CallOpOverload", m_alloc_dt));
     return *this;
   }
 
@@ -776,33 +776,28 @@ private:
     static_assert(parameter_list<AppliedT>::nb_parameters != 0, "No parameters found when applying type. Specialize cxx_wrap::BuildParameterList for your combination of type and non-type parameters.");
     static_assert(parameter_list<AppliedT>::nb_parameters >= parameter_list<T>::nb_parameters, "Parametric type applied to wrong number of parameters.");
     const bool is_abstract = jl_is_abstracttype(m_dt);
-    jl_datatype_t* app_dt = (jl_datatype_t*)apply_type((jl_value_t*)m_dt, parameter_list<AppliedT>()(parameter_list<T>::nb_parameters));
 
-    if(is_abstract)
-    {
-      if(jl_isbits(app_dt))
-      {
-        throw std::runtime_error("Abstract parametric bits not supported");
-      }
-      jl_datatype_t* concrete_app_dt = jl_new_datatype(jl_symbol((julia_type_name(m_dt)+"DefaultImplementation").c_str()), app_dt, jl_emptysvec, jl_svec1(jl_symbol("cpp_object")), jl_svec1(jl_voidpointer_type), 0, 1, 1);
-      protect_from_gc(concrete_app_dt);
-      static_type_mapping<AppliedT>::set_instantiable_julia_type(concrete_app_dt);
-    }
+    jl_datatype_t* app_dt = (jl_datatype_t*)apply_type((jl_value_t*)m_dt, parameter_list<AppliedT>()(parameter_list<T>::nb_parameters));
+    jl_datatype_t* app_ref_dt = (jl_datatype_t*)apply_type((jl_value_t*)m_ref_dt, parameter_list<AppliedT>()(parameter_list<T>::nb_parameters));
+    jl_datatype_t* app_alloc_dt = (jl_datatype_t*)apply_type((jl_value_t*)m_alloc_dt, parameter_list<AppliedT>()(parameter_list<T>::nb_parameters));
 
     set_julia_type<AppliedT>(app_dt);
     m_module.add_default_constructor<AppliedT>(DefaultConstructible<AppliedT>(), app_dt);
-    if(!IsImmutable<AppliedT>::value)
-    {
-      m_module.add_copy_constructor<AppliedT>(CopyConstructible<AppliedT>(), app_dt);
-      detail::add_smart_pointer_types<AppliedT>(app_dt, m_module);
-    }
+    m_module.add_copy_constructor<AppliedT>(CopyConstructible<AppliedT>(), app_dt);
+    //detail::add_smart_pointer_types<AppliedT>(app_dt, m_module);
+    static_type_mapping<AppliedT>::set_reference_type(app_ref_dt);
+    static_type_mapping<AppliedT>::set_allocated_type(app_alloc_dt);
 
-    apply_ftor(TypeWrapper<AppliedT>(m_module, app_dt));
+    apply_ftor(TypeWrapper<AppliedT>(m_module, app_dt, app_ref_dt, app_alloc_dt));
+
+    m_module.register_type_pair(app_ref_dt, app_alloc_dt);
 
     return 0;
   }
   Module& m_module;
   jl_datatype_t* m_dt;
+  jl_datatype_t* m_ref_dt;
+  jl_datatype_t* m_alloc_dt;
 };
 
 template<typename T>
@@ -820,20 +815,13 @@ void TypeWrapper<T>::apply_combination(FunctorT&& ftor)
   detail::DoApply<applied_list>()(*this, std::forward<FunctorT>(ftor));
 }
 
-template<typename T, bool AddBits, typename SuperParametersT, typename FieldListT>
-TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t* super, int abstract, FieldListT&& field_list)
+template<typename T, typename SuperParametersT>
+TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t* super)
 {
   static constexpr bool is_parametric = detail::IsParametric<T>::value;
-  static_assert(((!IsImmutable<T>::value && !AddBits) || AddBits) || is_parametric, "Immutable types (marked with IsImmutable) can't be added using add_type, use add_immutable instead");
-  static_assert(((std::is_trivial<T>::value && AddBits) || !AddBits) || is_parametric, "Immutable types must be trivial");
-  static_assert(((IsImmutable<T>::value && AddBits) || !AddBits) || is_parametric, "Immutable types must be marked as such by specializing the IsImmutable template");
-  if(IsBits<T>::value)
-  {
-    if(!jl_type_morespecific((jl_value_t*)super, (jl_value_t*)julia_type("CppBits")))
-    {
-      throw std::runtime_error("Immutable bits types must use CppBits as a super type");
-    }
-  }
+  static_assert(!IsImmutable<T>::value, "Immutable types (marked with IsImmutable) can't be added using add_type, map them directly to a struct instead");
+  static_assert(!IsBits<T>::value, "Bits types must be added using add_bits");
+
   if(m_jl_constants.count(name) > 0)
   {
     throw std::runtime_error("Duplicate registration of type or constant " + name);
@@ -846,12 +834,8 @@ TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t*
   JL_GC_PUSH5(&super, &parameters, &super_parameters, &fnames, &ftypes);
 
   parameters = is_parametric ? parameter_list<T>()() : jl_emptysvec;
-  fnames = AddBits ? field_list.field_names : jl_svec1(jl_symbol("cpp_object"));
-  ftypes = AddBits ? parameter_list<FieldListT>()() : jl_svec1(jl_voidpointer_type);
-  int mutabl = !AddBits;
-  int ninitialized = jl_svec_len(ftypes);
-
-  assert(jl_svec_len(ftypes) == jl_svec_len(fnames));
+  fnames = jl_svec1(jl_symbol("cpp_object"));
+  ftypes = jl_svec1(jl_voidpointer_type);
 
   size_t n_super_params = jl_nparams(super);
   if(is_parametric && n_super_params != 0)
@@ -869,62 +853,52 @@ TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t*
     }
   }
 
-  // Create the datatype
-  jl_datatype_t* dt = jl_new_datatype(jl_symbol(name.c_str()), super, parameters, abstract ? jl_emptysvec : fnames, abstract ? jl_emptysvec : ftypes, abstract, mutabl, ninitialized);
-  protect_from_gc(dt);
+  const std::string refname = name+"Ref";
+  const std::string allocname = name+"Allocated";
 
-  if(abstract)
-  {
-    jl_datatype_t* concrete_dt = jl_new_datatype(jl_symbol((name+"DefaultImplementation").c_str()), dt, parameters, fnames, ftypes, 0, mutabl, ninitialized);
-    protect_from_gc(concrete_dt);
-    if(!is_parametric)
-    {
-      static_type_mapping<T>::set_instantiable_julia_type(concrete_dt);
-    }
-  }
+  // Create the datatypes
+  jl_datatype_t* base_dt = jl_new_datatype(jl_symbol(name.c_str()), super, parameters, jl_emptysvec, jl_emptysvec, 1, 0, 0);
+  protect_from_gc(base_dt);
+
+  super = is_parametric ? (jl_datatype_t*)apply_type((jl_value_t*)base_dt, parameters) : base_dt;
+
+  jl_datatype_t* ref_dt = jl_new_datatype(jl_symbol(refname.c_str()), super, parameters, fnames, ftypes, 0, 0, 1);
+  protect_from_gc(ref_dt);
+  jl_datatype_t* alloc_dt = jl_new_datatype(jl_symbol(allocname.c_str()), super, parameters, fnames, ftypes, 0, 1, 1);
+  protect_from_gc(alloc_dt);
 
   // Register the type
   if(!is_parametric)
   {
-    set_julia_type<T>(dt);
-    if(!abstract)
-    {
-      add_default_constructor<T>(DefaultConstructible<T>(), dt);
-      if(!AddBits)
-      {
-        add_copy_constructor<T>(CopyConstructible<T>(), dt);
-        detail::add_smart_pointer_types<T>(dt, *this);
-      }
-    }
+    set_julia_type<T>(base_dt);
+    add_default_constructor<T>(DefaultConstructible<T>(), base_dt);
+    add_copy_constructor<T>(CopyConstructible<T>(), base_dt);
+    //detail::add_smart_pointer_types<T>(base_dt, *this);
+    static_type_mapping<T>::set_reference_type(ref_dt);
+    static_type_mapping<T>::set_allocated_type(alloc_dt);
   }
+
 #if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 6
-  m_jl_constants[name] = (jl_value_t*)dt;
+  m_jl_constants[name] = (jl_value_t*)base_dt;
+  m_jl_constants[refname] = (jl_value_t*)ref_dt;
+  m_jl_constants[allocname] = (jl_value_t*)alloc_dt;
 #else
-  m_jl_constants[name] = is_parametric ? dt->name->wrapper : (jl_value_t*)dt;
+  m_jl_constants[name] = is_parametric ? base_dt->name->wrapper : (jl_value_t*)base_dt;
+  m_jl_constants[refname] = is_parametric ? ref_dt->name->wrapper : (jl_value_t*)ref_dt;
+  m_jl_constants[allocname] = is_parametric ? alloc_dt->name->wrapper : (jl_value_t*)alloc_dt;
 #endif
+
+  this->register_type_pair(ref_dt, alloc_dt);
+
   JL_GC_POP();
-  return TypeWrapper<T>(*this, dt);
+  return TypeWrapper<T>(*this, base_dt, ref_dt, alloc_dt);
 }
 
 /// Add a composite type
 template<typename T, typename SuperParametersT>
 TypeWrapper<T> Module::add_type(const std::string& name, jl_datatype_t* super)
 {
-  return add_type_internal<T, false, SuperParametersT>(name, super, 0);
-}
-
-/// Add an abstract type
-template<typename T, typename SuperParametersT>
-TypeWrapper<T> Module::add_abstract(const std::string& name, jl_datatype_t* super)
-{
-  return add_type_internal<T, false, SuperParametersT>(name, super, 1);
-}
-
-/// Add type T as a struct that can be captured as bits type, using an immutable in Julia
-template<typename T, typename FieldListT, typename SuperParametersT>
-TypeWrapper<T> Module::add_immutable(const std::string& name, FieldListT&& field_list, jl_datatype_t* super)
-{
-  return add_type_internal<T, true, SuperParametersT>(name, super, 0, std::forward<FieldListT>(field_list));
+  return add_type_internal<T, SuperParametersT>(name, super);
 }
 
 namespace detail
@@ -954,7 +928,7 @@ namespace detail
 
 /// Add a bits type
 template<typename T>
-TypeWrapper<T> Module::add_bits(const std::string& name, jl_datatype_t* super)
+void Module::add_bits(const std::string& name, jl_datatype_t* super)
 {
   static constexpr bool is_parametric = detail::IsParametric<T>::value;
   static_assert(IsBits<T>::value || is_parametric, "Bits types must be marked as such by specializing the IsBits template");
@@ -966,7 +940,6 @@ TypeWrapper<T> Module::add_bits(const std::string& name, jl_datatype_t* super)
   JL_GC_POP();
   detail::dispatch_set_julia_type<T, is_parametric>()(dt);
   m_jl_constants[name] = (jl_value_t*)dt;
-  return TypeWrapper<T>(*this, dt);
 }
 
 /// Registry containing different modules

@@ -42,7 +42,7 @@ A* create_abstract()
 
 JULIA_CPP_MODULE_BEGIN(registry)
   cxx_wrap::Module& types = registry.create_module("CppInheritance");
-  types.add_abstract<A>("A").method("message", &A::message);
+  types.add_type<A>("A").method("message", &A::message);
   types.add_type<B>("B", cxx_wrap::julia_type<A>());
   types.method("create_abstract", create_abstract);
 
