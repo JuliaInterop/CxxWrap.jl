@@ -26,12 +26,13 @@ dump(w)
 @show fw = CppTypes.world_factory()
 @test CppTypes.greet(fw) == "factory hello"
 
-# @show swf = CppTypes.shared_world_factory()
-# @test CppTypes.greet(swf) == "shared factory hello" # Uses the shared ptr overload
-# @test CppTypes.greet(CppTypes.get(swf)) == "shared factory hello" # Explicitly get the shared ptr
-#
-# @show uwf = CppTypes.unique_world_factory()
-# @test CppTypes.greet(CppTypes.get(uwf)) == "unique factory hello"
+swf = CppTypes.shared_world_factory()
+@test CppTypes.greet_shared(swf) == "shared factory hello"
+@test CppTypes.greet(swf[]) == "shared factory hello" # Explicit dereference
+@test CppTypes.greet(swf) == "shared factory hello" # Automatic conversion
+
+@show uwf = CppTypes.unique_world_factory()
+@test CppTypes.greet(uwf) == "unique factory hello"
 
 CppTypes.set(w, "hello")
 @show CppTypes.greet(w)
@@ -61,24 +62,6 @@ println("completed deepcopy test")
 noncopyable = CppTypes.NonCopyable()
 other_noncopyable = deepcopy(noncopyable)
 @test other_noncopyable.cpp_object == noncopyable.cpp_object
-
-# import CppTypes.ImmutableDouble
-#
-# if VERSION >= v"0.5" # not supported on 0.4 anymore
-#   @test sizeof(ImmutableDouble) == 8
-#   @test isbits(ImmutableDouble)
-#   @test length(fieldnames(ImmutableDouble)) == 1
-#   println("creating bitsval1")
-#   bitsval1 = ImmutableDouble(1)
-#   println("created bitsval1")
-#   @test bitsval1.value == 1.
-#   @test bitsval1 == 1.
-#   @test CppTypes.getvalue(bitsval1) == 1
-#   bitsval2 = CppTypes.ImmutableDouble(2)
-#   @test bitsval2 == 2
-#   @test typeof(bitsval1 + bitsval2) == CppTypes.ImmutableDouble
-#   @test (bitsval1 + bitsval2) == 3.
-# end
 
 @test value(value(ReturnConstRef())) == 42
 

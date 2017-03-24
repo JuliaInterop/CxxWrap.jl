@@ -108,20 +108,20 @@ JULIA_CPP_MODULE_BEGIN(registry)
     return new World("factory hello");
   });
 
-  // types.method("shared_world_factory", []()
-  // {
-  //   return std::shared_ptr<World>(new World("shared factory hello"));
-  // });
-  // // Shared ptr overload for greet
-  // types.method("greet", [](const std::shared_ptr<World>& w)
-  // {
-  //   return w->greet();
-  // });
-  //
-  // types.method("unique_world_factory", []()
-  // {
-  //   return std::unique_ptr<World>(new World("unique factory hello"));
-  // });
+  types.method("shared_world_factory", []()
+  {
+    return std::shared_ptr<World>(new World("shared factory hello"));
+  });
+  // Shared ptr overload for greet
+  types.method("greet_shared", [](const std::shared_ptr<World>& w)
+  {
+    return w->greet();
+  });
+
+  types.method("unique_world_factory", []()
+  {
+    return std::unique_ptr<World>(new World("unique factory hello"));
+  });
 
   types.add_type<NonCopyable>("NonCopyable");
 

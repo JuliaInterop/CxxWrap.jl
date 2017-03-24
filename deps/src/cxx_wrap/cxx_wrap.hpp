@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "array.hpp"
+#include "smart_pointers.hpp"
 #include "type_conversion.hpp"
 
 namespace cxx_wrap
@@ -107,16 +108,7 @@ jl_value_t* create(ArgsT&&... args)
 
   T* cpp_obj = new T(std::forward<ArgsT>(args)...);
 
-  jl_value_t* result = nullptr;
-  jl_value_t* void_ptr = nullptr;
-  JL_GC_PUSH2(&result, &void_ptr);
-  void_ptr = jl_box_voidpointer(static_cast<void*>(const_cast<typename std::remove_const<T>::type*>(cpp_obj)));
-  result = jl_new_struct(dt, void_ptr);
-
-  jl_gc_add_finalizer(result, static_type_mapping<T>::finalizer());
-  JL_GC_POP();
-
-  return result;
+  return boxed_cpp_pointer(cpp_obj, dt, true);
 }
 
 // The CxxWrap Julia module
@@ -535,29 +527,6 @@ private:
   template<class T> friend class TypeWrapper;
 };
 
-namespace detail
-{
-
-template<typename T>
-void add_smart_pointer_types(jl_datatype_t* dt, Module& mod)
-{
-  jl_datatype_t* sp_dt = (jl_datatype_t*)apply_type(jl_get_global(get_cxxwrap_module(), jl_symbol("SharedPtr")), jl_svec1(static_type_mapping<T>::julia_type()));
-  set_julia_type<std::shared_ptr<T>>(sp_dt);
-  jl_datatype_t* up_dt = (jl_datatype_t*)apply_type(jl_get_global(get_cxxwrap_module(), jl_symbol("UniquePtr")), jl_svec1(static_type_mapping<T>::julia_type()));
-  set_julia_type<std::unique_ptr<T>>(up_dt);
-
-  mod.method("get", [](const std::shared_ptr<T>& ptr)
-  {
-    return ptr.get();
-  });
-  mod.method("get", [](const std::unique_ptr<T>& ptr)
-  {
-    return ptr.get();
-  });
-}
-
-}
-
 template<typename T>
 void Module::add_default_constructor(std::true_type, jl_datatype_t* dt)
 {
@@ -784,7 +753,6 @@ private:
     set_julia_type<AppliedT>(app_dt);
     m_module.add_default_constructor<AppliedT>(DefaultConstructible<AppliedT>(), app_dt);
     m_module.add_copy_constructor<AppliedT>(CopyConstructible<AppliedT>(), app_dt);
-    //detail::add_smart_pointer_types<AppliedT>(app_dt, m_module);
     static_type_mapping<AppliedT>::set_reference_type(app_ref_dt);
     static_type_mapping<AppliedT>::set_allocated_type(app_alloc_dt);
 
@@ -873,7 +841,6 @@ TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t*
     set_julia_type<T>(base_dt);
     add_default_constructor<T>(DefaultConstructible<T>(), base_dt);
     add_copy_constructor<T>(CopyConstructible<T>(), base_dt);
-    //detail::add_smart_pointer_types<T>(base_dt, *this);
     static_type_mapping<T>::set_reference_type(ref_dt);
     static_type_mapping<T>::set_allocated_type(alloc_dt);
   }
@@ -973,25 +940,6 @@ public:
 private:
   std::map<std::string, std::shared_ptr<Module>> m_modules;
 };
-
-// Smart pointers
-
-// Shared pointer
-template<typename T>
-struct ConvertToJulia<std::shared_ptr<T>, false, false, false>
-{
-  jl_value_t* operator()(const std::shared_ptr<T>& cpp_obj) const
-  {
-    return create<std::shared_ptr<T>>(cpp_obj);
-  }
-};
-
-// Unique Ptr
-template<typename T>
-inline jl_value_t* convert_to_julia(std::unique_ptr<T> cpp_val)
-{
-  return create<std::unique_ptr<T>>(std::move(cpp_val));
-}
 
 /// Registry for functions that are called when the CxxWrap module is initialized
 class InitHooks

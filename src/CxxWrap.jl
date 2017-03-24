@@ -33,15 +33,15 @@ abstract CppDisplay <: Display
 abstract CppArray{T,N} <: AbstractArray{T,N}
 abstract CppAssociative{K,V} <: Associative{K,V}
 
-# C++ std::shared_ptr
-type SharedPtr{T} <: CppAny
-  cpp_object::Ptr{Void}
+abstract SmartPointer{T} <: CppAny
+
+type SmartPointerWithDeref{T, DerefFunction} <: SmartPointer{T}
+  ptr::Ptr{Void}
 end
 
-# C++ std::unique_ptr
-type UniquePtr{T} <: CppAny
-  cpp_object::Ptr{Void}
-end
+reference_type(t::DataType) = t
+
+Base.getindex{T,DerefPtr}(p::SmartPointerWithDeref{T,DerefPtr})::reference_type(T) = ccall(DerefPtr, reference_type(T), (Ptr{Void},), p.ptr)
 
 immutable StrictlyTypedNumber{NumberT}
   value::NumberT
@@ -151,7 +151,10 @@ function argument_overloads(t::Type{Array{AbstractString,1}})
 end
 argument_overloads{T <: Number}(t::Type{Ptr{T}}) = [Array{T,1}]
 
-map_julia_arg_type(t::DataType) = Union{t,argument_overloads(t)...}
+smart_pointer_type(t::DataType) = t
+smart_pointer_type{T <: CppAny}(::Type{T}) = SmartPointer{T}
+
+map_julia_arg_type(t::DataType) = Union{t,smart_pointer_type(t),argument_overloads(t)...}
 map_julia_arg_type{T}(a::Type{StrictlyTypedNumber{T}}) = T
 
 # Build the expression to wrap the given function
@@ -172,6 +175,7 @@ function build_function_expression(func::CppFunctionInfo)
   map_c_arg_type(::Type{DataType}) = Any
   map_c_arg_type{T <: Tuple}(::Type{T}) = Any
   map_c_arg_type{T,N}(::Type{ConstArray{T,N}}) = Any
+  map_c_arg_type{T <: SmartPointer}(::Type{T}) = Any
 
   map_return_type(t) = map_c_arg_type(t)
   map_return_type{T}(t::Type{Ref{T}}) = Ptr{T}
@@ -209,7 +213,10 @@ function wrap_reference_converters(registry, julia_mod)
   reftypes = reference_types(registry, mod_name)
   alloctypes = allocated_types(registry, mod_name)
   for (rt, at) in zip(reftypes, alloctypes)
-    Core.eval(Base, :(cconvert(::Type{$rt}, x::$(supertype(at))) = unsafe_load(reinterpret(Ptr{$rt}, pointer_from_objref(x)))))
+    st = supertype(at)
+    Core.eval(Base, :(cconvert(::Type{$rt}, x::$st) = unsafe_load(reinterpret(Ptr{$rt}, pointer_from_objref(x)))))
+    Core.eval(Base, :(cconvert(::Type{$rt}, x::$(SmartPointer{st})) = x[]))
+    Core.eval(CxxWrap, :(reference_type(::Type{$st}) = $rt))
   end
 end
 

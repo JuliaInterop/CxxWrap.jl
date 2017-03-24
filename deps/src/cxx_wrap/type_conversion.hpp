@@ -164,10 +164,16 @@ struct IsFundamental<const char*>
   static constexpr bool value = false;
 };
 
+/// Indicate if a type is a smart pointer
+template<typename T> struct IsSmartPointerType
+{
+  static constexpr bool value = false;
+};
+
 /// Trait to determine if the given type is to be treated as a value type, i.e. if the reference should be stripped when passed as argument
 template<typename T> struct IsValueType
 {
-  static constexpr bool value = IsImmutable<T>::value || IsBits<T>::value || IsFundamental<T>::value;
+  static constexpr bool value = IsImmutable<T>::value || IsBits<T>::value || IsFundamental<T>::value || IsSmartPointerType<T>::value;
 };
 
 namespace detail
@@ -241,14 +247,6 @@ namespace detail
     reinterpret_cast<WrappedCppPtr*>(to_delete)->voidptr = nullptr;
   }
 
-  // Julia 0.4 version
-  template<typename T>
-  jl_value_t* finalizer_closure(jl_value_t *F, jl_value_t **args, uint32_t nargs)
-  {
-    finalizer<T>(args[0]);
-    return nullptr;
-  }
-
   template<typename T>
   struct unused_type
   {
@@ -269,9 +267,12 @@ namespace detail
 template<typename T1, typename T2> using define_if_different = typename DefineIfDifferent<T1,T2>::type;
 }
 
-/// Static mapping base template
+/// Static mapping base template, for dynamically added types
 template<typename SourceT, typename Enable=void> struct CXX_WRAP_EXPORT static_type_mapping
 {
+
+  static constexpr bool is_dynamic = true;
+
   typedef typename detail::StaticIf<IsBits<remove_const_ref<SourceT>>::value, remove_const_ref<SourceT>, WrappedCppPtr>::type type;
 
   // Abstract base type for both the reference and allocated type
@@ -313,7 +314,6 @@ template<typename SourceT, typename Enable=void> struct CXX_WRAP_EXPORT static_t
       throw std::runtime_error("Type " + std::string(typeid(SourceT).name()) + " was already registered");
     }
     type_pointer() = dt;
-    SetFinalizer<SourceT>()();
   }
 
   static void set_reference_type(jl_datatype_t* dt)
@@ -324,37 +324,6 @@ template<typename SourceT, typename Enable=void> struct CXX_WRAP_EXPORT static_t
   static void set_allocated_type(jl_datatype_t* dt)
   {
     allocated_type_pointer() = dt;
-  }
-
-  template<typename BareT>
-  struct SetFinalizer
-  {
-    void operator()()
-    {
-      #if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 5
-            finalizer_pointer() = jl_new_closure(detail::finalizer_closure<BareT>, (jl_value_t*)jl_emptysvec, NULL);
-      #else
-            finalizer_pointer() = jl_box_voidpointer((void*)detail::finalizer<BareT>);
-      #endif
-      protect_from_gc(finalizer_pointer());
-    }
-  };
-
-  template<typename BareT>
-  struct SetFinalizer<BareT*>
-  {
-    void operator()()
-    {
-    }
-  };
-
-  static jl_function_t* finalizer()
-  {
-    if(type_pointer() == nullptr)
-    {
-      throw std::runtime_error("Type " + std::string(typeid(SourceT).name()) + " has no finalizer");
-    }
-    return finalizer_pointer();
   }
 
   static bool has_julia_type()
@@ -379,12 +348,6 @@ private:
   {
     static jl_datatype_t* m_allocated_type_pointer = nullptr;
     return m_allocated_type_pointer;
-  }
-
-  static jl_function_t*& finalizer_pointer()
-  {
-    static jl_function_t* m_finalizer = nullptr;
-    return m_finalizer;
   }
 };
 
@@ -813,17 +776,35 @@ namespace detail
   };
 }
 
+/// Wrap a C++ pointer in a Julia type that contains a single void pointer field, returning the result as an any
+template<typename T>
+jl_value_t* boxed_cpp_pointer(T* cpp_ptr, jl_datatype_t* dt, bool add_finalizer)
+{
+  assert(jl_datatype_nfields(dt) == 1);
+  assert(jl_field_type(dt,0) == (jl_value_t*)jl_voidpointer_type);
+  jl_value_t* void_ptr = nullptr;
+  jl_value_t* result = nullptr;
+  jl_value_t* finalizer = nullptr;
+  JL_GC_PUSH3(&void_ptr, &result, &finalizer);
+  void_ptr = jl_box_voidpointer((void*)cpp_ptr);
+  result = jl_new_struct(dt, void_ptr);
+  if(add_finalizer)
+  {
+    finalizer = jl_box_voidpointer((void*)detail::finalizer<T>);
+    jl_gc_add_finalizer(result, finalizer);
+  }
+  JL_GC_POP();
+  return result;
+};
+
 template<typename T> using julia_converter_type = ConvertToJulia<typename detail::StrippedConversionType<T>::type, IsFundamental<remove_const_ref<T>>::value, IsImmutable<remove_const_ref<T>>::value, IsBits<remove_const_ref<T>>::value>;
 
 /// Conversion to the statically mapped target type.
 template<typename T>
-inline auto convert_to_julia(T&& cpp_val) -> decltype(julia_converter_type<T>()(cpp_val))
+inline auto convert_to_julia(T&& cpp_val) -> decltype(julia_converter_type<T>()(std::forward<T>(cpp_val)))
 {
   return julia_converter_type<T>()(std::forward<T>(cpp_val));
 }
-
-template<typename T>
-inline jl_value_t* convert_to_julia(std::unique_ptr<T> cpp_val);
 
 template<typename CppT>
 inline typename std::enable_if<!std::is_same<jl_value_t*, mapped_julia_type<CppT>>::value && !std::is_same<WrappedCppPtr, mapped_julia_type<CppT>>::value, jl_value_t*>::type box(const CppT& cpp_val)
@@ -836,13 +817,7 @@ inline typename std::enable_if<!std::is_same<jl_value_t*, mapped_julia_type<CppT
 template<typename CppT>
 inline typename std::enable_if<std::is_same<WrappedCppPtr, mapped_julia_type<CppT>>::value, jl_value_t*>::type box(const CppT& cpp_val)
 {
-  jl_value_t* void_ptr = nullptr;
-  jl_value_t* result = nullptr;
-  JL_GC_PUSH2(&void_ptr, &result);
-  void_ptr = jl_box_voidpointer(static_cast<void*>(const_cast<CppT*>(&cpp_val)));
-  result = jl_new_struct(julia_reference_type<CppT>(), void_ptr);
-  JL_GC_POP();
-  return result;
+  return boxed_cpp_pointer(&cpp_val, julia_reference_type<CppT>(), false);
 }
 
 // Pass-through for already boxed types
@@ -1130,7 +1105,7 @@ struct ConvertToCpp<CppT, false, false, true>
 
 // Generic conversion for C++ classes wrapped in a composite type
 template<typename CppT>
-struct ConvertToCpp<CppT, false, false, false>
+struct ConvertToCpp<CppT, false, false, false, typename std::enable_if<static_type_mapping<CppT>::is_dynamic>::type>
 {
   CppT operator()(const WrappedCppPtr& julia_value) const
   {

@@ -28,6 +28,7 @@ set(JULIA_LIBRARY "/usr/lib/julia/libjulia.so" CACHE FILEPATH "Julia library")
 
 add_library(cxx_wrap SHARED
   array.hpp
+  smart_pointers.hpp
   c_interface.cpp
   cxx_wrap.cpp
   functions.hpp
@@ -60,6 +61,7 @@ install(
     array.hpp
     cxx_wrap.hpp
     functions.hpp
+    smart_pointers.hpp
     type_conversion.hpp
   DESTINATION
     include
