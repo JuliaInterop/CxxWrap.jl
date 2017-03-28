@@ -137,6 +137,16 @@ struct CppAny
 {
 };
 
+// Specialize to indicate direct Julia supertype in a smart-pointer compatible way i.e. using this to define supertypes
+// will make conversion to a smart pointer of the base type work like in C++
+template<typename T>
+struct SuperType
+{
+  typedef T type;
+};
+
+template<typename T> using supertype = typename SuperType<T>::type;
+
 /// Trait to determine if a type is to be treated as a Julia immutable type that has isbits == true
 template<typename T> struct IsImmutable : std::false_type {};
 
@@ -221,15 +231,22 @@ inline CppT convert_to_cpp(const JuliaT& julia_val)
   return cpp_converter_type<CppT>()(julia_val);
 }
 
+// Unbox boxed type
+template<typename CppT>
+inline CppT unbox(jl_value_t* v)
+{
+  return *reinterpret_cast<CppT*>(jl_data_ptr(v));
+}
+
 /// Equivalent of the basic C++ type layout in Julia
 struct WrappedCppPtr {
   void* voidptr;
 };
 
 template<typename T>
-T* julia_cast(jl_value_t* v)
+T* unbox_wrapped_ptr(jl_value_t* v)
 {
-  return reinterpret_cast<T*>(reinterpret_cast<WrappedCppPtr*>(v)->voidptr);
+  return reinterpret_cast<T*>(unbox<WrappedCppPtr>(v).voidptr);
 }
 
 namespace detail
@@ -238,7 +255,7 @@ namespace detail
   template<typename T>
   void finalizer(jl_value_t* to_delete)
   {
-    T* stored_obj = julia_cast<T>(to_delete);
+    T* stored_obj = unbox_wrapped_ptr<T>(to_delete);
     if(stored_obj != nullptr)
     {
       delete stored_obj;
@@ -929,13 +946,6 @@ inline jl_value_t* box(const detail::define_if_different<unsigned long, uint64_t
   return detail::box_us_long(x);
 }
 
-// Unbox boxed type
-template<typename CppT>
-inline CppT unbox(jl_value_t* v)
-{
-  static_assert(sizeof(CppT) == 0, "Unimplemented unbox in cxx_wrap");
-}
-
 template<>
 inline bool unbox(jl_value_t* v)
 {
@@ -1016,7 +1026,7 @@ struct ConvertToCpp<CppT, false, true, false>
 {
   CppT operator()(jl_value_t* julia_value) const
   {
-    return *reinterpret_cast<CppT*>(jl_data_ptr(julia_value));
+    return unbox<CppT>(julia_value);
   }
 };
 
@@ -1093,7 +1103,7 @@ struct ConvertToCpp<CppT, false, false, true>
   // Boxed variant
   CppT operator()(jl_value_t* julia_value) const
   {
-    return *reinterpret_cast<CppT*>(jl_data_ptr(julia_value));
+    return unbox<CppT>(julia_value);
   }
 
   // Direct variant

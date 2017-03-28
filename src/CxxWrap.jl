@@ -33,15 +33,31 @@ abstract CppDisplay <: Display
 abstract CppArray{T,N} <: AbstractArray{T,N}
 abstract CppAssociative{K,V} <: Associative{K,V}
 
+"""
+Base class for smart pointers
+"""
 abstract SmartPointer{T} <: CppAny
 
-type SmartPointerWithDeref{T, DerefFunction} <: SmartPointer{T}
+"""
+Concrete smart pointer implementation. PT is a hash for the pointer types, DerefPtr a pointer to the dereference function,
+ConstructPtr a function pointer to construct from a compatible smart pointer type (e.g. weak_ptr from shared_ptr)
+CastPtr is a function pointer to cast to the direct base class
+"""
+type SmartPointerWithDeref{T,PT,DerefPtr,ConstructPtr,CastPtr} <: SmartPointer{T}
   ptr::Ptr{Void}
 end
 
 reference_type(t::DataType) = t
 
-Base.getindex{T,DerefPtr}(p::SmartPointerWithDeref{T,DerefPtr})::reference_type(T) = ccall(DerefPtr, reference_type(T), (Ptr{Void},), p.ptr)
+Base.getindex{T,PT,DerefPtr,ConstructPtr,CastPtr}(p::SmartPointerWithDeref{T,PT,DerefPtr,ConstructPtr,CastPtr})::reference_type(T) = ccall(DerefPtr, reference_type(T), (Ptr{Void},), p.ptr)
+Base.convert{T,PT,DerefPtr,ConstructPtr,CastPtr}(::Type{SmartPointerWithDeref{T,PT,DerefPtr,ConstructPtr,CastPtr}}, p::SmartPointerWithDeref{T,PT,DerefPtr,ConstructPtr,CastPtr}) = p
+Base.convert{T,PT,DerefPtr,ConstructPtr,CastPtr}(::Type{SmartPointerWithDeref{T,PT,DerefPtr,ConstructPtr,CastPtr}}, p::SmartPointer{T}) = ccall(ConstructPtr, Any, (Any,), p)
+function Base.convert{BaseT,DerivedT,PT,B1,B2,B3,D1,D2,D3}(::Type{SmartPointerWithDeref{BaseT,PT,B1,B2,B3}}, p::SmartPointerWithDeref{DerivedT,PT,D1,D2,D3})
+  if !(DerivedT <: BaseT)
+    error("$DerivedT does not inherit from $BaseT in smart pointer convert")
+  end
+  return convert(SmartPointerWithDeref{BaseT,PT,B1,B2,B3}, ccall(D3, Any, (Ptr{Void},), p.ptr))
+end
 
 immutable StrictlyTypedNumber{NumberT}
   value::NumberT
@@ -152,9 +168,16 @@ end
 argument_overloads{T <: Number}(t::Type{Ptr{T}}) = [Array{T,1}]
 
 smart_pointer_type(t::DataType) = t
-smart_pointer_type{T <: CppAny}(::Type{T}) = SmartPointer{T}
+function smart_pointer_type{T <: CppAny}(::Type{T})
+  @compat result{T2 <: T} = Union{T2, SmartPointer{T2}}
+  return result
+end
+function smart_pointer_type{T,PT,DerefPtr,ConstructPtr,CastPtr}(::Type{SmartPointerWithDeref{T,PT,DerefPtr,ConstructPtr,CastPtr}})
+  @compat result{T2 <: T} = SmartPointer{T2}
+  return result
+end
 
-map_julia_arg_type(t::DataType) = Union{t,smart_pointer_type(t),argument_overloads(t)...}
+map_julia_arg_type(t::DataType) = Union{smart_pointer_type(t),argument_overloads(t)...}
 map_julia_arg_type{T}(a::Type{StrictlyTypedNumber{T}}) = T
 
 # Build the expression to wrap the given function

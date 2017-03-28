@@ -6,6 +6,26 @@
 namespace cpp_types
 {
 
+// Custom minimal smart pointer type
+template<typename T>
+struct MySmartPointer
+{
+  MySmartPointer(T* ptr) : m_ptr(ptr)
+  {
+  }
+
+  MySmartPointer(std::shared_ptr<T> ptr) : m_ptr(ptr.get())
+  {
+  }
+
+  T& operator*() const
+  {
+    return *m_ptr;
+  }
+
+  T* m_ptr;
+};
+
 struct DoubleData
 {
   double a[4];
@@ -88,6 +108,8 @@ enum CppEnum
 namespace cxx_wrap
 {
   template<> struct IsBits<cpp_types::CppEnum> : std::true_type {};
+  template<typename T> struct IsSmartPointerType<cpp_types::MySmartPointer<T>> : std::true_type { };
+  template<typename T> struct ConstructorPointerType<cpp_types::MySmartPointer<T>> { typedef std::shared_ptr<T> type; };
 }
 
 JULIA_CPP_MODULE_BEGIN(registry)
@@ -118,9 +140,25 @@ JULIA_CPP_MODULE_BEGIN(registry)
     return w->greet();
   });
 
+  types.method("smart_world_factory", []()
+  {
+    return MySmartPointer<World>(new World("smart factory hello"));
+  });
+  // smart ptr overload for greet
+  types.method("greet_smart", [](const MySmartPointer<World>& w)
+  {
+    return (*w).greet();
+  });
+
+  // weak ptr overload for greet
+  types.method("greet_weak", [](const std::weak_ptr<World>& w)
+  {
+    return w.lock()->greet();
+  });
+
   types.method("unique_world_factory", []()
   {
-    return std::unique_ptr<World>(new World("unique factory hello"));
+    return std::unique_ptr<const World>(new World("unique factory hello"));
   });
 
   types.add_type<NonCopyable>("NonCopyable");
