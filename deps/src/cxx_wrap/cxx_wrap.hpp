@@ -26,7 +26,7 @@ namespace detail
 template<typename R, typename... Args>
 struct ReturnTypeAdapter
 {
-  inline mapped_julia_type<R> operator()(const void* functor, mapped_julia_type<Args>... args)
+  inline mapped_return_type<R> operator()(const void* functor, mapped_julia_type<Args>... args)
   {
     auto std_func = reinterpret_cast<const std::function<R(Args...)>*>(functor);
     assert(std_func != nullptr);
@@ -47,19 +47,22 @@ struct ReturnTypeAdapter<void, Args...>
 
 /// Call a C++ std::function, passed as a void pointer since it comes from Julia
 template<typename R, typename... Args>
-mapped_julia_type<R> call_functor(const void* functor, mapped_julia_type<Args>... args)
+struct CallFunctor
 {
-  try
+  static mapped_return_type<R> apply(const void* functor, mapped_julia_type<Args>... args)
   {
-    return ReturnTypeAdapter<R, Args...>()(functor, args...);
-  }
-  catch(const std::exception& err)
-  {
-    jl_error(err.what());
-  }
+    try
+    {
+      return ReturnTypeAdapter<R, Args...>()(functor, args...);
+    }
+    catch(const std::exception& err)
+    {
+      jl_error(err.what());
+    }
 
-  return mapped_julia_type<R>();
-}
+    return mapped_return_type<R>();
+  }
+};
 
 /// Make a vector with the types in the variadic template parameter pack
 template<typename... Args>
@@ -165,13 +168,13 @@ class FunctionWrapper : public FunctionWrapperBase
 public:
   typedef std::function<R(Args...)> functor_t;
 
-  FunctionWrapper(const functor_t& function) : FunctionWrapperBase(julia_reference_type<dereference_for_mapping<R>>()), m_function(function)
+  FunctionWrapper(const functor_t& function) : FunctionWrapperBase(julia_return_type<R>()), m_function(function)
   {
   }
 
   virtual void* pointer()
   {
-    return reinterpret_cast<void*>(detail::call_functor<R, Args...>);
+    return reinterpret_cast<void*>(detail::CallFunctor<R, Args...>::apply);
   }
 
   virtual void* thunk()
@@ -200,7 +203,7 @@ class FunctionPtrWrapper : public FunctionWrapperBase
 public:
   typedef std::function<R(Args...)> functor_t;
 
-  FunctionPtrWrapper(R(*f)(Args...)) : FunctionWrapperBase(julia_reference_type<dereference_for_mapping<R>>()), m_function(f)
+  FunctionPtrWrapper(R(*f)(Args...)) : FunctionWrapperBase(julia_return_type<R>()), m_function(f)
   {
   }
 

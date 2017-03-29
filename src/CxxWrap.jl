@@ -167,11 +167,16 @@ function argument_overloads(t::Type{Array{AbstractString,1}})
 end
 argument_overloads{T <: Number}(t::Type{Ptr{T}}) = [Array{T,1}]
 
-smart_pointer_type(t::DataType) = t
-function smart_pointer_type{T <: CppAny}(::Type{T})
+function make_smart_union{T}(::Type{T})
   @compat result{T2 <: T} = Union{T2, SmartPointer{T2}}
   return result
 end
+
+smart_pointer_type(t::DataType) = t
+smart_pointer_type{T <: CppAny}(x::Type{T}) = make_smart_union(x)
+smart_pointer_type{T <: CppArray}(x::Type{T}) = make_smart_union(x)
+smart_pointer_type{T <: CppAssociative}(x::Type{T}) = make_smart_union(x)
+
 function smart_pointer_type{T,PT,DerefPtr,ConstructPtr,CastPtr}(::Type{SmartPointerWithDeref{T,PT,DerefPtr,ConstructPtr,CastPtr}})
   @compat result{T2 <: T} = SmartPointer{T2}
   return result

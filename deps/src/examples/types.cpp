@@ -130,7 +130,7 @@ JULIA_CPP_MODULE_BEGIN(registry)
     return new World("factory hello");
   });
 
-  types.method("shared_world_factory", []()
+  types.method("shared_world_factory", []() -> const std::shared_ptr<World>
   {
     return std::shared_ptr<World>(new World("shared factory hello"));
   });
@@ -159,6 +159,11 @@ JULIA_CPP_MODULE_BEGIN(registry)
   types.method("unique_world_factory", []()
   {
     return std::unique_ptr<const World>(new World("unique factory hello"));
+  });
+
+  types.method("world_by_value", [] () -> World
+  {
+    return World("world by value hello");
   });
 
   types.add_type<NonCopyable>("NonCopyable");

@@ -41,6 +41,9 @@ swf2 = CppTypes.smart_world_factory()
 @show uwf = CppTypes.unique_world_factory()
 @test CppTypes.greet(uwf) == "unique factory hello"
 
+byval = CppTypes.world_by_value()
+@test CppTypes.greet(byval) == "world by value hello"
+
 CppTypes.set(w, "hello")
 @show CppTypes.greet(w)
 @test CppTypes.greet(w) == "hello"
