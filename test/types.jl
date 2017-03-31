@@ -28,6 +28,7 @@ dump(w)
 
 swf = CppTypes.shared_world_factory()
 @test CppTypes.greet_shared(swf) == "shared factory hello"
+@test CppTypes.greet_shared_const(swf) == "shared factory hello"
 @test CppTypes.greet(swf[]) == "shared factory hello" # Explicit dereference
 @test CppTypes.greet(swf) == "shared factory hello" # Automatic conversion
 swf2 = CppTypes.smart_world_factory()

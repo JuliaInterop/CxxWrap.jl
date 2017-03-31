@@ -139,6 +139,10 @@ JULIA_CPP_MODULE_BEGIN(registry)
   {
     return w->greet();
   });
+  types.method("greet_shared_const", [](const std::shared_ptr<const World>& w)
+  {
+    return w->greet();
+  });
 
   types.method("smart_world_factory", []()
   {

@@ -78,7 +78,7 @@ struct ConvertToBase<PtrT<T>>
     auto smart_ptr = reinterpret_cast<PtrT<T>*>(smart_void_ptr);
     if(std::is_same<T,supertype<T>>::value)
     {
-      jl_error("No compile-time type hierarchy specified. Specialize SuperType to get automatic pointer conversion.");
+      jl_error(("No compile-time type hierarchy specified. Specialize SuperType to get automatic pointer conversion from " + julia_type_name(julia_type<T>()) + " to its base.").c_str());
     }
     return boxed_cpp_pointer(new PtrT<supertype<T>>(*smart_ptr), static_type_mapping<PtrT<supertype<T>>>::julia_type(), true);
   }
@@ -123,6 +123,12 @@ template<template<typename...> class PtrT, typename T> struct static_type_mappin
     }
     return result;
   }
+};
+
+template<template<typename...> class PtrT, typename T> struct static_type_mapping<PtrT<const T>, typename std::enable_if<IsSmartPointerType<PtrT<const T>>::value>::type>
+{
+  typedef jl_value_t* type;
+  static jl_datatype_t* julia_type() { return static_type_mapping<PtrT<T>>::julia_type(); }
 };
 
 template<typename T>
