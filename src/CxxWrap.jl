@@ -4,7 +4,7 @@ module CxxWrap
 
 using Compat
 
-export wrap_modules, wrap_module, wrap_module_types, wrap_module_functions, safe_cfunction, load_modules
+export wrap_modules, wrap_module, wrap_module_types, wrap_module_functions, safe_cfunction, load_modules, ptrunion
 
 # Convert path if it contains lib prefix on windows
 function lib_path(so_path::AbstractString)
@@ -33,6 +33,8 @@ abstract CppDisplay <: Display
 abstract CppArray{T,N} <: AbstractArray{T,N}
 abstract CppAssociative{K,V} <: Associative{K,V}
 
+cxxdowncast(x) = error("No downcast for type $(supertype(typeof(x))). Did you specialize SuperType to enable automatic downcasting?")
+
 """
 Base class for smart pointers
 """
@@ -50,8 +52,26 @@ end
 reference_type(t::DataType) = t
 
 Base.getindex{T,PT,DerefPtr,ConstructPtr,CastPtr}(p::SmartPointerWithDeref{T,PT,DerefPtr,ConstructPtr,CastPtr})::reference_type(T) = ccall(DerefPtr, reference_type(T), (Ptr{Void},), p.ptr)
+
+# No conversion if source and target type are identical
 Base.convert{T,PT,DerefPtr,ConstructPtr,CastPtr}(::Type{SmartPointerWithDeref{T,PT,DerefPtr,ConstructPtr,CastPtr}}, p::SmartPointerWithDeref{T,PT,DerefPtr,ConstructPtr,CastPtr}) = p
-Base.convert{T,PT,DerefPtr,ConstructPtr,CastPtr}(::Type{SmartPointerWithDeref{T,PT,DerefPtr,ConstructPtr,CastPtr}}, p::SmartPointer{T}) = ccall(ConstructPtr, Any, (Any,), p)
+
+# Construct from a related pointer, e.g. a std::weak_ptr from std::shared_ptr
+function Base.convert{T,PT1,PT2,B1,B2,B3,D1,D2,D3}(::Type{SmartPointerWithDeref{T,PT1,B1,B2,B3}}, p::SmartPointerWithDeref{T,PT2,D1,D2,D3})
+  ccall(B2, Any, (Any,), p)
+end
+
+# Construct from a related pointer, downcasting the type to base class
+function Base.convert{BaseT,DerivedT,PT1,PT2,B1,B2,B3,D1,D2,D3}(t::Type{SmartPointerWithDeref{BaseT,PT1,B1,B2,B3}}, p::SmartPointerWithDeref{DerivedT,PT2,D1,D2,D3})
+  if !(DerivedT <: BaseT)
+    error("$DerivedT does not inherit from $BaseT in smart pointer convert")
+  end
+  # First convert to base type
+  base_p = ccall(D3, Any, (Ptr{Void},), p.ptr)
+  return convert(t, base_p)
+end
+
+# Cast to base type enclosed in same pointer type
 function Base.convert{BaseT,DerivedT,PT,B1,B2,B3,D1,D2,D3}(::Type{SmartPointerWithDeref{BaseT,PT,B1,B2,B3}}, p::SmartPointerWithDeref{DerivedT,PT,D1,D2,D3})
   if !(DerivedT <: BaseT)
     error("$DerivedT does not inherit from $BaseT in smart pointer convert")
@@ -167,15 +187,18 @@ function argument_overloads(t::Type{Array{AbstractString,1}})
 end
 argument_overloads{T <: Number}(t::Type{Ptr{T}}) = [Array{T,1}]
 
-function make_smart_union{T}(::Type{T})
+"""
+Create a Union containing the type and a smart pointer to any type derived from it
+"""
+function ptrunion{T}(::Type{T})
   @compat result{T2 <: T} = Union{T2, SmartPointer{T2}}
   return result
 end
 
 smart_pointer_type(t::DataType) = t
-smart_pointer_type{T <: CppAny}(x::Type{T}) = make_smart_union(x)
-smart_pointer_type{T <: CppArray}(x::Type{T}) = make_smart_union(x)
-smart_pointer_type{T <: CppAssociative}(x::Type{T}) = make_smart_union(x)
+smart_pointer_type{T <: CppAny}(x::Type{T}) = ptrunion(x)
+smart_pointer_type{T <: CppArray}(x::Type{T}) = ptrunion(x)
+smart_pointer_type{T <: CppAssociative}(x::Type{T}) = ptrunion(x)
 
 function smart_pointer_type{T,PT,DerefPtr,ConstructPtr,CastPtr}(::Type{SmartPointerWithDeref{T,PT,DerefPtr,ConstructPtr,CastPtr}})
   @compat result{T2 <: T} = SmartPointer{T2}
@@ -242,8 +265,11 @@ function wrap_reference_converters(registry, julia_mod)
   alloctypes = allocated_types(registry, mod_name)
   for (rt, at) in zip(reftypes, alloctypes)
     st = supertype(at)
-    Core.eval(Base, :(cconvert(::Type{$rt}, x::$st) = unsafe_load(reinterpret(Ptr{$rt}, pointer_from_objref(x)))))
+    Core.eval(Base, :(cconvert(::Type{$rt}, x::$rt) = x))
+    Core.eval(Base, :(cconvert(::Type{$rt}, x::$at) = unsafe_load(reinterpret(Ptr{$rt}, pointer_from_objref(x)))))
+    Core.eval(Base, :(cconvert{T <: $st}(t::Type{$rt}, x::T) = Base.cconvert(t, $(cxxdowncast)(x))))
     Core.eval(Base, :(cconvert(::Type{$rt}, x::$(SmartPointer{st})) = x[]))
+    Core.eval(Base, :(cconvert{T <: $st}(t::Type{$rt}, x::$(SmartPointer){T}) = Base.cconvert(t, $(cxxdowncast)(x[]))))
     Core.eval(CxxWrap, :(reference_type(::Type{$st}) = $rt))
   end
 end
@@ -260,9 +286,16 @@ function wrap_functions(functions, julia_mod)
     :*,
     :(==)
   ])
+
+  cxxnames = Set([
+    :cxxdowncast
+  ])
+
   for func in functions
     if func.name ∈ basenames
       Core.eval(Base, build_function_expression(func))
+    elseif func.name ∈ cxxnames
+      Core.eval(CxxWrap, build_function_expression(func))
     else
       Core.eval(julia_mod, build_function_expression(func))
     end

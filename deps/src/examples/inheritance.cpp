@@ -4,12 +4,13 @@
 
 struct A
 {
-  virtual std::string message() = 0;
+  virtual std::string message() const = 0;
+  std::string data = "mydata";
 };
 
 struct B : A
 {
-  virtual std::string message()
+  virtual std::string message() const
   {
     return "B";
   }
@@ -17,7 +18,8 @@ struct B : A
 
 struct C : B
 {
-  virtual std::string message()
+  C() { this->data = "C"; }
+  virtual std::string message() const
   {
     return "C";
   }
@@ -25,7 +27,7 @@ struct C : B
 
 struct D : A
 {
-  virtual std::string message()
+  virtual std::string message() const
   {
     return "D";
   }
@@ -60,5 +62,10 @@ JULIA_CPP_MODULE_BEGIN(registry)
   types.method("shared_d", []() { return std::make_shared<D>(); });
   types.method("shared_ptr_message", [](const std::shared_ptr<A>& x) { return x->message(); });
 
-  types.export_symbols("A", "B", "C", "D", "message", "create_abstract", "shared_ptr_message", "shared_b", "shared_c", "shared_d");
+  types.method("weak_ptr_message_a", [](const std::weak_ptr<A>& x) { return x.lock()->message(); });
+  types.method("weak_ptr_message_b", [](const std::weak_ptr<B>& x) { return x.lock()->message(); });
+
+  types.method("dynamic_message_c", [](const A* c) { return dynamic_cast<const C*>(c)->data; });
+
+  types.export_symbols("A", "B", "C", "D", "message", "create_abstract", "shared_ptr_message", "shared_b", "shared_c", "shared_d", "weak_ptr_message_a", "weak_ptr_message_b", "dynamic_message_c");
 JULIA_CPP_MODULE_END

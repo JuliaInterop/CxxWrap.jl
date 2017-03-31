@@ -114,6 +114,16 @@ jl_value_t* create(ArgsT&&... args)
   return boxed_cpp_pointer(cpp_obj, dt, true);
 }
 
+/// Safe downcast to base type
+template<typename T>
+struct DownCast
+{
+  static inline supertype<T>& apply(T& base)
+  {
+    return static_cast<supertype<T>&>(base);
+  }
+};
+
 // The CxxWrap Julia module
 extern jl_module_t* g_cxx_wrap_module;
 extern jl_datatype_t* g_cppfunctioninfo_type;
@@ -763,6 +773,11 @@ private:
 
     m_module.register_type_pair(app_ref_dt, app_alloc_dt);
 
+    if(!std::is_same<supertype<AppliedT>,AppliedT>::value)
+    {
+      m_module.method("cxxdowncast", DownCast<AppliedT>::apply);
+    }
+
     return 0;
   }
   Module& m_module;
@@ -859,6 +874,11 @@ TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t*
 #endif
 
   this->register_type_pair(ref_dt, alloc_dt);
+
+  if(!is_parametric && !std::is_same<supertype<T>,T>::value)
+  {
+    method("cxxdowncast", DownCast<T>::apply);
+  }
 
   JL_GC_POP();
   return TypeWrapper<T>(*this, base_dt, ref_dt, alloc_dt);
