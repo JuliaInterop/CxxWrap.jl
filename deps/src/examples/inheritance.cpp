@@ -41,6 +41,11 @@ A* create_abstract()
   return &b;
 }
 
+std::string take_ref(A& a)
+{
+  return a.message();
+}
+
 namespace cxx_wrap
 {
   // Needed for shared pointer downcasting
@@ -67,5 +72,7 @@ JULIA_CPP_MODULE_BEGIN(registry)
 
   types.method("dynamic_message_c", [](const A* c) { return dynamic_cast<const C*>(c)->data; });
 
-  types.export_symbols("A", "B", "C", "D", "message", "create_abstract", "shared_ptr_message", "shared_b", "shared_c", "shared_d", "weak_ptr_message_a", "weak_ptr_message_b", "dynamic_message_c");
+  types.method("take_ref", take_ref);
+
+  types.export_symbols("A", "B", "C", "D", "message", "create_abstract", "shared_ptr_message", "shared_b", "shared_c", "shared_d", "weak_ptr_message_a", "weak_ptr_message_b", "dynamic_message_c", "take_ref");
 JULIA_CPP_MODULE_END

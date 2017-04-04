@@ -16,6 +16,10 @@ d = D()
 @test message(c) == "C"
 @test message(d) == "D"
 
+@test take_ref(b) == "B"
+@test take_ref(c) == "C"
+@test take_ref(d) == "D"
+
 # factory function returning an abstract type A
 @test message(create_abstract()) == "B"
 
