@@ -30,9 +30,12 @@ Just like any registered package:
 Pkg.add("CxxWrap")
 ```
 ### Building on Windows
-To build on Windows, you need to set the `BUILD_ON_WINDOWS` environment variable to `"1"` in order to avoid the automatic binary download. The build prerequisites are:
-- Cmake in the path
-- Latest version of Visual Studio (Visual Studio 2015 Update 2 RC with MSVC 19.0.23824.1, it won't work on older versions due to internal compiler errors)
+To install on Windows, you need to do the following before running ```Pkg.add("CxxWrap")```:
+* Make sure the system has Visual Studio 2015 (aka Visual Studio 14) with Visual C++ installed (community edition ISO download link can be found at https://gist.github.com/CHEF-KOCH/8078b39e1aad71ef6c317a3c0edb6ec9).
+Note 1: Visual Studio default installation only gives you C# and VB. User must select custom installation and choose Visual C++ to be installed.
+Note 2: Visual Studio 2015 (Update 2 RC with MSVC 19.0.23824.1 or newer) is required; older versions won't work due to internal compiler errors; Visual Studio 2017 won't work for now but should work in the future.
+* Make sure CMake has been installed (download at https://cmake.org/download/), and its bin folder is included in the environmental variable PATH. For example, if the installation path is C:\CMake, then C:\CMake\bin should be included in PATH - normally the installer would add it automatically.
+* Create an environmental variable BUILD_ON_WINDOWS with the value 1. This tells the installer to build the binary on the local machine using CMake and Visual Stuido compiler instead of downloading the binary from server.
 
 ## Boost Python Hello World example
 Let's try to reproduce the example from the [Boost.Python tutorial](http://www.boost.org/doc/libs/1_59_0/libs/python/doc/tutorial/doc/html/index.html). Suppose we want to expose the following C++ function to Julia in a module called `CppHello`:
@@ -63,6 +66,36 @@ wrap_modules(joinpath("path/to/built/lib","libhello"))
 @show CppHello.greet()
 ```
 The code for this example can be found in [`deps/src/examples/hello.cpp`](deps/src/examples/hello.cpp) and [`test/hello.jl`](test/hello.jl).
+
+## Hello World example on Windows
+On Windows, it is not necessary to create the Visual Studio project by hand: CMake creates a .sln file in the deps/build directory of the package, and that can be opened using Visual Studio to edit the source files and so on. The drawback is that this file gets overwritten if you add a new C++ source file for example.
+
+If creating the Visual Studio project by hand is preferred, however, the following are the steps (assume Julia has been installed to C:\JuliaPro).
+
+* In Visual Studio 2015, New Project, Installed | Templates | Other Languages | Visual C++ | Win32 | Win32 Project. Type in the name "CppHello" and choose Location of the project.
+* In the Win32 Application Wizard, click Next, then select Application Type as DLL; in Additional options uncheck Security Development Lifecycle (SDL) checks. Then click Finish.
+* Choose the active configuration as Release; choose x86 or x64 to match the CPU and the Julia version installed.
+* Right click on the project name in the Solution Explorer, and choose Properties. Make the following changes (modify directory names as needed to match the actual Julia installation path):
+  * C/C++ | General | Additional Include Directories: insert "C:\JuliaPro\Julia-0.5.1\include\julia;C:\JuliaPro\pkgs-0.5.1.1\v0.5\CxxWrap\deps\usr\include;"
+  * C/C++ | Preprocessor | Preprocessor Definitions: insert "JULIA_ENABLE_THREADING;" before "%(PreprocessorDefinitions)"
+  * Linker | Input | Additional Dependencies: insert "C:\JuliaPro\pkgs-0.5.1.1\v0.5\CxxWrap\deps\usr\lib\cxx_wrap.lib;C:\JuliaPro\Julia-0.5.1\lib\libjulia.dll.a;" before "%(AdditionalIncludeDirectories)"
+* Click OK to exit the CppHello Property Pages.
+* In Solution Explorer, under Source Files, double click "CppHello.cpp" to open it. Append the following code at the end and save:
+```
+#include <cxx_wrap.hpp>
+
+std::string greet()
+{
+  return "hello, world";
+}
+
+JULIA_CPP_MODULE_BEGIN(registry)
+  cxx_wrap::Module& hello = registry.create_module("CppHello");
+  hello.method("greet", &greet);
+JULIA_CPP_MODULE_END
+```
+* Build the CppHello project.
+* Locate the resulted CppHello.dll file under the Release folder. For a 64-bit build, the path is the project folder\x64\Release\CppHello.dll.
 
 ### Exporting symbols
 Julia symbols can be exported from the module using the `export_symbols` function on the C++ side. It takes any number of symbols as string. To export `greet` from the `CppHello` module:
