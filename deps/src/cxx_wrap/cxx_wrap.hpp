@@ -873,7 +873,10 @@ TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t*
   m_jl_constants[allocname] = is_parametric ? alloc_dt->name->wrapper : (jl_value_t*)alloc_dt;
 #endif
 
-  this->register_type_pair(ref_dt, alloc_dt);
+  if(!is_parametric)
+  {
+    this->register_type_pair(ref_dt, alloc_dt);
+  }
 
   if(!is_parametric && !std::is_same<supertype<T>,T>::value)
   {
@@ -925,7 +928,11 @@ void Module::add_bits(const std::string& name, jl_datatype_t* super)
   static_assert(std::is_scalar<T>::value, "Bits types must be a scalar type");
   jl_svec_t* params = is_parametric ? parameter_list<T>()() : jl_emptysvec;
   JL_GC_PUSH1(&params);
+#if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 6
   jl_datatype_t* dt = jl_new_bitstype((jl_value_t*)jl_symbol(name.c_str()), super, params, 8*sizeof(T));
+#else
+  jl_datatype_t* dt = jl_new_primitivetype((jl_value_t*)jl_symbol(name.c_str()), super, params, 8*sizeof(T));
+#endif
   protect_from_gc(dt);
   JL_GC_POP();
   detail::dispatch_set_julia_type<T, is_parametric>()(dt);

@@ -27,18 +27,18 @@ include(depsfile)
 const cxx_wrap_path = _l_cxx_wrap
 
 # Base type for wrapped C++ types
-abstract CppAny
-abstract CppBits <: CppAny
-abstract CppDisplay <: Display
-abstract CppArray{T,N} <: AbstractArray{T,N}
-abstract CppAssociative{K,V} <: Associative{K,V}
+@compat abstract type CppAny end
+@compat abstract type CppBits <: CppAny end
+@compat abstract type CppDisplay <: Display end
+@compat abstract type CppArray{T,N} <: AbstractArray{T,N} end
+@compat abstract type CppAssociative{K,V} <: Associative{K,V} end
 
 cxxdowncast(x) = error("No downcast for type $(supertype(typeof(x))). Did you specialize SuperType to enable automatic downcasting?")
 
 """
 Base class for smart pointers
 """
-abstract SmartPointer{T} <: CppAny
+@compat abstract type SmartPointer{T} <: CppAny end
 
 """
 Concrete smart pointer implementation. PT is a hash for the pointer types, DerefPtr a pointer to the dereference function,
@@ -49,9 +49,17 @@ type SmartPointerWithDeref{T,PT,DerefPtr,ConstructPtr,CastPtr} <: SmartPointer{T
   ptr::Ptr{Void}
 end
 
-reference_type(t::DataType) = t
+reference_type(t::DataType) = Any
 
-Base.getindex{T,PT,DerefPtr,ConstructPtr,CastPtr}(p::SmartPointerWithDeref{T,PT,DerefPtr,ConstructPtr,CastPtr})::reference_type(T) = ccall(DerefPtr, reference_type(T), (Ptr{Void},), p.ptr)
+@generated function dereference_smart_pointer{T,PT,DerefPtr,ConstructPtr,CastPtr,DereferencedT}(p::SmartPointerWithDeref{T,PT,DerefPtr,ConstructPtr,CastPtr}, ::Type{DereferencedT})
+  quote
+    ccall(DerefPtr, $DereferencedT, (Ptr{Void},), p.ptr)
+  end
+end
+
+function Base.getindex{T,PT,DerefPtr,ConstructPtr,CastPtr}(p::SmartPointerWithDeref{T,PT,DerefPtr,ConstructPtr,CastPtr})::reference_type(T)
+  return dereference_smart_pointer(p, reference_type(T))
+end
 
 # No conversion if source and target type are identical
 Base.convert{T,PT,DerefPtr,ConstructPtr,CastPtr}(::Type{SmartPointerWithDeref{T,PT,DerefPtr,ConstructPtr,CastPtr}}, p::SmartPointerWithDeref{T,PT,DerefPtr,ConstructPtr,CastPtr}) = p
@@ -108,8 +116,11 @@ function __init__()
     Libdl.dlopen(cxx_wrap_path, Libdl.RTLD_GLOBAL)
   end
   ccall((:initialize, cxx_wrap_path), Void, (Any, Any, Any), CxxWrap, CppAny, CppFunctionInfo)
-
-  Base.linearindexing(::ConstArray) = Base.LinearFast()
+  @static if VERSION < v"0.6-dev"
+    Base.linearindexing(::ConstArray) = Base.LinearFast()
+  else
+    Base.IndexStyle(::ConstArray) = Base.IndexLinear()
+  end
   Base.size(arr::ConstArray) = arr.size
   Base.getindex(arr::ConstArray, i::Integer) = unsafe_load(arr.ptr.ptr, i)
 end

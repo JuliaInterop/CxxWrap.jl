@@ -1,15 +1,15 @@
 environment:
   matrix:
-  - JULIAVERSION: "julialang/bin/winnt/x64/0.4/julia-0.4-latest-win64.exe"
-    BUILD_ON_WINDOWS: 1
   - JULIAVERSION: "julialang/bin/winnt/x64/0.5/julia-0.5-latest-win64.exe"
     BUILD_ON_WINDOWS: 1
-  - JULIAVERSION: "julialang/bin/winnt/x86/0.4/julia-0.4-latest-win32.exe"
+  - JULIAVERSION: "julialang/bin/winnt/x64/0.6/julia-0.6-latest-win64.exe"
     BUILD_ON_WINDOWS: 1
   - JULIAVERSION: "julialang/bin/winnt/x86/0.5/julia-0.5-latest-win32.exe"
     BUILD_ON_WINDOWS: 1
-  - JULIAVERSION: "julialang/bin/winnt/x64/0.5/julia-0.5-latest-win64.exe"
-    BUILD_ON_WINDOWS: 1 # Test Mingw on 0.5 64bit only
+  - JULIAVERSION: "julialang/bin/winnt/x86/0.6/julia-0.6-latest-win32.exe"
+    BUILD_ON_WINDOWS: 1
+  - JULIAVERSION: "julialang/bin/winnt/x64/0.6/julia-0.6-latest-win64.exe"
+    BUILD_ON_WINDOWS: 1 # Test Mingw on 0.6 64bit only
     MSYSTEM: MINGW64
 
 branches:
