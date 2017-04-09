@@ -100,35 +100,66 @@ inline jl_value_t* julia_smartpointer_type()
   return m_ptr_type;
 }
 
-template<template<typename...> class PtrT, typename T> struct static_type_mapping<PtrT<T>, typename std::enable_if<IsSmartPointerType<PtrT<T>>::value>::type>
+namespace detail
+{
+
+template<typename PtrT, typename DefaultPtrT, typename T>
+inline jl_datatype_t* smart_julia_type()
+{
+  static jl_datatype_t* result = nullptr;
+  if(result == nullptr)
+  {
+    jl_value_t* type_hash = nullptr;
+    jl_value_t* deref_ptr = nullptr;
+    jl_value_t* construct_ptr = nullptr;
+    jl_value_t* cast_ptr = nullptr;
+    JL_GC_PUSH4(&type_hash, &deref_ptr, &construct_ptr, &cast_ptr);
+    type_hash = box(typeid(DefaultPtrT).hash_code());
+    deref_ptr = jl_box_voidpointer(reinterpret_cast<void*>(DereferenceSmartPointer<PtrT>::apply));
+    construct_ptr = jl_box_voidpointer(reinterpret_cast<void*>(ConstructFromOther<PtrT, typename ConstructorPointerType<PtrT>::type>::apply));
+    cast_ptr = jl_box_voidpointer(reinterpret_cast<void*>(ConvertToBase<PtrT>::apply));
+    result = (jl_datatype_t*)apply_type(julia_smartpointer_type(), jl_svec(5, static_type_mapping<remove_const_ref<T>>::julia_type(), type_hash, deref_ptr, construct_ptr, cast_ptr));
+    protect_from_gc(result);
+    JL_GC_POP();
+  }
+  return result;
+}
+
+template<typename T>
+struct SmartJuliaType;
+
+template<template<typename...> class PtrT, typename T>
+struct SmartJuliaType<PtrT<T>>
+{
+  static jl_datatype_t* apply()
+  {
+    return smart_julia_type<PtrT<T>,PtrT<int>,T>();
+  }
+};
+
+template<template<typename...> class PtrT, typename T> struct SmartJuliaType<PtrT<const T>>
+{
+  static jl_datatype_t* apply() { return SmartJuliaType<PtrT<T>>::apply(); }
+};
+
+template<typename T>
+struct SmartJuliaType<std::unique_ptr<T>>
+{
+  static jl_datatype_t* apply()
+  {
+    return smart_julia_type<std::unique_ptr<remove_const_ref<T>>,std::unique_ptr<int>,remove_const_ref<T>>();
+  }
+};
+
+}
+
+template<typename T> struct CXX_WRAP_EXPORT static_type_mapping<T, typename std::enable_if<IsSmartPointerType<T>::value>::type>
 {
   typedef jl_value_t* type;
   static jl_datatype_t* julia_type()
   {
-    static jl_datatype_t* result = nullptr;
-    if(result == nullptr)
-    {
-      jl_value_t* type_hash = nullptr;
-      jl_value_t* deref_ptr = nullptr;
-      jl_value_t* construct_ptr = nullptr;
-      jl_value_t* cast_ptr = nullptr;
-      JL_GC_PUSH4(&type_hash, &deref_ptr, &construct_ptr, &cast_ptr);
-      type_hash = box(typeid(PtrT<int>).hash_code());
-      deref_ptr = jl_box_voidpointer(reinterpret_cast<void*>(DereferenceSmartPointer<PtrT<T>>::apply));
-      construct_ptr = jl_box_voidpointer(reinterpret_cast<void*>(ConstructFromOther<PtrT<T>, typename ConstructorPointerType<PtrT<T>>::type>::apply));
-      cast_ptr = jl_box_voidpointer(reinterpret_cast<void*>(ConvertToBase<PtrT<T>>::apply));
-      result = (jl_datatype_t*)apply_type(julia_smartpointer_type(), jl_svec(5, static_type_mapping<remove_const_ref<T>>::julia_type(), type_hash, deref_ptr, construct_ptr, cast_ptr));
-      protect_from_gc(result);
-      JL_GC_POP();
-    }
-    return result;
+    return detail::SmartJuliaType<T>::apply();
   }
-};
-
-template<template<typename...> class PtrT, typename T> struct static_type_mapping<PtrT<const T>, typename std::enable_if<IsSmartPointerType<PtrT<const T>>::value>::type>
-{
-  typedef jl_value_t* type;
-  static jl_datatype_t* julia_type() { return static_type_mapping<PtrT<T>>::julia_type(); }
 };
 
 template<typename T>
