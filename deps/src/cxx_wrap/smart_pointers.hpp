@@ -147,8 +147,14 @@ struct SmartJuliaType<std::unique_ptr<T>>
 {
   static jl_datatype_t* apply()
   {
-    return smart_julia_type<std::unique_ptr<remove_const_ref<T>>,std::unique_ptr<int>,remove_const_ref<T>>();
+    return smart_julia_type<std::unique_ptr<T>,std::unique_ptr<int>,T>();
   }
+};
+
+template<typename T>
+struct SmartJuliaType<std::unique_ptr<const T>>
+{
+  static jl_datatype_t* apply() { return SmartJuliaType<std::unique_ptr<T>>::apply(); }
 };
 
 }
