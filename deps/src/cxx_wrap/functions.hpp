@@ -145,7 +145,7 @@ namespace detail
 
     std::vector<jl_datatype_t*> operator()()
     {
-      return std::vector<jl_datatype_t*>({julia_type<ArgsT>()...});
+      return std::vector<jl_datatype_t*>({julia_reference_type<ArgsT>()...});
     }
 
     fptr_t cast_ptr(void* ptr)
