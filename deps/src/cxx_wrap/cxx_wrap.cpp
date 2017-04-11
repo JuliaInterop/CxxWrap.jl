@@ -33,9 +33,9 @@ CXX_WRAP_EXPORT std::stack<std::size_t>& gc_free_stack()
   return m_stack;
 }
 
-CXX_WRAP_EXPORT std::map<jl_value_t*, std::size_t>& gc_index_map()
+CXX_WRAP_EXPORT std::map<jl_value_t*, std::pair<std::size_t,std::size_t>>& gc_index_map()
 {
-  static std::map<jl_value_t*, std::size_t> m_map;
+  static std::map<jl_value_t*, std::pair<std::size_t,std::size_t>> m_map;
   return m_map;
 }
 

@@ -47,13 +47,24 @@ namespace detail
 
 CXX_WRAP_EXPORT jl_array_t* gc_protected();
 CXX_WRAP_EXPORT std::stack<std::size_t>& gc_free_stack();
-CXX_WRAP_EXPORT std::map<jl_value_t*, std::size_t>& gc_index_map();
+CXX_WRAP_EXPORT std::map<jl_value_t*, std::pair<std::size_t,std::size_t>>& gc_index_map();
 
 
 template<typename T>
-inline void protect_from_gc(T* val)
+inline void protect_from_gc(T* x)
 {
+  jl_value_t* val = (jl_value_t*)x;
   JL_GC_PUSH1(&val);
+
+  // Increase count if already protected
+  auto map_it = gc_index_map().find(val);
+  if(map_it != gc_index_map().end())
+  {
+    map_it->second.second += 1;
+    JL_GC_POP();
+    return;
+  }
+
   std::size_t pos = 0;
   if(gc_free_stack().empty())
   {
@@ -65,8 +76,8 @@ inline void protect_from_gc(T* val)
     pos = gc_free_stack().top();
     gc_free_stack().pop();
   }
-  jl_arrayset(gc_protected(), (jl_value_t*)(val), pos);
-  gc_index_map()[(jl_value_t*)val] = pos;
+  jl_arrayset(gc_protected(), val, pos);
+  gc_index_map()[val] = std::make_pair(pos,1);
   JL_GC_POP();
 }
 
@@ -79,8 +90,14 @@ inline void unprotect_from_gc(T* val)
     std::cout << "WARNING: attempt to unprotect a jl_value_t* that was never protected" << std::endl;
     return;
   }
-  gc_free_stack().push(found->second);
-  jl_arrayset(gc_protected(), jl_nothing, found->second);
+  // Decrement use count
+  found->second.second -= 1;
+  if(found->second.second > 0)
+  {
+    return;
+  }
+  gc_free_stack().push(found->second.first);
+  jl_arrayset(gc_protected(), jl_nothing, found->second.first);
   gc_index_map().erase(found);
 }
 
