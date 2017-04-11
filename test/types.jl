@@ -39,6 +39,9 @@ swf2 = CppTypes.smart_world_factory()
 @test CppTypes.greet_weak(swf) == "shared factory hello"
 @test_throws ErrorException CppTypes.greet_weak(swf2) == "shared factory hello"
 
+@test CppTypes.greet(CppTypes.boxed_world_factory()) == "boxed world"
+@test CppTypes.greet(CppTypes.boxed_world_pointer_factory()) == "boxed world pointer"
+
 @show uwf = CppTypes.unique_world_factory()
 @test CppTypes.greet(uwf) == "unique factory hello"
 

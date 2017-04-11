@@ -170,6 +170,18 @@ JULIA_CPP_MODULE_BEGIN(registry)
     return World("world by value hello");
   });
 
+  types.method("boxed_world_factory", []()
+  {
+    static World w("boxed world");
+    return cxx_wrap::box(w);
+  });
+
+  types.method("boxed_world_pointer_factory", []()
+  {
+    static World w("boxed world pointer");
+    return cxx_wrap::box(&w);
+  });
+
   types.add_type<NonCopyable>("NonCopyable");
 
   types.add_type<AConstRef>("AConstRef").method("value", &AConstRef::value);

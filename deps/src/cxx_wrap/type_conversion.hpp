@@ -911,9 +911,15 @@ inline typename std::enable_if<!std::is_same<jl_value_t*, mapped_julia_type<CppT
 
 // Box an automatically converted value
 template<typename CppT>
-inline typename std::enable_if<std::is_same<WrappedCppPtr, mapped_julia_type<CppT>>::value, jl_value_t*>::type box(const CppT& cpp_val)
+inline typename std::enable_if<std::is_same<WrappedCppPtr, mapped_julia_type<CppT>>::value && !std::is_pointer<CppT>::value, jl_value_t*>::type box(const CppT& cpp_val)
 {
   return boxed_cpp_pointer(&cpp_val, julia_reference_type<CppT>(), false);
+}
+
+template<typename CppT>
+inline typename std::enable_if<std::is_same<WrappedCppPtr, mapped_julia_type<CppT>>::value && std::is_pointer<CppT>::value, jl_value_t*>::type box(const CppT& cpp_val)
+{
+  return boxed_cpp_pointer(cpp_val, julia_reference_type<CppT>(), false);
 }
 
 // Pass-through for already boxed types
