@@ -81,7 +81,7 @@ If creating the Visual Studio project by hand is preferred, however, the followi
   * Linker | Input | Additional Dependencies: insert "C:\JuliaPro\pkgs-0.5.1.1\v0.5\CxxWrap\deps\usr\lib\cxx_wrap.lib;C:\JuliaPro\Julia-0.5.1\lib\libjulia.dll.a;" before "%(AdditionalIncludeDirectories)"
 * Click OK to exit the CppHello Property Pages.
 * In Solution Explorer, under Source Files, double click "CppHello.cpp" to open it. Append the following code at the end and save:
-```
+```c++
 #include <cxx_wrap.hpp>
 
 std::string greet()
@@ -134,9 +134,90 @@ CppTypes.set(w, "hello")
 @test CppTypes.greet(w) == "hello"
 ```
 
+The `add_type` function actually builds 3 Julia types related to World. The first is an abstract type that by default inherits from the `CppAny` base type:
+
+```julia
+abstract type World <: CxxWrap.CppAny end
+```
+
+The second is an immutable type (the "reference type") with the following structure:
+
+```julia
+struct WorldRef <: World
+  cpp_object::Ptr{Void}
+end
+```
+
+It is an immutable type to be able to refer to C++ values without needing to allocate. This also means there are no finalizers for this kind of type, which is why there is also an equivalent mutable type that is returned by constructors and has a finalize attached that calls `delete` in C++:
+
+```julia
+mutable struct WorldAllocated <: World
+  cpp_object::Ptr{Void}
+end
+```
+
+This means that the variable `w` in the above example is of concrete type `WorldAllocated` and letting it go out of scope may trigger the finalizer and delete the object. When calling a C++ constructor, it is the responsibility of the caller to manage the lifetime of the resulting variable.
+
+The above types are used in method generation as follows, considering for example the greet method taking a `World` argument:
+
+```julia
+greet(w::World) = ccall($fpointer, Any, (Ptr{Void}, WorldRef), $thunk, cconvert(WorldRef, w))
+```
+
+Here, the `cconvert` from `WorldAllocated` to `WorldRef` is defined automatically when creating the type.
+
 **Warning:** The ordering of the C++ code matters: types used as function arguments or return types must be added before they are used in a function.
 
 The full code for this example and more info on immutables and bits types can be found in [`deps/src/examples/types.cpp`](deps/src/examples/types.cpp) and [`test/types.jl`](test/types.jl).
+
+## Inheritance
+To encapsulate inheritance, types must first inherit from each other in C++, so a `static_cast` to the base type can work:
+
+```c++
+struct A
+{
+  virtual std::string message() const = 0;
+  std::string data = "mydata";
+};
+
+struct B : A
+{
+  virtual std::string message() const
+  {
+    return "B";
+  }
+};
+```
+
+When adding the type, add the supertype as a second argument:
+```c++
+types.add_type<A>("A").method("message", &A::message);
+types.add_type<B>("B", cxx_wrap::julia_type<A>());
+```
+
+The supertype is of type `jl_datatype_t*` and using the template variant of `cxx_wrap::julia_type` looks up the corresponding type here. There is also a variant taking a string for the type name and an optional Julia module name as second argument, which is useful for inheriting from a type defined in Julia, e.g:
+
+```c++
+mod.add_type<Teuchos::ParameterList>("ParameterList", cxx_wrap::julia_type("PLAssociative", "Trilinos"))
+```
+
+The value returned by `add_type` also had a `dt()` method, useful in the case of template types:
+
+```c++
+auto multi_vector_base = mod.add_type<Parametric<TypeVar<1>>>("MultiVectorBase");
+auto vector_base = mod.add_type<Parametric<TypeVar<1>>>("VectorBase", multi_vector_base.dt());
+```
+
+Since the concrete arguments given to `ccall` are the reference types, we need a way to convert `BRef` into `ARef`. To allow CxxWrap to figure out the correct static_cast to use, the hierarchy must be defined at compile time as follows:
+
+```c++
+namespace cxx_wrap
+{
+  template<> struct SuperType<B> { typedef A type; };
+}
+```
+
+See the test at [`deps/src/examples/inheritance.cpp`](deps/src/examples/inheritance.cpp) and [`test/inheritance.jl`](test/inheritance.jl).
 
 ## Enum types
 
@@ -167,9 +248,6 @@ JULIA_CPP_MODULE_END
 ```
 
 The enum constants will be available on the Julia side as `CppTypes.EnumValA` and `CppTypes.EnumValB`, both of type `CppTypes.CppEnum`. Wrapped C++ functions taking a `CppEnum` will only accept a value of type `CppTypes.CppEnum` in Julia.
-
-## Inheritance
-See the test at [`deps/src/examples/inheritance.cpp`](deps/src/examples/inheritance.cpp) and [`test/inheritance.jl`](test/inheritance.jl).
 
 ## Template (parametric) types
 The natural Julia equivalent of a C++ template class is the parametric type. The mapping is complicated by the fact that all possible parameter values must be compiled in advance, requiring a deviation from the syntax for adding a regular class. Consider the following template class:
@@ -213,6 +291,8 @@ p2 = TemplateType{P2, P1}()
 @test ParametricTypes.get_first(p1) == 1
 @test ParametricTypes.get_second(p2) == 1
 ```
+
+There is also an `apply_combination` method to make applying all combinations of parameters shorter to write.
 
 Full example and test including non-type parameters at: [`deps/src/examples/parametric.cpp`](deps/src/examples/parametric.cpp) and [`test/parametric.jl`](test/parametric.jl).
 
@@ -285,7 +365,8 @@ CxxWrap.argument_overloads(t::Type{UInt64}) = [Int64]
 ```
 
 ## Smart pointers
-Currently, `std::shared_ptr` and `std::unique_ptr` are supported transparently. Returning one of these pointer types will return an object of type `SharedPtr{T}` (or `UniquePtr{T}`), and a `get` method is added automatically to the module that wraps `T` to extract the pointer. Example from the types test:
+Currently, `std::shared_ptr`, `std::unique_ptr` and `std::weak_ptr` are supported transparently. Returning one of these pointer types will return an object inheriting from `SmartPointer{T}`:
+
 ```c++
 types.method("shared_world_factory", []()
 {
@@ -293,21 +374,52 @@ types.method("shared_world_factory", []()
 });
 ```
 The shared pointer can then be used in a function taking an object of type `World` like this (the module is named `CppTypes` here):
+
 ```julia
 swf = CppTypes.shared_world_factory()
-CppTypes.greet(CppTypes.get(swf))
-```
-To shorten this form, the `get` function may be exported of course. To avoid having to use the `get` function for common methods, functions taking the regular class can be overloaded in C++, like this for the `greet` method:
-```c++
-types.method("greet", [](const std::shared_ptr<World>& w)
-{
-  return w->greet();
-});
-```
-We can then call it directly on the shared pointer:
-```julia
 CppTypes.greet(swf)
 ```
+
+Explicit dereferencing is also supported, using the `[]` operator:
+
+```julia
+CppTypes.greet(swf[])
+```
+
+### Adding a custom smart pointer
+Suppose we have a "smart" pointer type defined as follows:
+```c++
+template<typename T>
+struct MySmartPointer
+{
+  MySmartPointer(T* ptr) : m_ptr(ptr)
+  {
+  }
+
+  MySmartPointer(std::shared_ptr<T> ptr) : m_ptr(ptr.get())
+  {
+  }
+
+  T& operator*() const
+  {
+    return *m_ptr;
+  }
+
+  T* m_ptr;
+};
+```
+
+Specializing in the `cxx_wrap` namespace:
+
+```c++
+namespace cxx_wrap
+{
+  template<typename T> struct IsSmartPointerType<cpp_types::MySmartPointer<T>> : std::true_type { };
+  template<typename T> struct ConstructorPointerType<cpp_types::MySmartPointer<T>> { typedef std::shared_ptr<T> type; };
+}
+```
+
+Here, the first line marks our type as a smart pointer, enabling automatic conversion from the pointer to its referenced type and adding the dereferencing pointer. If the type uses inheritance and the hierarchy is defined using `SuperType`, automatic conversion to the pointer or reference of the base type is also supported. The second line indicates that our smart pointer can be constructed from a `std::shared_ptr`, also adding auto-conversion for that case. This is useful for a relation as in `std::weak_ptr` and `std::shared_ptr`, for example.
 
 ## Exceptions
 When directly adding a regular free C++ function as a method, it will be called directly using ccall and any exception will abort the Julia program. To avoid this, you can force wrapping it in an `std::functor` to intercept the exception automatically by setting the `force_convert` argument to `method` to true:
