@@ -868,7 +868,7 @@ struct ConvertToJulia<SingletonType<T>, false, false, false>
 {
   jl_datatype_t* operator()(SingletonType<T>)
   {
-    return static_type_mapping<SingletonType<T>>::julia_type();
+    return static_type_mapping<T>::julia_type();
   }
 };
 
