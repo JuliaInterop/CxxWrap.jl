@@ -116,11 +116,7 @@ function __init__()
     Libdl.dlopen(cxx_wrap_path, Libdl.RTLD_GLOBAL)
   end
   ccall((:initialize, cxx_wrap_path), Void, (Any, Any, Any), CxxWrap, CppAny, CppFunctionInfo)
-  @static if VERSION < v"0.6-dev"
-    Base.linearindexing(::ConstArray) = Base.LinearFast()
-  else
-    Base.IndexStyle(::ConstArray) = Base.IndexLinear()
-  end
+  @compat Base.IndexStyle(::ConstArray) = IndexLinear()
   Base.size(arr::ConstArray) = arr.size
   Base.getindex(arr::ConstArray, i::Integer) = unsafe_load(arr.ptr.ptr, i)
 end
