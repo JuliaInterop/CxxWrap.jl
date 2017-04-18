@@ -88,7 +88,7 @@ jl_value_t* JuliaFunction::operator()(ArgumentsT&&... args) const
   result = jl_call(m_function, julia_args, nb_args);
   if (jl_exception_occurred())
   {
-    jl_show(jl_stderr_obj(), jl_exception_occurred());
+    jl_call2(jl_get_function(jl_base_module, "show"), jl_stderr_obj(), jl_exception_occurred());
     jl_printf(jl_stderr_stream(), "\n");
     jlbacktrace();
     JL_GC_POP();
