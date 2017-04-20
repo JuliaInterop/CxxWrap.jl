@@ -402,4 +402,7 @@ end
 
 safe_cfunction(f::Function, rt::DataType, args::Tuple) = SafeCFunction(cfunction(f, rt, args), rt, [t for t in args])
 
+wstring_to_julia(p::Ptr{Cwchar_t}, L::Int) = transcode(String, unsafe_wrap(Array, p, L))
+wstring_to_cpp(s::String) = transcode(Cwchar_t, s)
+
 end # module

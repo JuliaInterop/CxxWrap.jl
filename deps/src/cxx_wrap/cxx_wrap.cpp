@@ -1,4 +1,6 @@
+#include "array.hpp"
 #include "cxx_wrap.hpp"
+#include "functions.hpp"
 
 #include <julia.h>
 #if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR > 4
@@ -105,6 +107,19 @@ CXX_WRAP_EXPORT jl_value_t* apply_type(jl_value_t* tc, jl_svec_t* params)
 #else
   return jl_apply_type(jl_is_unionall(tc) ? tc : ((jl_datatype_t*)tc)->name->wrapper, jl_svec_data(params), jl_svec_len(params));
 #endif
+}
+
+jl_value_t* ConvertToJulia<std::wstring, false, false, false>::operator()(const std::wstring& str) const
+{
+  static const JuliaFunction wstring_to_julia("wstring_to_julia", "CxxWrap");
+  return wstring_to_julia(str.c_str(), static_cast<int_t>(str.size()));
+}
+
+std::wstring ConvertToCpp<std::wstring, false, false, false>::operator()(jl_value_t* jstr) const
+{
+  static const JuliaFunction wstring_to_cpp("wstring_to_cpp", "CxxWrap");
+  ArrayRef<wchar_t> arr((jl_array_t*)wstring_to_cpp(jstr));
+  return std::wstring(arr.data(), arr.size());
 }
 
 }

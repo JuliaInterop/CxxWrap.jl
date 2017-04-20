@@ -210,6 +210,10 @@ void init_test_module(cxx_wrap::Module& mod)
   mod.method("test_double_pointer", [] () { return static_cast<double*>(nullptr); });
   mod.method("test_double2_pointer", [] () { return static_cast<double**>(nullptr); });
   mod.method("test_double3_pointer", [] () { return static_cast<double***>(nullptr); });
+
+  // wstring
+  mod.method("test_wstring_to_julia", [] () { return std::wstring(L"šČô_φ_привет_일보"); });
+  mod.method("test_wstring_to_cpp", [] (const std::wstring& ws) { return ws == L"šČô_φ_привет_일보"; });
 }
 
 }

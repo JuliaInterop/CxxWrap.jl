@@ -627,8 +627,23 @@ template<> struct static_type_mapping<detail::define_if_different<unsigned long,
   static jl_datatype_t* julia_type() { return sizeof(unsigned long) == 8 ? jl_uint64_type : jl_uint32_type; }
 };
 
+template<> struct static_type_mapping<wchar_t>
+{
+  typedef wchar_t type;
+  static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_get_global(jl_base_module, jl_symbol("Cwchar_t")); }
+};
+template<> struct static_type_mapping<const wchar_t> : static_type_mapping<wchar_t> {};
+
+
 template<> struct IsValueType<std::string> : std::true_type {};
 template<> struct static_type_mapping<std::string>
+{
+  typedef jl_value_t* type;
+  static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_get_global(jl_base_module, jl_symbol("AbstractString")); }
+};
+
+template<> struct IsValueType<std::wstring> : std::true_type {};
+template<> struct static_type_mapping<std::wstring>
 {
   typedef jl_value_t* type;
   static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_get_global(jl_base_module, jl_symbol("AbstractString")); }
@@ -828,6 +843,12 @@ struct ConvertToJulia<const std::string*, false, false, false>
 };
 
 template<>
+struct CXX_WRAP_EXPORT ConvertToJulia<std::wstring, false, false, false>
+{
+  jl_value_t* operator()(const std::wstring& str) const;
+};
+
+template<>
 struct ConvertToJulia<const char*, false, false, false>
 {
   jl_value_t* operator()(const char* str) const
@@ -988,6 +1009,12 @@ template<>
 inline jl_value_t* box(void* const& x)
 {
   return jl_box_voidpointer(x);
+}
+
+template<typename T>
+inline typename std::enable_if<IsFundamental<remove_const_ref<T>>::value, jl_value_t*>::type box(T* const& x)
+{
+  return jl_new_bits((jl_value_t*)static_type_mapping<typename std::remove_const<T>::type*>::julia_type(), (void*)&x);
 }
 
 namespace detail
@@ -1259,6 +1286,12 @@ struct ConvertToCpp<std::string, false, false, false>
   {
     return std::string(ConvertToCpp<const char*, false, false, false>()(jstr));
   }
+};
+
+template<>
+struct CXX_WRAP_EXPORT ConvertToCpp<std::wstring, false, false, false>
+{
+  std::wstring operator()(jl_value_t* jstr) const;
 };
 
 template<typename T>
