@@ -36,26 +36,6 @@ build_type = get(ENV, "CXXWRAP_BUILD_TYPE", "Release")
 
 libname = build_type == "Debug" ? "libjulia-debug" : "libjulia"
 
-function find_julia_lib(lib_suffix::AbstractString, julia_base_dir::AbstractString)
-  julia_lib = joinpath(julia_base_dir, "lib", "julia", "$libname.$lib_suffix")
-  if !isfile(julia_lib)
-    julia_lib = joinpath(julia_base_dir, "lib", "$libname.$lib_suffix")
-  end
-  if !isfile(julia_lib)
-    julia_lib = joinpath(julia_base_dir, "lib64", "julia", "$libname.$lib_suffix")
-  end
-  if !isfile(julia_lib)
-    julia_lib = joinpath(julia_base_dir, "lib64", "$libname.$lib_suffix")
-  end
-  if !isfile(julia_lib)
-    julia_lib = joinpath(julia_base_dir, "lib", "x86_64-linux-gnu", "julia", "$libname.$lib_suffix")
-  end
-  if !isfile(julia_lib)
-    julia_lib = joinpath(julia_base_dir, "lib", "x86_64-linux-gnu", "$libname.$lib_suffix")
-  end
-  return julia_lib
-end
-
 # The base library, needed to wrap functions
 cxx_wrap = library_dependency("cxx_wrap", aliases=["libcxx_wrap"])
 
@@ -65,26 +45,7 @@ cxx_wrap_builddir = joinpath(BinDeps.depsdir(cxx_wrap),"builds","cxx_wrap")
 lib_prefix = @static is_windows() ? "" : "lib"
 lib_suffix = @static is_windows() ? "dll" : (@static is_apple() ? "dylib" : "so")
 julia_base_dir = splitdir(JULIA_HOME)[1]
-julia_lib = ""
-for suff in ["dll", "dll.a", "dylib", "so"]
-  julia_lib = find_julia_lib(suff, julia_base_dir)
-  if isfile(julia_lib)
-    println("Found Julia library at ", julia_lib)
-    break
-  end
-end
-
-if !isfile(julia_lib)
-  throw(ErrorException("Could not locate Julia library at $julia_lib"))
-end
-
-julia_include_dir = joinpath(julia_base_dir, "include", "julia")
-if !isdir(julia_include_dir)  # then we're running directly from build
-  julia_base_dir_aux = splitdir(splitdir(JULIA_HOME)[1])[1]  # useful for running-from-build
-  julia_include_dir = joinpath(julia_base_dir_aux, "usr", "include" )
-  julia_include_dir *= ";" * joinpath(julia_base_dir_aux, "src", "support" )
-  julia_include_dir *= ";" * joinpath(julia_base_dir_aux, "src" )
-end
+julia_executable = split(string(Base.julia_cmd()))[1][2:end]
 
 makeopts = ["--", "-j", "$(Sys.ARCH == :armv7l ? 2 : Sys.CPU_CORES+2)"]
 
@@ -118,7 +79,7 @@ examples_builddir = joinpath(BinDeps.depsdir(functions),"builds","examples")
 deps = [cxx_wrap; examples]
 
 cxx_steps = @build_steps begin
-  `cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="$build_type"  -DJULIA_INCLUDE_DIRECTORY="$julia_include_dir" -DJULIA_LIBRARY="$julia_lib" -DLIBDIR_SUFFIX=$libdir_opt $cxx_wrap_srcdir`
+  `cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="$build_type" -DLIBDIR_SUFFIX=$libdir_opt -DJulia_EXECUTABLE=$julia_executable $cxx_wrap_srcdir`
   `cmake --build . --config $build_type --target install $makeopts`
 end
 
@@ -128,7 +89,7 @@ for l in example_labels
 end
 
 examples_steps = @build_steps begin
-  `cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="$build_type" -DLIBDIR_SUFFIX=$libdir_opt $examples_srcdir`
+  `cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="$build_type" -DLIBDIR_SUFFIX=$libdir_opt -DJulia_EXECUTABLE=$julia_executable $examples_srcdir`
   `cmake --build . --config $build_type --target install $makeopts`
 end
 
