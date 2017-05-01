@@ -1,5 +1,5 @@
-#ifndef FUNCTIONS_HPP
-#define FUNCTIONS_HPP
+#ifndef CXXWRAP_FUNCTIONS_HPP
+#define CXXWRAP_FUNCTIONS_HPP
 
 #include <sstream>
 #include <vector>

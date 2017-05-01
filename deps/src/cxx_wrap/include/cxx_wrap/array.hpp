@@ -1,9 +1,8 @@
-#ifndef ARRAY_HPP
-#define ARRAY_HPP
+#ifndef CXXWRAP_ARRAY_HPP
+#define CXXWRAP_ARRAY_HPP
 
 #include "type_conversion.hpp"
-
-#include "containers/tuple.hpp"
+#include "tuple.hpp"
 
 namespace cxx_wrap
 {

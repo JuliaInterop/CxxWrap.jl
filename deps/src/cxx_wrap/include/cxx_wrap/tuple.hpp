@@ -1,9 +1,9 @@
-#ifndef CXX_WRAPPER_TUPLE_HPP
-#define CXX_WRAPPER_TUPLE_HPP
+#ifndef CXXWRAP_TUPLE_HPP
+#define CXXWRAP_TUPLE_HPP
 
 #include <tuple>
 
-#include "../type_conversion.hpp"
+#include "type_conversion.hpp"
 
 namespace cxx_wrap
 {

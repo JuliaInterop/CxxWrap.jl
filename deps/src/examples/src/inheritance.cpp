@@ -1,6 +1,7 @@
 #include <string>
+#include <memory>
 
-#include <cxx_wrap.hpp>
+#include "cxx_wrap/cxx_wrap.hpp"
 
 struct A
 {

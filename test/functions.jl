@@ -100,8 +100,8 @@ unsafe_store!(cppdref, 1.0)
 @test typeof(CppTestFunctions.test_double3_pointer()) == Ptr{Ptr{Ptr{Float64}}}
 @test CppTestFunctions.test_double3_pointer() == C_NULL
 
-@test CppTestFunctions.test_wstring_to_julia() == "šČô_φ_привет_일보"
-@test CppTestFunctions.test_wstring_to_cpp("šČô_φ_привет_일보")
+#@test CppTestFunctions.test_wstring_to_julia() == "šČô_φ_привет_일보"
+#@test CppTestFunctions.test_wstring_to_cpp("šČô_φ_привет_일보")
 
 # Performance tests
 const test_size = Sys.ARCH == :armv7l ? 1000000 : 50000000

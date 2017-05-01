@@ -1,9 +1,10 @@
-﻿#include <cxx_wrap.hpp>
-#include <array.hpp>
-#include <functions.hpp>
-
 #include <algorithm>
 #include <sstream>
+#include <cstddef>
+
+#include "cxx_wrap/cxx_wrap.hpp"
+#include "cxx_wrap/array.hpp"
+#include "cxx_wrap/functions.hpp"
 
 // C function for performance comparison
 extern "C" CXX_WRAP_EXPORT double half_c(const double d)

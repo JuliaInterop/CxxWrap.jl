@@ -1,6 +1,6 @@
 #include <string>
 
-#include <cxx_wrap.hpp>
+#include "cxx_wrap/cxx_wrap.hpp"
 
 namespace extended
 {

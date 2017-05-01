@@ -1,0 +1,13 @@
+# cxx_wrap cmake module
+# This module sets the following variables in your project::
+#
+#   CxxWrap_FOUND - true if cxx_wrap found on the system
+#   CxxWrap_INCLUDE_DIRS - the directories containing CxxWrap headers
+#   CxxWrap_LIBRARY - the library for dynamic linking
+
+@PACKAGE_INIT@
+
+set(PN CxxWrap)
+set_and_check(${PN}_INCLUDE_DIRS "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_INCLUDEDIR@")
+set_and_check(${PN}_LIBRARY "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/@CXXWRAP_LINK_FILE@")
+check_required_components(${PN})

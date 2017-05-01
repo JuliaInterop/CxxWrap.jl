@@ -12,11 +12,6 @@ function prompt_cmake()
   end
 end
 
-libdir_opt = ""
-@static if is_windows()
-  libdir_opt = Sys.WORD_SIZE==32 ? "32" : ""
-end
-
 @static if is_windows()
   # prefer building if requested
   if haskey(ENV, "BUILD_ON_WINDOWS") && ENV["BUILD_ON_WINDOWS"] == "1"
@@ -39,9 +34,16 @@ libname = build_type == "Debug" ? "libjulia-debug" : "libjulia"
 # The base library, needed to wrap functions
 cxx_wrap = library_dependency("cxx_wrap", aliases=["libcxx_wrap"])
 
-prefix=joinpath(BinDeps.depsdir(cxx_wrap),"usr")
-cxx_wrap_srcdir = joinpath(BinDeps.depsdir(cxx_wrap),"src","cxx_wrap")
-cxx_wrap_builddir = joinpath(BinDeps.depsdir(cxx_wrap),"builds","cxx_wrap")
+prefix = joinpath(BinDeps.depsdir(cxx_wrap), "usr")
+
+@static if is_windows()
+    bindir = joinpath(prefix, "bin")
+else
+    bindir = joinpath(prefix, "lib")
+end
+
+cxx_wrap_srcdir = joinpath(BinDeps.depsdir(cxx_wrap), "src", "cxx_wrap")
+cxx_wrap_builddir = joinpath(BinDeps.depsdir(cxx_wrap), "builds", "cxx_wrap")
 lib_prefix = @static is_windows() ? "" : "lib"
 lib_suffix = @static is_windows() ? "dll" : (@static is_apple() ? "dylib" : "so")
 julia_base_dir = splitdir(JULIA_HOME)[1]
@@ -74,22 +76,22 @@ for l in example_labels
   @eval $l = $(library_dependency(string(l), aliases=["lib"*string(l)]))
   push!(examples, eval(:($l)))
 end
-examples_srcdir = joinpath(BinDeps.depsdir(functions),"src","examples")
-examples_builddir = joinpath(BinDeps.depsdir(functions),"builds","examples")
+examples_srcdir = joinpath(BinDeps.depsdir(functions), "src", "examples")
+examples_builddir = joinpath(BinDeps.depsdir(functions), "builds", "examples")
 deps = [cxx_wrap; examples]
 
 cxx_steps = @build_steps begin
-  `cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="$build_type" -DLIBDIR_SUFFIX=$libdir_opt -DCMAKE_PROGRAM_PATH=$JULIA_HOME $cxx_wrap_srcdir`
+  `cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="$build_type" -DCMAKE_PROGRAM_PATH=$JULIA_HOME $cxx_wrap_srcdir`
   `cmake --build . --config $build_type --target install $makeopts`
 end
 
 example_paths = AbstractString[]
 for l in example_labels
-  push!(example_paths, joinpath(prefix,"lib$libdir_opt", "$(lib_prefix)$(string(l)).$lib_suffix"))
+  push!(example_paths, joinpath(bindir, "$(lib_prefix)$(string(l)).$lib_suffix"))
 end
 
 examples_steps = @build_steps begin
-  `cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="$build_type" -DLIBDIR_SUFFIX=$libdir_opt -DCMAKE_PROGRAM_PATH=$JULIA_HOME $examples_srcdir`
+  `cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="$build_type" -DCMAKE_PROGRAM_PATH=$JULIA_HOME $examples_srcdir`
   `cmake --build . --config $build_type --target install $makeopts`
 end
 
@@ -112,7 +114,7 @@ provides(BuildProcess,
     CreateDirectory(cxx_wrap_builddir)
     @build_steps begin
       ChangeDirectory(cxx_wrap_builddir)
-      FileRule(joinpath(prefix,"lib$libdir_opt", "$(lib_prefix)cxx_wrap.$lib_suffix"),cxx_steps)
+      FileRule(joinpath(bindir, "$(lib_prefix)cxx_wrap.$lib_suffix"), cxx_steps)
     end
   end), cxx_wrap)
 
@@ -153,13 +155,13 @@ end
     empty!(BinDeps.defaults)
     append!(BinDeps.defaults, saved_defaults)
     if get(ENV, "MSYSTEM", "") == "MINGW32"
-      run(`cp -f $(joinpath("/mingw32", "bin", "libwinpthread-1.dll")) $(joinpath(prefix,"lib$libdir_opt"))`)
-      run(`cp -f $(joinpath("/mingw32", "bin", "libgcc_s_dw2-1.dll")) $(joinpath(prefix,"lib$libdir_opt"))`)
+      run(`cp -f $(joinpath("/mingw32", "bin", "libwinpthread-1.dll")) $(joinpath(bindir))`)
+      run(`cp -f $(joinpath("/mingw32", "bin", "libgcc_s_dw2-1.dll")) $(joinpath(bindir))`)
     else
       redist_dlls = ["concrt140.dll", "msvcp140.dll", "vccorlib140.dll", "vcruntime140.dll"]
       redistbasepath = "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\redist\\$(Sys.WORD_SIZE == 64 ? "x64" : "x86")\\Microsoft.VC140.CRT"
       for dll in redist_dlls
-        cp(joinpath(redistbasepath, dll), joinpath(prefix,"lib$libdir_opt", dll), remove_destination=true)
+        cp(joinpath(redistbasepath, dll), joinpath(bindir, dll), remove_destination=true)
       end
     end
   end
