@@ -2,6 +2,8 @@ project(CxxWrap)
 
 cmake_minimum_required(VERSION 2.8.12)
 
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
+
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE ON)
 set(CMAKE_MACOSX_RPATH 1)
@@ -19,12 +21,11 @@ if(WIN32 AND DEFINED ENV{MSYSTEM})
   endif()
 endif()
 
+find_package(Julia REQUIRED)
+
 # TODO Figure out why this doesn't work on OS X:
 #set(CMAKE_CXX_STANDARD 11)
 #set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-set(JULIA_INCLUDE_DIRECTORY "/usr/include/julia" CACHE PATH "Julia include directory")
-set(JULIA_LIBRARY "/usr/lib/julia/libjulia.so" CACHE FILEPATH "Julia library")
 
 add_library(cxx_wrap SHARED
   array.hpp
@@ -37,10 +38,13 @@ add_library(cxx_wrap SHARED
   containers/const_array.hpp
   containers/tuple.hpp
 )
-target_include_directories(cxx_wrap PUBLIC ${JULIA_INCLUDE_DIRECTORY})
+
+MESSAGE(STATUS ${Julia_INCLUDE_DIRS})
+
+target_include_directories(cxx_wrap PUBLIC ${Julia_INCLUDE_DIRS})
 generate_export_header(cxx_wrap)
 
-target_link_libraries(cxx_wrap ${JULIA_LIBRARY})
+target_link_libraries(cxx_wrap ${Julia_LIBRARY})
 
 set_property(TARGET cxx_wrap PROPERTY VERSION ${CxxWrap_VERSION})
 set_property(TARGET cxx_wrap PROPERTY SOVERSION 0)
