@@ -3,20 +3,16 @@ if(Julia_FOUND)
     return()
 endif()
 
-#################### 
+####################
 # Julia Executable #
 ####################
 
-if (NOT Julia_EXECUTABLE)
-    find_program(Julia_EXECUTABLE julia DOC "Julia executable")
-    if(NOT Julia_EXECUTABLE)
-        return()
-    endif()
-endif()
+find_program(Julia_EXECUTABLE julia DOC "Julia executable")
+MESSAGE(STATUS "Julia_EXECUTABLE:     ${Julia_EXECUTABLE}")
 
-################# 
+#################
 # Julia Version #
-################# 
+#################
 
 execute_process(
     COMMAND ${Julia_EXECUTABLE} --version
@@ -28,11 +24,11 @@ string(
       Julia_VERSION_STRING ${Julia_VERSION_STRING}
 )
 
-MESSAGE(STATUS "Julia_VERSION_STRING: "${Julia_VERSION_STRING})
+MESSAGE(STATUS "Julia_VERSION_STRING: ${Julia_VERSION_STRING}")
 
-################## 
+##################
 # Julia Includes #
-################## 
+##################
 
 execute_process(
     COMMAND ${Julia_EXECUTABLE} -E "julia_include_dir = joinpath(match(r\"(.*)(bin)\",JULIA_HOME).captures[1],\"include\",\"julia\")\n
@@ -51,11 +47,11 @@ string(REGEX REPLACE "\n" "" Julia_INCLUDE_DIRS ${Julia_INCLUDE_DIRS})
 set(Julia_INCLUDE_DIRS ${Julia_INCLUDE_DIRS}
     CACHE PATH "Location of Julia include files")
 
-MESSAGE(STATUS "Julia_INCLUDE_DIRS:   "${Julia_INCLUDE_DIRS})
+MESSAGE(STATUS "Julia_INCLUDE_DIRS:   ${Julia_INCLUDE_DIRS}")
 
-################### 
+###################
 # Julia Libraries #
-################### 
+###################
 
 execute_process(
     COMMAND ${Julia_EXECUTABLE} -E "abspath(dirname(Libdl.dlpath(\"libjulia\")))"
@@ -74,20 +70,22 @@ if(WIN32)
     find_library(Julia_LIBRARY
         NAMES libjulia.dll.a
         PATHS ${Julia_LIBRARY_DIR}//..//lib
+        NO_DEFAULT_PATH
     )
 else()
     find_library(Julia_LIBRARY
-        NAMES julia
+        NAMES julia libjulia
         PATHS ${Julia_LIBRARY_DIR}
+        NO_DEFAULT_PATH
     )
 endif()
 
-MESSAGE(STATUS "Julia_LIBRARY_DIR:    "${Julia_LIBRARY_DIR})
-MESSAGE(STATUS "Julia_LIBRARY:        "${Julia_LIBRARY})
+MESSAGE(STATUS "Julia_LIBRARY_DIR:    ${Julia_LIBRARY_DIR}")
+MESSAGE(STATUS "Julia_LIBRARY:        ${Julia_LIBRARY}")
 
-############## 
+##############
 # JULIA_HOME #
-############## 
+##############
 
 execute_process(
     COMMAND ${Julia_EXECUTABLE} -E "JULIA_HOME"
@@ -97,7 +95,7 @@ execute_process(
 string(REGEX REPLACE "\"" "" JULIA_HOME ${JULIA_HOME})
 string(REGEX REPLACE "\n" "" JULIA_HOME ${JULIA_HOME})
 
-MESSAGE(STATUS "JULIA_HOME:           "${JULIA_HOME})
+MESSAGE(STATUS "JULIA_HOME:           ${JULIA_HOME}")
 
 ###################
 # libLLVM version #
@@ -117,7 +115,7 @@ string(REGEX REPLACE "\n" "" Julia_LLVM_VERSION ${Julia_LLVM_VERSION})
 
 find_path(Julia_MAIN_HEADER julia.h HINTS ${Julia_INCLUDE_DIRS})
 
-MESSAGE(STATUS "Julia_LLVM_VERSION:   "${Julia_LLVM_VERSION})
+MESSAGE(STATUS "Julia_LLVM_VERSION:   ${Julia_LLVM_VERSION}")
 
 ###########################
 # FindPackage Boilerplate #

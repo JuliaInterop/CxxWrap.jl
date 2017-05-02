@@ -79,7 +79,7 @@ examples_builddir = joinpath(BinDeps.depsdir(functions),"builds","examples")
 deps = [cxx_wrap; examples]
 
 cxx_steps = @build_steps begin
-  `cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="$build_type" -DLIBDIR_SUFFIX=$libdir_opt -DJulia_EXECUTABLE=$julia_executable $cxx_wrap_srcdir`
+  `cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="$build_type" -DLIBDIR_SUFFIX=$libdir_opt -DCMAKE_PROGRAM_PATH=$JULIA_HOME $cxx_wrap_srcdir`
   `cmake --build . --config $build_type --target install $makeopts`
 end
 
@@ -89,7 +89,7 @@ for l in example_labels
 end
 
 examples_steps = @build_steps begin
-  `cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="$build_type" -DLIBDIR_SUFFIX=$libdir_opt -DJulia_EXECUTABLE=$julia_executable $examples_srcdir`
+  `cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="$build_type" -DLIBDIR_SUFFIX=$libdir_opt -DCMAKE_PROGRAM_PATH=$JULIA_HOME $examples_srcdir`
   `cmake --build . --config $build_type --target install $makeopts`
 end
 
