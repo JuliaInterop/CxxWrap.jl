@@ -159,7 +159,8 @@ struct SmartJuliaType<std::unique_ptr<const T>>
 
 }
 
-template<typename T> struct CXX_WRAP_EXPORT static_type_mapping<T, typename std::enable_if<IsSmartPointerType<T>::value>::type>
+template<typename T>
+struct static_type_mapping<T, typename std::enable_if<IsSmartPointerType<T>::value>::type>
 {
   typedef jl_value_t* type;
   static jl_datatype_t* julia_type()

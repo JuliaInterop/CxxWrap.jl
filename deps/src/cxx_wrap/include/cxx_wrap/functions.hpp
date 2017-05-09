@@ -13,7 +13,7 @@ namespace cxx_wrap
 {
 
 /// Wrap a Julia function for easy calling
-class CXX_WRAP_EXPORT JuliaFunction
+class CXXWRAP_API JuliaFunction
 {
 public:
   /// Construct using a function name and module name. Searches the current module by default. Throws if the function was not found.

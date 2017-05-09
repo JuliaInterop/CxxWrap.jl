@@ -22,6 +22,7 @@ include_directories(${CxxWrap_INCLUDE_DIRS})
 include_directories(${Julia_INCLUDE_DIRS})
 
 add_library(functions SHARED src/functions.cpp)
+set_target_properties(functions PROPERTIES COMPILE_DEFINITIONS "CXXWRAP_EXAMPLES_EXPORTS")
 
 MESSAGE(STATUS ${CxxWrap_LIBRARY})
 target_link_libraries(functions ${CxxWrap_LIBRARY} ${Julia_LIBRARY})
@@ -46,7 +47,7 @@ target_link_libraries(cxxwrap_containers ${CxxWrap_LIBRARY} ${Julia_LIBRARY})
 
 add_library(except SHARED src/except.cpp)
 target_include_directories(except PRIVATE ${Julia_INCLUDE_DIRS})
-target_link_libraries(except ${Julia_LIBRARY} ${Julia_LIBRARY})
+target_link_libraries(except ${Julia_LIBRARY})
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
