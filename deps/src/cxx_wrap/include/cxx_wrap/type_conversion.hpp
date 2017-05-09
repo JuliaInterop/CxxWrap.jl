@@ -227,7 +227,7 @@ template<typename CppT, bool Fundamental=false, bool Immutable=false, bool Bits=
 struct ConvertToCpp
 {
   template<typename JuliaT>
-  CppT* operator()(JuliaT&& julia_val) const
+  CppT* operator()(JuliaT&&) const
   {
     static_assert(sizeof(CppT)==0, "No appropriate specialization for ConvertToCpp");
     return nullptr; // not reached
@@ -951,7 +951,7 @@ inline auto convert_to_julia(T&& cpp_val) -> decltype(julia_converter_type<T>()(
 }
 
 template<typename CppT>
-inline typename std::enable_if<!std::is_same<jl_value_t*, mapped_julia_type<CppT>>::value && !std::is_same<WrappedCppPtr, mapped_julia_type<CppT>>::value, jl_value_t*>::type box(const CppT& cpp_val)
+inline typename std::enable_if<!std::is_same<jl_value_t*, mapped_julia_type<CppT>>::value && !std::is_same<WrappedCppPtr, mapped_julia_type<CppT>>::value, jl_value_t*>::type box(const CppT&)
 {
   static_assert(sizeof(CppT*) == 0, "Unimplemented box in cxx_wrap");
   return nullptr;
@@ -1324,7 +1324,7 @@ struct CXXWRAP_API ConvertToCpp<std::wstring, false, false, false>
 template<typename T>
 struct ConvertToCpp<SingletonType<T>, false, false, false>
 {
-  SingletonType<T> operator()(jl_datatype_t* julia_value) const
+  SingletonType<T> operator()(jl_datatype_t*) const
   {
     return SingletonType<T>();
   }

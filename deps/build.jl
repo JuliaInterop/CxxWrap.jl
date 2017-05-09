@@ -39,7 +39,7 @@ prefix = joinpath(BinDeps.depsdir(cxx_wrap), "usr")
 @static if is_windows()
     bindir = joinpath(prefix, "bin")
 else
-    bindir = joinpath(prefix, "lib")
+    bindir = joinpath(prefix, "lib"*(Sys.WORD_SIZE == 64 && !is_apple() ? "64" : ""))
 end
 
 cxx_wrap_srcdir = joinpath(BinDeps.depsdir(cxx_wrap), "src", "cxx_wrap")

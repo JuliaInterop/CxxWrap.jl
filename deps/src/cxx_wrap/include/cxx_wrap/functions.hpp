@@ -174,7 +174,7 @@ typename detail::SplitSignature<SignatureT>::fptr_t make_function_pointer(SafeCF
   const std::vector<jl_datatype_t*> expected_argstypes = SplitterT()();
   ArrayRef<jl_value_t*> argtypes(data.argtypes);
   const int nb_args = expected_argstypes.size();
-  if(nb_args != argtypes.size())
+  if(nb_args != static_cast<int>(argtypes.size()))
   {
     std::stringstream err_sstr;
     err_sstr << "Incorrect number of arguments for cfunction, expected: " << nb_args << ", obtained: " << argtypes.size();

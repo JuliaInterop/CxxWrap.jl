@@ -353,7 +353,7 @@ template<> struct static_type_mapping<JuliaMatrix>
 template<>
 struct ConvertToCpp<JuliaMatrix, false, false, false>
 {
-  JuliaMatrix operator()(jl_datatype_t* julia_value) const
+  JuliaMatrix operator()(jl_datatype_t*) const
   {
     return JuliaMatrix();
   }

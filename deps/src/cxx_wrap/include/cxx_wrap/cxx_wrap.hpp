@@ -503,12 +503,12 @@ private:
   void add_default_constructor(std::true_type, jl_datatype_t* dt);
 
   template<typename T>
-  void add_default_constructor(std::false_type, jl_datatype_t* dt = nullptr)
+  void add_default_constructor(std::false_type, jl_datatype_t*)
   {
   }
 
   template<typename T>
-  void add_copy_constructor(std::true_type, jl_datatype_t* dt)
+  void add_copy_constructor(std::true_type, jl_datatype_t*)
   {
     method("deepcopy_internal", [this](const T& other, ObjectIdDict)
     {
@@ -517,7 +517,7 @@ private:
   }
 
   template<typename T>
-  void add_copy_constructor(std::false_type, jl_datatype_t* dt = nullptr)
+  void add_copy_constructor(std::false_type, jl_datatype_t*)
   {
   }
 
@@ -525,7 +525,7 @@ private:
   TypeWrapper<T> add_type_internal(const std::string& name, jl_datatype_t* super);
 
   template<typename R, typename LambdaRefT, typename LambdaT, typename... ArgsT>
-  FunctionWrapperBase& add_lambda(const std::string& name, LambdaRefT&& lambda, R(LambdaT::*f)(ArgsT...) const)
+  FunctionWrapperBase& add_lambda(const std::string& name, LambdaRefT&& lambda, R(LambdaT::*)(ArgsT...) const)
   {
     return method(name, std::function<R(ArgsT...)>(lambda));
   }
@@ -913,7 +913,7 @@ namespace detail
   template<typename T>
   struct dispatch_set_julia_type<T, true>
   {
-    void operator()(jl_datatype_t* dt)
+    void operator()(jl_datatype_t*)
     {
     }
   };
