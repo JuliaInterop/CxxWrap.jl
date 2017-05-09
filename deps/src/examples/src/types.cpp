@@ -1,7 +1,10 @@
+﻿#include <type_traits>
 #include <string>
+#include <memory>
+#include <iostream>
 
-#include <cxx_wrap.hpp>
-#include <functions.hpp>
+#include "cxx_wrap/cxx_wrap.hpp"
+#include "cxx_wrap/functions.hpp"
 
 namespace cpp_types
 {

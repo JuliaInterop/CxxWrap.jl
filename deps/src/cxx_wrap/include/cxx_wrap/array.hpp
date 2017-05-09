@@ -1,9 +1,8 @@
-#ifndef ARRAY_HPP
-#define ARRAY_HPP
+﻿#ifndef CXXWRAP_ARRAY_HPP
+#define CXXWRAP_ARRAY_HPP
 
 #include "type_conversion.hpp"
-
-#include "containers/tuple.hpp"
+#include "tuple.hpp"
 
 namespace cxx_wrap
 {
@@ -354,7 +353,7 @@ template<> struct static_type_mapping<JuliaMatrix>
 template<>
 struct ConvertToCpp<JuliaMatrix, false, false, false>
 {
-  JuliaMatrix operator()(jl_datatype_t* julia_value) const
+  JuliaMatrix operator()(jl_datatype_t*) const
   {
     return JuliaMatrix();
   }

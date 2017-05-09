@@ -1,14 +1,25 @@
-﻿#include <cxx_wrap.hpp>
-#include <array.hpp>
-#include <functions.hpp>
-
-#include <algorithm>
+﻿#include <algorithm>
 #include <sstream>
+#include <cstddef>
+
+#include "cxx_wrap/cxx_wrap.hpp"
+#include "cxx_wrap/array.hpp"
+#include "cxx_wrap/functions.hpp"
+
+#ifdef _WIN32
+  #ifdef CXXWRAP_EXAMPLES_EXPORTS
+      #define CXXWRAP_EXAMPLES_API __declspec(dllexport)
+  #else
+      #define CXXWRAP_EXAMPLES_API __declspec(dllimport)
+  #endif
+#else
+  #define CXXWRAP_EXAMPLES_API
+#endif
 
 // C function for performance comparison
-extern "C" CXX_WRAP_EXPORT double half_c(const double d)
+extern "C" CXXWRAP_EXAMPLES_API double half_c(const double d)
 {
-  return 0.5*d;
+  return 0.5 * d;
 }
 
 namespace functions
@@ -16,7 +27,7 @@ namespace functions
 
 double half_function(const double d)
 {
-  return 0.5*d;
+  return 0.5 * d;
 }
 
 template<typename T>

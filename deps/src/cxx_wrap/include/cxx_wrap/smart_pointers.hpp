@@ -1,4 +1,4 @@
-#ifndef CXXWRAP_SMART_POINTER_HPP
+﻿#ifndef CXXWRAP_SMART_POINTER_HPP
 #define CXXWRAP_SMART_POINTER_HPP
 
 #include "type_conversion.hpp"
@@ -53,7 +53,7 @@ ConstructFromOther
 template<typename ToType>
 struct ConstructFromOther<ToType, void>
 {
-  static jl_value_t* apply(jl_value_t* smart_void_ptr)
+  static jl_value_t* apply(jl_value_t*)
   {
     jl_error("ConstructFromOther not available for this smart pointer type");
     return nullptr;
@@ -64,7 +64,7 @@ struct ConstructFromOther<ToType, void>
 template<typename T>
 struct ConvertToBase
 {
-  static jl_value_t* apply(void* smart_void_ptr)
+  static jl_value_t* apply(void*)
   {
     static_assert(sizeof(T)==0, "No appropriate specialization for ConvertToBase");
   }
@@ -87,7 +87,7 @@ struct ConvertToBase<PtrT<T>>
 template<typename T>
 struct ConvertToBase<std::unique_ptr<T>>
 {
-  static jl_value_t* apply(void* smart_void_ptr)
+  static jl_value_t* apply(void*)
   {
     jl_error("No convert to base for std::unique_ptr");
     return nullptr;
@@ -159,7 +159,8 @@ struct SmartJuliaType<std::unique_ptr<const T>>
 
 }
 
-template<typename T> struct CXX_WRAP_EXPORT static_type_mapping<T, typename std::enable_if<IsSmartPointerType<T>::value>::type>
+template<typename T>
+struct static_type_mapping<T, typename std::enable_if<IsSmartPointerType<T>::value>::type>
 {
   typedef jl_value_t* type;
   static jl_datatype_t* julia_type()

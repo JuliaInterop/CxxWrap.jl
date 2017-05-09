@@ -1,8 +1,7 @@
-#ifndef CONST_ARRAY_HPP
-#define CONST_ARRAY_HPP
+﻿#ifndef CXXWRAP_CONST_ARRAY_HPP
+#define CXXWRAP_CONST_ARRAY_HPP
 
-#include "../cxx_wrap.hpp"
-
+#include "cxx_wrap.hpp"
 #include "tuple.hpp"
 
 namespace cxx_wrap

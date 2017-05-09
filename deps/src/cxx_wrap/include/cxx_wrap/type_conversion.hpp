@@ -1,5 +1,5 @@
-#ifndef TYPE_CONVERSION_HPP
-#define TYPE_CONVERSION_HPP
+﻿#ifndef CXXWRAP_TYPE_CONVERSION_HPP
+#define CXXWRAP_TYPE_CONVERSION_HPP
 
 #include <julia.h>
 #if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR > 4
@@ -16,11 +16,7 @@
 #include <type_traits>
 #include <iostream>
 
-#ifdef _WIN32
-  #define  CXX_WRAP_EXPORT __declspec(dllexport)
-#else
-   #define  CXX_WRAP_EXPORT
-#endif
+#include "cxx_wrap_config.hpp"
 
 namespace cxx_wrap
 {
@@ -45,10 +41,9 @@ namespace detail
   };
 }
 
-CXX_WRAP_EXPORT jl_array_t* gc_protected();
-CXX_WRAP_EXPORT std::stack<std::size_t>& gc_free_stack();
-CXX_WRAP_EXPORT std::map<jl_value_t*, std::pair<std::size_t,std::size_t>>& gc_index_map();
-
+CXXWRAP_API jl_array_t* gc_protected();
+CXXWRAP_API std::stack<std::size_t>& gc_free_stack();
+CXXWRAP_API std::map<jl_value_t*, std::pair<std::size_t,std::size_t>>& gc_index_map();
 
 template<typename T>
 inline void protect_from_gc(T* x)
@@ -112,7 +107,7 @@ inline std::string symbol_name(jl_sym_t* symbol)
 }
 
 /// Backwards-compatible apply_type
-CXX_WRAP_EXPORT jl_value_t* apply_type(jl_value_t* tc, jl_svec_t* params);
+CXXWRAP_API jl_value_t* apply_type(jl_value_t* tc, jl_svec_t* params);
 
 /// Backwards-compatible apply_array_type
 template<typename T>
@@ -232,7 +227,7 @@ template<typename CppT, bool Fundamental=false, bool Immutable=false, bool Bits=
 struct ConvertToCpp
 {
   template<typename JuliaT>
-  CppT* operator()(JuliaT&& julia_val) const
+  CppT* operator()(JuliaT&&) const
   {
     static_assert(sizeof(CppT)==0, "No appropriate specialization for ConvertToCpp");
     return nullptr; // not reached
@@ -302,7 +297,8 @@ namespace detail
 }
 
 /// Static mapping base template, for dynamically added types
-template<typename SourceT, typename Enable=void> struct CXX_WRAP_EXPORT static_type_mapping
+template<typename SourceT, typename Enable=void>
+struct static_type_mapping
 {
   typedef typename detail::StaticIf<IsBits<remove_const_ref<SourceT>>::value, remove_const_ref<SourceT>, WrappedCppPtr>::type type;
 
@@ -535,127 +531,158 @@ inline jl_datatype_t* julia_return_type()
 /// Specializations
 
 // Needed for Visual C++, static members are different in each DLL
-extern "C" CXX_WRAP_EXPORT jl_datatype_t* get_any_type(); // Implemented in c_interface.cpp
-extern "C" CXX_WRAP_EXPORT jl_module_t* get_cxxwrap_module();
-template<> struct CXX_WRAP_EXPORT static_type_mapping<CppAny>
+extern "C" CXXWRAP_API jl_datatype_t* get_any_type(); // Implemented in c_interface.cpp
+extern "C" CXXWRAP_API jl_module_t* get_cxxwrap_module();
+
+template<>
+struct CXXWRAP_API static_type_mapping<CppAny>
 {
   typedef jl_value_t* type;
   static jl_datatype_t* julia_type() { return get_any_type(); }
 };
 
-template<> struct static_type_mapping<void>
+template<>
+struct static_type_mapping<void>
 {
   typedef void type;
   static jl_datatype_t* julia_type() { return jl_void_type; }
 };
 
-template<> struct static_type_mapping<bool>
+template<>
+struct static_type_mapping<bool>
 {
   typedef bool type;
   static jl_datatype_t* julia_type() { return jl_bool_type; }
 };
 
-template<> struct static_type_mapping<double>
+template<>
+struct static_type_mapping<double>
 {
   typedef double type;
   static jl_datatype_t* julia_type() { return jl_float64_type; }
 };
 
-template<> struct static_type_mapping<float>
+template<>
+struct static_type_mapping<float>
 {
   typedef float type;
   static jl_datatype_t* julia_type() { return jl_float32_type; }
 };
 
-template<> struct static_type_mapping<short>
+template<>
+struct static_type_mapping<short>
 {
   static_assert(sizeof(short) == 2, "short is expected to be 16 bits");
   typedef short type;
   static jl_datatype_t* julia_type() { return jl_int16_type; }
 };
 
-template<> struct static_type_mapping<int>
+template<>
+struct static_type_mapping<int>
 {
   static_assert(sizeof(int) == 4, "int is expected to be 32 bits");
   typedef int type;
   static jl_datatype_t* julia_type() { return jl_int32_type; }
 };
 
-template<> struct static_type_mapping<unsigned int>
+template<>
+struct static_type_mapping<unsigned int>
 {
   static_assert(sizeof(unsigned int) == 4, "unsigned int is expected to be 32 bits");
   typedef unsigned int type;
   static jl_datatype_t* julia_type() { return jl_uint32_type; }
 };
 
-template<> struct static_type_mapping<unsigned char>
+template<>
+struct static_type_mapping<unsigned char>
 {
   typedef unsigned char type;
   static jl_datatype_t* julia_type() { return jl_uint8_type; }
 };
 
-template<> struct static_type_mapping<int64_t>
+template<>
+struct static_type_mapping<int64_t>
 {
   typedef int64_t type;
   static jl_datatype_t* julia_type() { return jl_int64_type; }
 };
 
-template<> struct static_type_mapping<uint64_t>
+template<>
+struct static_type_mapping<uint64_t>
 {
   typedef uint64_t type;
   static jl_datatype_t* julia_type() { return jl_uint64_type; }
 };
 
-template<> struct static_type_mapping<detail::define_if_different<long, int64_t>>
+template<>
+struct static_type_mapping<detail::define_if_different<long, int64_t>>
 {
   static_assert(sizeof(long) == 8 || sizeof(long) == 4, "long is expected to be 64 bits or 32 bits");
   typedef long type;
   static jl_datatype_t* julia_type() { return sizeof(long) == 8 ? jl_int64_type : jl_int32_type; }
 };
 
-template<> struct static_type_mapping<detail::define_if_different<long long, int64_t>>
+template<>
+struct static_type_mapping<detail::define_if_different<long long, int64_t>>
 {
   static_assert(sizeof(long long) == 8, " long long is expected to be 64 bits or 32 bits");
   typedef long long type;
   static jl_datatype_t* julia_type() { return jl_int64_type; }
 };
 
-template<> struct static_type_mapping<detail::define_if_different<unsigned long, uint64_t>>
+template<>
+struct static_type_mapping<detail::define_if_different<unsigned long, uint64_t>>
 {
   static_assert(sizeof(unsigned long) == 8 || sizeof(unsigned long) == 4, "unsigned long is expected to be 64 bits or 32 bits");
   typedef unsigned long type;
   static jl_datatype_t* julia_type() { return sizeof(unsigned long) == 8 ? jl_uint64_type : jl_uint32_type; }
 };
 
-template<> struct static_type_mapping<wchar_t>
+template<>
+struct static_type_mapping<wchar_t>
 {
   typedef wchar_t type;
   static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_get_global(jl_base_module, jl_symbol("Cwchar_t")); }
 };
-template<> struct static_type_mapping<const wchar_t> : static_type_mapping<wchar_t> {};
 
+template<>
+struct static_type_mapping<const wchar_t> : static_type_mapping<wchar_t>
+{
+};
 
-template<> struct IsValueType<std::string> : std::true_type {};
-template<> struct static_type_mapping<std::string>
+template<>
+struct IsValueType<std::string> : std::true_type
+{
+};
+
+template<>
+struct static_type_mapping<std::string>
 {
   typedef jl_value_t* type;
   static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_get_global(jl_base_module, jl_symbol("AbstractString")); }
 };
 
-template<> struct IsValueType<std::wstring> : std::true_type {};
-template<> struct static_type_mapping<std::wstring>
+template<>
+struct IsValueType<std::wstring> : std::true_type
+{
+};
+
+template<>
+struct static_type_mapping<std::wstring>
 {
   typedef jl_value_t* type;
   static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_get_global(jl_base_module, jl_symbol("AbstractString")); }
 };
 
-template<typename T> struct static_type_mapping<T*, typename std::enable_if<IsFundamental<T>::value>::type>
+template<typename T>
+struct static_type_mapping<T*, typename std::enable_if<IsFundamental<T>::value>::type>
 {
   typedef T* type;
   static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_type((jl_value_t*)jl_pointer_type, jl_svec1(static_type_mapping<T>::julia_type())); }
 };
 
-template<> struct static_type_mapping<const char*>
+template<>
+struct static_type_mapping<const char*>
 {
   typedef jl_value_t* type;
   static jl_datatype_t* julia_type() { return (jl_datatype_t*)jl_get_global(jl_base_module, jl_symbol("AbstractString")); }
@@ -843,7 +870,7 @@ struct ConvertToJulia<const std::string*, false, false, false>
 };
 
 template<>
-struct CXX_WRAP_EXPORT ConvertToJulia<std::wstring, false, false, false>
+struct CXXWRAP_API ConvertToJulia<std::wstring, false, false, false>
 {
   jl_value_t* operator()(const std::wstring& str) const;
 };
@@ -924,7 +951,7 @@ inline auto convert_to_julia(T&& cpp_val) -> decltype(julia_converter_type<T>()(
 }
 
 template<typename CppT>
-inline typename std::enable_if<!std::is_same<jl_value_t*, mapped_julia_type<CppT>>::value && !std::is_same<WrappedCppPtr, mapped_julia_type<CppT>>::value, jl_value_t*>::type box(const CppT& cpp_val)
+inline typename std::enable_if<!std::is_same<jl_value_t*, mapped_julia_type<CppT>>::value && !std::is_same<WrappedCppPtr, mapped_julia_type<CppT>>::value, jl_value_t*>::type box(const CppT&)
 {
   static_assert(sizeof(CppT*) == 0, "Unimplemented box in cxx_wrap");
   return nullptr;
@@ -1289,7 +1316,7 @@ struct ConvertToCpp<std::string, false, false, false>
 };
 
 template<>
-struct CXX_WRAP_EXPORT ConvertToCpp<std::wstring, false, false, false>
+struct CXXWRAP_API ConvertToCpp<std::wstring, false, false, false>
 {
   std::wstring operator()(jl_value_t* jstr) const;
 };
@@ -1297,7 +1324,7 @@ struct CXX_WRAP_EXPORT ConvertToCpp<std::wstring, false, false, false>
 template<typename T>
 struct ConvertToCpp<SingletonType<T>, false, false, false>
 {
-  SingletonType<T> operator()(jl_datatype_t* julia_value) const
+  SingletonType<T> operator()(jl_datatype_t*) const
   {
     return SingletonType<T>();
   }
@@ -1350,7 +1377,7 @@ inline jl_datatype_t* julia_type()
 }
 
 /// Get the type from a global symbol
-CXX_WRAP_EXPORT jl_datatype_t* julia_type(const std::string& name, const std::string& module_name = "");
+CXXWRAP_API jl_datatype_t* julia_type(const std::string& name, const std::string& module_name = "");
 
 /// Helper to encapsulate a strictly typed number type. Numbers typed like this will not be involved in the convenience-overloads that allow passing e.g. an Int to a Float64 argument
 template<typename NumberT>

@@ -1,5 +1,5 @@
-#ifndef CXX_WRAP_HPP
-#define CXX_WRAP_HPP
+﻿#ifndef CXXWRAP_HPP
+#define CXXWRAP_HPP
 
 #include <cassert>
 #include <functional>
@@ -250,7 +250,7 @@ struct Parametric
 template<typename T>
 class TypeWrapper;
 
-class CXX_WRAP_EXPORT Module;
+class CXXWRAP_API Module;
 
 /// Specialise this to instantiate parametric types when first used in a wrapper
 template<typename T>
@@ -354,7 +354,7 @@ struct ParameterList
 };
 
 /// Store all exposed C++ functions associated with a module
-class CXX_WRAP_EXPORT Module
+class CXXWRAP_API Module
 {
 public:
 
@@ -503,12 +503,12 @@ private:
   void add_default_constructor(std::true_type, jl_datatype_t* dt);
 
   template<typename T>
-  void add_default_constructor(std::false_type, jl_datatype_t* dt = nullptr)
+  void add_default_constructor(std::false_type, jl_datatype_t*)
   {
   }
 
   template<typename T>
-  void add_copy_constructor(std::true_type, jl_datatype_t* dt)
+  void add_copy_constructor(std::true_type, jl_datatype_t*)
   {
     method("deepcopy_internal", [this](const T& other, ObjectIdDict)
     {
@@ -517,7 +517,7 @@ private:
   }
 
   template<typename T>
-  void add_copy_constructor(std::false_type, jl_datatype_t* dt = nullptr)
+  void add_copy_constructor(std::false_type, jl_datatype_t*)
   {
   }
 
@@ -525,7 +525,7 @@ private:
   TypeWrapper<T> add_type_internal(const std::string& name, jl_datatype_t* super);
 
   template<typename R, typename LambdaRefT, typename LambdaT, typename... ArgsT>
-  FunctionWrapperBase& add_lambda(const std::string& name, LambdaRefT&& lambda, R(LambdaT::*f)(ArgsT...) const)
+  FunctionWrapperBase& add_lambda(const std::string& name, LambdaRefT&& lambda, R(LambdaT::*)(ArgsT...) const)
   {
     return method(name, std::function<R(ArgsT...)>(lambda));
   }
@@ -913,7 +913,7 @@ namespace detail
   template<typename T>
   struct dispatch_set_julia_type<T, true>
   {
-    void operator()(jl_datatype_t* dt)
+    void operator()(jl_datatype_t*)
     {
     }
   };
@@ -940,7 +940,7 @@ void Module::add_bits(const std::string& name, jl_datatype_t* super)
 }
 
 /// Registry containing different modules
-class CXX_WRAP_EXPORT ModuleRegistry
+class CXXWRAP_API ModuleRegistry
 {
 public:
   /// Create a module and register it
@@ -1002,9 +1002,15 @@ struct RegisterHook
 
 } // namespace cxx_wrap
 
+#ifdef _WIN32
+   #define CXXWRAP_ONLY_EXPORTS __declspec(dllexport)
+#else
+   #define CXXWRAP_ONLY_EXPORTS
+#endif
+
 /// Register a new module
 #define JULIA_CPP_MODULE_BEGIN(registry) \
-extern "C" CXX_WRAP_EXPORT void register_julia_modules(void* void_reg) { \
+extern "C" CXXWRAP_ONLY_EXPORTS void register_julia_modules(void* void_reg) { \
   cxx_wrap::ModuleRegistry& registry = *reinterpret_cast<cxx_wrap::ModuleRegistry*>(void_reg);
 
 #define JULIA_CPP_MODULE_END }

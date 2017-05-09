@@ -1,6 +1,7 @@
-#include "array.hpp"
+﻿#include "array.hpp"
 #include "cxx_wrap.hpp"
 #include "functions.hpp"
+#include "cxx_wrap_config.hpp"
 
 #include <julia.h>
 #if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR > 4
@@ -13,7 +14,7 @@ namespace cxx_wrap
 jl_module_t* g_cxx_wrap_module;
 jl_datatype_t* g_cppfunctioninfo_type;
 
-CXX_WRAP_EXPORT jl_array_t* gc_protected()
+CXXWRAP_API jl_array_t* gc_protected()
 {
   static jl_array_t* m_arr = nullptr;
   if (m_arr == nullptr)
@@ -29,13 +30,13 @@ CXX_WRAP_EXPORT jl_array_t* gc_protected()
   return m_arr;
 }
 
-CXX_WRAP_EXPORT std::stack<std::size_t>& gc_free_stack()
+CXXWRAP_API std::stack<std::size_t>& gc_free_stack()
 {
   static std::stack<std::size_t> m_stack;
   return m_stack;
 }
 
-CXX_WRAP_EXPORT std::map<jl_value_t*, std::pair<std::size_t,std::size_t>>& gc_index_map()
+CXXWRAP_API std::map<jl_value_t*, std::pair<std::size_t,std::size_t>>& gc_index_map()
 {
   static std::map<jl_value_t*, std::pair<std::size_t,std::size_t>> m_map;
   return m_map;
@@ -55,7 +56,7 @@ Module& ModuleRegistry::create_module(const std::string &name)
   return *mod;
 }
 
-CXX_WRAP_EXPORT jl_datatype_t* julia_type(const std::string& name, const std::string& module_name)
+CXXWRAP_API jl_datatype_t* julia_type(const std::string& name, const std::string& module_name)
 {
   for(jl_module_t* mod : {jl_base_module, g_cxx_wrap_module, jl_current_module, jl_current_module->parent, module_name.empty() ? nullptr : (jl_module_t*)jl_get_global(jl_current_module, jl_symbol(module_name.c_str()))})
   {
@@ -100,7 +101,7 @@ void InitHooks::run_hooks()
   }
 }
 
-CXX_WRAP_EXPORT jl_value_t* apply_type(jl_value_t* tc, jl_svec_t* params)
+CXXWRAP_API jl_value_t* apply_type(jl_value_t* tc, jl_svec_t* params)
 {
 #if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 6
   return jl_apply_type(tc, params);

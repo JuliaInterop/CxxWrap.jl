@@ -1,8 +1,9 @@
 project(Examples)
 
 cmake_minimum_required(VERSION 2.8.12)
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cxx_wrap/)
 
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 set(CMAKE_MACOSX_RPATH 1)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
@@ -14,35 +15,42 @@ if(WIN32 AND DEFINED ENV{MSYSTEM})
   endif()
 endif()
 
-set(CxxWrap_DIR "${CMAKE_CURRENT_BINARY_DIR}/../../usr/lib/cmake")
 find_package(CxxWrap)
+find_package(Julia)
 
-add_library(functions SHARED functions.cpp)
-target_link_libraries(functions CxxWrap::cxx_wrap)
+include_directories(${CxxWrap_INCLUDE_DIRS})
+include_directories(${Julia_INCLUDE_DIRS})
 
-add_library(hello SHARED hello.cpp)
-target_link_libraries(hello CxxWrap::cxx_wrap)
+add_library(functions SHARED src/functions.cpp)
+set_target_properties(functions PROPERTIES COMPILE_DEFINITIONS "CXXWRAP_EXAMPLES_EXPORTS")
 
-add_library(types SHARED types.cpp)
-target_link_libraries(types CxxWrap::cxx_wrap)
+MESSAGE(STATUS ${CxxWrap_LIBRARY})
+target_link_libraries(functions ${CxxWrap_LIBRARY} ${Julia_LIBRARY})
 
-add_library(inheritance SHARED inheritance.cpp)
-target_link_libraries(inheritance CxxWrap::cxx_wrap)
+add_library(hello SHARED src/hello.cpp)
+target_link_libraries(hello ${CxxWrap_LIBRARY} ${Julia_LIBRARY})
 
-add_library(parametric SHARED parametric.cpp)
-target_link_libraries(parametric CxxWrap::cxx_wrap)
+add_library(types SHARED src/types.cpp)
+target_link_libraries(types ${CxxWrap_LIBRARY} ${Julia_LIBRARY})
 
-add_library(extended SHARED extended.cpp)
-target_link_libraries(extended CxxWrap::cxx_wrap)
+add_library(inheritance SHARED src/inheritance.cpp)
+target_link_libraries(inheritance ${CxxWrap_LIBRARY} ${Julia_LIBRARY})
 
-add_library(cxxwrap_containers SHARED containers.cpp)
-target_link_libraries(cxxwrap_containers CxxWrap::cxx_wrap)
+add_library(parametric SHARED src/parametric.cpp)
+target_link_libraries(parametric ${CxxWrap_LIBRARY} ${Julia_LIBRARY})
 
-get_property(JULIA_LIBRARY TARGET CxxWrap::cxx_wrap PROPERTY INTERFACE_LINK_LIBRARIES)
-get_property(JULIA_INCLUDES TARGET CxxWrap::cxx_wrap PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
-add_library(except SHARED except.cpp)
-target_include_directories(except PRIVATE ${JULIA_INCLUDES})
-target_link_libraries(except ${JULIA_LIBRARY})
+add_library(extended SHARED src/extended.cpp)
+target_link_libraries(extended ${CxxWrap_LIBRARY} ${Julia_LIBRARY})
+
+add_library(cxxwrap_containers SHARED src/containers.cpp)
+target_link_libraries(cxxwrap_containers ${CxxWrap_LIBRARY} ${Julia_LIBRARY})
+
+add_library(except SHARED src/except.cpp)
+target_include_directories(except PRIVATE ${Julia_INCLUDE_DIRS})
+target_link_libraries(except ${Julia_LIBRARY})
+
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 install(TARGETS
   cxxwrap_containers
@@ -53,7 +61,7 @@ install(TARGETS
   inheritance
   parametric
   types
-LIBRARY DESTINATION lib${LIBDIR_SUFFIX}
-ARCHIVE DESTINATION lib${LIBDIR_SUFFIX}
-RUNTIME DESTINATION lib${LIBDIR_SUFFIX}
-INCLUDES DESTINATION include)
+ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/cxx_wrap-examples)

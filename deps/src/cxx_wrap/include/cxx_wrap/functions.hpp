@@ -1,5 +1,5 @@
-#ifndef FUNCTIONS_HPP
-#define FUNCTIONS_HPP
+﻿#ifndef CXXWRAP_FUNCTIONS_HPP
+#define CXXWRAP_FUNCTIONS_HPP
 
 #include <sstream>
 #include <vector>
@@ -13,7 +13,7 @@ namespace cxx_wrap
 {
 
 /// Wrap a Julia function for easy calling
-class CXX_WRAP_EXPORT JuliaFunction
+class CXXWRAP_API JuliaFunction
 {
 public:
   /// Construct using a function name and module name. Searches the current module by default. Throws if the function was not found.
@@ -174,7 +174,7 @@ typename detail::SplitSignature<SignatureT>::fptr_t make_function_pointer(SafeCF
   const std::vector<jl_datatype_t*> expected_argstypes = SplitterT()();
   ArrayRef<jl_value_t*> argtypes(data.argtypes);
   const int nb_args = expected_argstypes.size();
-  if(nb_args != argtypes.size())
+  if(nb_args != static_cast<int>(argtypes.size()))
   {
     std::stringstream err_sstr;
     err_sstr << "Incorrect number of arguments for cfunction, expected: " << nb_args << ", obtained: " << argtypes.size();
