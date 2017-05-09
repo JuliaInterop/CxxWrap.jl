@@ -1,4 +1,4 @@
-#ifndef CXXWRAP_HPP
+﻿#ifndef CXXWRAP_HPP
 #define CXXWRAP_HPP
 
 #include <cassert>

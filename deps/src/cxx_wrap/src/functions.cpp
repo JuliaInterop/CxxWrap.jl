@@ -1,4 +1,4 @@
-#include "functions.hpp"
+﻿#include "functions.hpp"
 
 // This header provides helper functions to call Julia functions from C++
 

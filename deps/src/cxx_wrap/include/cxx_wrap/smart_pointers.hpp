@@ -1,4 +1,4 @@
-#ifndef CXXWRAP_SMART_POINTER_HPP
+﻿#ifndef CXXWRAP_SMART_POINTER_HPP
 #define CXXWRAP_SMART_POINTER_HPP
 
 #include "type_conversion.hpp"

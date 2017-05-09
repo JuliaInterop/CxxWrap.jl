@@ -1,4 +1,4 @@
-#ifndef CXXWRAP_TYPE_CONVERSION_HPP
+﻿#ifndef CXXWRAP_TYPE_CONVERSION_HPP
 #define CXXWRAP_TYPE_CONVERSION_HPP
 
 #include <julia.h>

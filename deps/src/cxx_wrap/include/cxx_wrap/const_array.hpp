@@ -1,4 +1,4 @@
-#ifndef CXXWRAP_CONST_ARRAY_HPP
+﻿#ifndef CXXWRAP_CONST_ARRAY_HPP
 #define CXXWRAP_CONST_ARRAY_HPP
 
 #include "cxx_wrap.hpp"

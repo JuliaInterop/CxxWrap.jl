@@ -1,4 +1,4 @@
-#ifndef CXXWRAP_ARRAY_HPP
+﻿#ifndef CXXWRAP_ARRAY_HPP
 #define CXXWRAP_ARRAY_HPP
 
 #include "type_conversion.hpp"
