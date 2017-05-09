@@ -43,6 +43,7 @@ set(CXXWRAP_HEADERS
     ${CXXWRAP_INCLUDE_DIR}/cxx_wrap/array.hpp
     ${CXXWRAP_INCLUDE_DIR}/cxx_wrap/const_array.hpp
     ${CXXWRAP_INCLUDE_DIR}/cxx_wrap/cxx_wrap.hpp
+    ${CXXWRAP_INCLUDE_DIR}/cxx_wrap/cxx_wrap_config.hpp
     ${CXXWRAP_INCLUDE_DIR}/cxx_wrap/functions.hpp
     ${CXXWRAP_INCLUDE_DIR}/cxx_wrap/smart_pointers.hpp
     ${CXXWRAP_INCLUDE_DIR}/cxx_wrap/tuple.hpp
@@ -57,6 +58,20 @@ set(CXXWRAP_SOURCES
 
 include_directories(${CXXWRAP_INCLUDE_DIR}/cxx_wrap)
 include_directories(${Julia_INCLUDE_DIRS})
+
+# Versioning
+# ==========
+
+file(STRINGS "${CXXWRAP_INCLUDE_DIR}/cxx_wrap/cxx_wrap_config.hpp" cxx_wrap_version_defines
+    REGEX "#define CXXWRAP_VERSION_(MAJOR|MINOR|PATCH)")
+foreach(ver ${cxx_wrap_version_defines})
+    if(ver MATCHES "#define XEUS_VERSION_(MAJOR|MINOR|PATCH) +([^ ]+)$")
+        set(CXXWRAP_VERSION_${CMAKE_MATCH_1} "${CMAKE_MATCH_2}" CACHE INTERNAL "")
+    endif()
+endforeach()
+set(${PROJECT_NAME}_VERSION
+    ${CXXWRAP_VERSION_MAJOR}.${CXXWRAP_VERSION_MINOR}.${CXXWRAP_VERSION_PATCH})
+message(STATUS "${PROJECT_NAME} version: v${${PROJECT_NAME}_VERSION}")
 
 # Output
 # ======
@@ -84,17 +99,6 @@ else()
     set(CXXWRAP_LINK_FILE lib${CXXWRAP_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX})
     set(CXXWRAP_RUNTIME_FILE lib${CXXWRAP_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX})
 endif()
-
-include(GenerateExportHeader)
-
-generate_export_header(${CXXWRAP_TARGET})
-
-set(CxxWrap_VERSION 0.1)
-
-set_property(TARGET ${CXXWRAP_TARGET} PROPERTY VERSION ${CxxWrap_VERSION})
-set_property(TARGET ${CXXWRAP_TARGET} PROPERTY SOVERSION 0)
-set_property(TARGET ${CXXWRAP_TARGET} PROPERTY INTERFACE_cxx_wrap_MAJOR_VERSION 0)
-set_property(TARGET ${CXXWRAP_TARGET} APPEND PROPERTY COMPATIBLE_INTERFACE_STRING cxx_wrap_MAJOR_VERSION)
 
 # Installation
 # ============
