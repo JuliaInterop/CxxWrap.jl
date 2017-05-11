@@ -402,7 +402,7 @@ public:
   template<typename LambdaT>
   FunctionWrapperBase& method(const std::string& name, LambdaT&& lambda)
   {
-    return add_lambda(name, lambda, &LambdaT::operator());
+    return add_lambda(name, std::forward<LambdaT>(lambda), &LambdaT::operator());
   }
 
   /// Add a constructor with the given argument types for the given datatype (used to get the name)
@@ -524,10 +524,10 @@ private:
   template<typename T, typename SuperParametersT>
   TypeWrapper<T> add_type_internal(const std::string& name, jl_datatype_t* super);
 
-  template<typename R, typename LambdaRefT, typename LambdaT, typename... ArgsT>
-  FunctionWrapperBase& add_lambda(const std::string& name, LambdaRefT&& lambda, R(LambdaT::*)(ArgsT...) const)
+  template<typename R, typename LambdaT, typename... ArgsT>
+  FunctionWrapperBase& add_lambda(const std::string& name, LambdaT&& lambda, R(LambdaT::*)(ArgsT...) const)
   {
-    return method(name, std::function<R(ArgsT...)>(lambda));
+    return method(name, std::function<R(ArgsT...)>(std::forward<LambdaT>(lambda)));
   }
 
   std::string m_name;
