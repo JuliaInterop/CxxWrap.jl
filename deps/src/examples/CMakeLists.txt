@@ -15,6 +15,8 @@ if(WIN32 AND DEFINED ENV{MSYSTEM})
   endif()
 endif()
 
+set(CMAKE_INSTALL_LIBDIR "lib")
+
 find_package(CxxWrap)
 find_package(Julia)
 

@@ -33,6 +33,8 @@ if(WIN32 AND DEFINED ENV{MSYSTEM})
   endif()
 endif()
 
+set(CMAKE_INSTALL_LIBDIR "lib")
+
 # Source files
 # ============
 
