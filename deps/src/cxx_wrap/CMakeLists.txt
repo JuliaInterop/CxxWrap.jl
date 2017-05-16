@@ -7,6 +7,8 @@ project(CxxWrap)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 find_package(Julia REQUIRED)
 
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 set(CMAKE_MACOSX_RPATH 1)
 
 # Compilation flags
@@ -34,6 +36,8 @@ if(WIN32 AND DEFINED ENV{MSYSTEM})
 endif()
 
 set(CMAKE_INSTALL_LIBDIR "lib")
+
+set(CXXWRAP_BUILD_EXAMPLES ON CACHE BOOL "Build the CxxWrap examples")
 
 # Source files
 # ============
@@ -100,6 +104,10 @@ else()
     endif()
     set(CXXWRAP_LINK_FILE lib${CXXWRAP_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX})
     set(CXXWRAP_RUNTIME_FILE lib${CXXWRAP_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX})
+endif()
+
+if(CXXWRAP_BUILD_EXAMPLES)
+  add_subdirectory(examples)
 endif()
 
 # Installation

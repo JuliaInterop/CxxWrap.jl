@@ -37,7 +37,7 @@ template<typename T> struct IsBits<ConstPtr<T>> : std::true_type {};
 template<typename T>
 struct InstantiateParametricType<ConstPtr<T>>
 {
-  int operator()(Module& m) const
+  int operator()(Module&) const
   {
     // Register the Julia type if not already instantiated
     if(!static_type_mapping<ConstPtr<T>>::has_julia_type())

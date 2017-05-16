@@ -82,7 +82,7 @@ struct WrapTemplateType
 struct WrapTemplateDefaultType
 {
   template<typename TypeWrapperT>
-  void operator()(TypeWrapperT&& wrapped)
+  void operator()(TypeWrapperT&&)
   {
   }
 };
