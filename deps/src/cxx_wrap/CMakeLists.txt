@@ -106,10 +106,6 @@ else()
     set(CXXWRAP_RUNTIME_FILE lib${CXXWRAP_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX})
 endif()
 
-if(CXXWRAP_BUILD_EXAMPLES)
-  add_subdirectory(examples)
-endif()
-
 # Installation
 # ============
 
@@ -137,3 +133,7 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
               ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
   DESTINATION ${CXXWRAP_CMAKECONFIG_INSTALL_DIR}
 )
+
+if(CXXWRAP_BUILD_EXAMPLES)
+  add_subdirectory(examples)
+endif()
