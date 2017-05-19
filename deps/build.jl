@@ -56,11 +56,6 @@ lib_suffix = @static is_windows() ? "dll" : (@static is_apple() ? "dylib" : "so"
 julia_base_dir = splitdir(JULIA_HOME)[1]
 julia_executable = split(string(Base.julia_cmd()))[1][2:end]
 
-deps_paths = AbstractString[]
-for l in lib_labels
-  push!(deps_paths, joinpath(bindir, "$(lib_prefix)$(string(l)).$lib_suffix"))
-end
-
 makeopts = ["--", "-j", "$(Sys.ARCH == :armv7l ? 2 : Sys.CPU_CORES+2)"]
 
 # Set generator if on windows
@@ -79,6 +74,11 @@ genopt = "Unix Makefiles"
   else
     lib_prefix = "lib" #Makefiles on windows do keep the lib prefix
   end
+end
+
+deps_paths = AbstractString[]
+for l in lib_labels
+  push!(deps_paths, joinpath(bindir, "$(lib_prefix)$(string(l)).$lib_suffix"))
 end
 
 cxx_steps = @build_steps begin
