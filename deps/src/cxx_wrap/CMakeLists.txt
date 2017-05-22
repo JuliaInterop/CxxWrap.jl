@@ -11,12 +11,16 @@ set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 set(CMAKE_MACOSX_RPATH 1)
 
+# includes
+# ============
+include(CheckCXXCompilerFlag)
+include(CMakePackageConfigHelpers)
 include(GenerateExportHeader)
+include(GNUInstallDirs)
+
 
 # Compilation flags
 # =================
-
-include(CheckCXXCompilerFlag)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Intel")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -Wunused-parameter -Wextra -Wreorder")
@@ -64,8 +68,6 @@ set(CXXWRAP_SOURCES
   ${CXXWRAP_SOURCE_DIR}/functions.cpp
 )
 
-set(CXXWRAP_INSTALL_INCLUDEDIR ${CMAKE_INSTALL_PREFIX}/include)
-
 # Versioning
 # ==========
 
@@ -87,7 +89,7 @@ set(CXXWRAP_TARGET cxx_wrap)
 add_library(${CXXWRAP_TARGET} SHARED ${CXXWRAP_SOURCES} ${CXXWRAP_HEADERS})
 
 target_include_directories(${CXXWRAP_TARGET} PUBLIC
-  $<INSTALL_INTERFACE:${CXXWRAP_INSTALL_INCLUDEDIR}>
+  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   $<BUILD_INTERFACE:${CXXWRAP_INCLUDE_DIR}>
   $<BUILD_INTERFACE:${Julia_INCLUDE_DIRS}>
 )
@@ -125,8 +127,6 @@ endif()
 # Installation
 # ============
 
-include(CMakePackageConfigHelpers)
-
 # GNUInstallDirs "DATADIR" wrong here; CMake search path wants "share".
 set(CXXWRAP_CMAKECONFIG_INSTALL_DIR "share/cmake/${PROJECT_NAME}" CACHE STRING "install path for cxx_wrapConfig.cmake")
 
@@ -134,7 +134,7 @@ install(TARGETS ${CXXWRAP_TARGET} EXPORT CxxWrapTargets
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-        PUBLIC_HEADER DESTINATION ${CXXWRAP_INSTALL_INCLUDEDIR}/cxx_wrap)
+        PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/cxx_wrap)
 
 configure_package_config_file(${PROJECT_NAME}Config.cmake.in
                               "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
