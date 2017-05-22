@@ -1,4 +1,4 @@
-﻿#include "functions.hpp"
+﻿#include "cxx_wrap/functions.hpp"
 
 // This header provides helper functions to call Julia functions from C++
 

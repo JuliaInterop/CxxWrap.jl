@@ -1,13 +1,13 @@
-# cxx_wrap cmake module
-# This module sets the following variables in your project::
-#
-#   CxxWrap_FOUND - true if cxx_wrap found on the system
-#   CxxWrap_INCLUDE_DIRS - the directories containing CxxWrap headers
-#   CxxWrap_LIBRARY - the library for dynamic linking
+include(CMakeFindDependencyMacro)
 
-@PACKAGE_INIT@
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
+find_dependency(Julia)
 
-set(PN CxxWrap)
-set_and_check(${PN}_INCLUDE_DIRS "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_INCLUDEDIR@")
-set_and_check(${PN}_LIBRARY "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/@CXXWRAP_LINK_FILE@")
-check_required_components(${PN})
+include(CxxWrapConfigExports)
+
+get_target_property(CXX_OLD_INCLUDES CxxWrap::cxx_wrap INTERFACE_INCLUDE_DIRECTORIES)
+
+set_target_properties(CxxWrap::cxx_wrap PROPERTIES
+  INTERFACE_INCLUDE_DIRECTORIES "${CXX_OLD_INCLUDES};${Julia_INCLUDE_DIRS}"
+  INTERFACE_LINK_LIBRARIES "${Julia_LIBRARY}"
+)

@@ -1,6 +1,6 @@
-﻿#include "array.hpp"
-#include "cxx_wrap.hpp"
-#include "cxx_wrap_config.hpp"
+﻿#include "cxx_wrap/array.hpp"
+#include "cxx_wrap/cxx_wrap.hpp"
+#include "cxx_wrap/cxx_wrap_config.hpp"
 
 extern "C"
 {

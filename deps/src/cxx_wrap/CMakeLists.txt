@@ -11,6 +11,8 @@ set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 set(CMAKE_MACOSX_RPATH 1)
 
+include(GenerateExportHeader)
+
 # Compilation flags
 # =================
 
@@ -62,8 +64,7 @@ set(CXXWRAP_SOURCES
   ${CXXWRAP_SOURCE_DIR}/functions.cpp
 )
 
-include_directories(${CXXWRAP_INCLUDE_DIR}/cxx_wrap)
-include_directories(${Julia_INCLUDE_DIRS})
+set(CXXWRAP_INSTALL_INCLUDEDIR ${CMAKE_INSTALL_PREFIX}/include)
 
 # Versioning
 # ==========
@@ -71,7 +72,7 @@ include_directories(${Julia_INCLUDE_DIRS})
 file(STRINGS "${CXXWRAP_INCLUDE_DIR}/cxx_wrap/cxx_wrap_config.hpp" cxx_wrap_version_defines
     REGEX "#define CXXWRAP_VERSION_(MAJOR|MINOR|PATCH)")
 foreach(ver ${cxx_wrap_version_defines})
-    if(ver MATCHES "#define XEUS_VERSION_(MAJOR|MINOR|PATCH) +([^ ]+)$")
+    if(ver MATCHES "#define CXXWRAP_VERSION_(MAJOR|MINOR|PATCH) +([^ ]+)$")
         set(CXXWRAP_VERSION_${CMAKE_MATCH_1} "${CMAKE_MATCH_2}" CACHE INTERNAL "")
     endif()
 endforeach()
@@ -84,10 +85,25 @@ message(STATUS "${PROJECT_NAME} version: v${${PROJECT_NAME}_VERSION}")
 
 set(CXXWRAP_TARGET cxx_wrap)
 add_library(${CXXWRAP_TARGET} SHARED ${CXXWRAP_SOURCES} ${CXXWRAP_HEADERS})
-target_link_libraries(${CXXWRAP_TARGET} ${Julia_LIBRARY})
+
+target_include_directories(${CXXWRAP_TARGET} PUBLIC
+  $<INSTALL_INTERFACE:${CXXWRAP_INSTALL_INCLUDEDIR}>
+  $<BUILD_INTERFACE:${CXXWRAP_INCLUDE_DIR}>
+  $<BUILD_INTERFACE:${Julia_INCLUDE_DIRS}>
+)
+generate_export_header(${CXXWRAP_TARGET})
+
+target_link_libraries(${CXXWRAP_TARGET} $<BUILD_INTERFACE:${Julia_LIBRARY}>)
 set_target_properties(${CXXWRAP_TARGET} PROPERTIES
                       PUBLIC_HEADER "${CXXWRAP_HEADERS}"
                       COMPILE_DEFINITIONS "CXXWRAP_EXPORTS")
+set_property(TARGET ${CXXWRAP_TARGET} PROPERTY VERSION ${${PROJECT_NAME}_VERSION})
+set_property(TARGET ${CXXWRAP_TARGET} PROPERTY SOVERSION ${CXXWRAP_VERSION_MAJOR})
+set_property(TARGET ${CXXWRAP_TARGET} PROPERTY
+  INTERFACE_${CXXWRAP_TARGET}_MAJOR_VERSION ${CXXWRAP_VERSION_MAJOR})
+set_property(TARGET ${CXXWRAP_TARGET} APPEND PROPERTY
+  COMPATIBLE_INTERFACE_STRING ${CXXWRAP_TARGET}_MAJOR_VERSION
+)
 
 set(CXXWRAP_NAME ${CXXWRAP_TARGET})
 if(WIN32)
@@ -109,7 +125,6 @@ endif()
 # Installation
 # ============
 
-include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
 # GNUInstallDirs "DATADIR" wrong here; CMake search path wants "share".
@@ -119,7 +134,7 @@ install(TARGETS ${CXXWRAP_TARGET} EXPORT CxxWrapTargets
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-        PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/cxx_wrap)
+        PUBLIC_HEADER DESTINATION ${CXXWRAP_INSTALL_INCLUDEDIR}/cxx_wrap)
 
 configure_package_config_file(${PROJECT_NAME}Config.cmake.in
                               "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
@@ -129,8 +144,16 @@ write_basic_package_version_file(
   VERSION ${${PROJECT_NAME}_VERSION}
   COMPATIBILITY AnyNewerVersion
 )
+
+install(EXPORT CxxWrapTargets
+  FILE ${PROJECT_NAME}ConfigExports.cmake
+  NAMESPACE CxxWrap::
+  DESTINATION ${CXXWRAP_CMAKECONFIG_INSTALL_DIR}
+)
+
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
               ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
+              ${CMAKE_CURRENT_SOURCE_DIR}/FindJulia.cmake
   DESTINATION ${CXXWRAP_CMAKECONFIG_INSTALL_DIR}
 )
 

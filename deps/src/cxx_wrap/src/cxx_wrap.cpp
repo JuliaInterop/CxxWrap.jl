@@ -1,7 +1,7 @@
-﻿#include "array.hpp"
-#include "cxx_wrap.hpp"
-#include "functions.hpp"
-#include "cxx_wrap_config.hpp"
+﻿#include "cxx_wrap/array.hpp"
+#include "cxx_wrap/cxx_wrap.hpp"
+#include "cxx_wrap/functions.hpp"
+#include "cxx_wrap/cxx_wrap_config.hpp"
 
 #include <julia.h>
 #if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR > 4
