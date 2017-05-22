@@ -697,7 +697,7 @@ template<> struct static_type_mapping<void*>
 template<> struct static_type_mapping<jl_datatype_t*>
 {
   typedef jl_datatype_t* type; // Debatable if this should be jl_value_t*
-  static jl_datatype_t* julia_type() { return jl_datatype_type; }
+  static jl_datatype_t* julia_type() { return jl_any_type; }
 };
 
 template<> struct static_type_mapping<jl_value_t*>

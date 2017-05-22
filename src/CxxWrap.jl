@@ -49,7 +49,7 @@ type SmartPointerWithDeref{T,PT,DerefPtr,ConstructPtr,CastPtr} <: SmartPointer{T
   ptr::Ptr{Void}
 end
 
-reference_type(t::DataType) = Any
+reference_type(t::Type) = Any
 
 @generated function dereference_smart_pointer{T,PT,DerefPtr,ConstructPtr,CastPtr,DereferencedT}(p::SmartPointerWithDeref{T,PT,DerefPtr,ConstructPtr,CastPtr}, ::Type{DereferencedT})
   quote
@@ -104,9 +104,9 @@ end
 # Encapsulate information about a function
 type CppFunctionInfo
   name::Any
-  argument_types::Array{DataType,1}
-  reference_argument_types::Array{DataType,1}
-  return_type::DataType
+  argument_types::Array{Type,1}
+  reference_argument_types::Array{Type,1}
+  return_type::Type
   function_pointer::Ptr{Void}
   thunk_pointer::Ptr{Void}
 end
@@ -146,11 +146,11 @@ function exported_symbols(registry::Ptr{Void}, modname::AbstractString)
 end
 
 function reference_types(registry::Ptr{Void}, modname::AbstractString)
-  ccall((:get_reference_types, cxx_wrap_path), Array{DataType}, (Ptr{Void},AbstractString), registry, modname)
+  ccall((:get_reference_types, cxx_wrap_path), Array{Type}, (Ptr{Void},AbstractString), registry, modname)
 end
 
 function allocated_types(registry::Ptr{Void}, modname::AbstractString)
-  ccall((:get_allocated_types, cxx_wrap_path), Array{DataType}, (Ptr{Void},AbstractString), registry, modname)
+  ccall((:get_allocated_types, cxx_wrap_path), Array{Type}, (Ptr{Void},AbstractString), registry, modname)
 end
 
 # Interpreted as a constructor for Julia  > 0.5
@@ -175,7 +175,7 @@ function make_func_declaration(fn::CallOpOverload, argmap)
 end
 
 # By default, no argument overloading happens
-argument_overloads(t::DataType) = DataType[]
+argument_overloads(t::Type) = Type[]
 @static if Int != Cint
   argument_overloads(t::Type{Cint}) = [Int]
 end
@@ -202,7 +202,7 @@ function ptrunion{T}(::Type{T})
   return result
 end
 
-smart_pointer_type(t::DataType) = t
+smart_pointer_type(t::Type) = t
 smart_pointer_type{T <: CppAny}(x::Type{T}) = ptrunion(x)
 smart_pointer_type{T <: CppArray}(x::Type{T}) = ptrunion(x)
 smart_pointer_type{T <: CppAssociative}(x::Type{T}) = ptrunion(x)
@@ -212,7 +212,7 @@ function smart_pointer_type{T,PT,DerefPtr,ConstructPtr,CastPtr}(::Type{SmartPoin
   return result
 end
 
-map_julia_arg_type(t::DataType) = Union{smart_pointer_type(t),argument_overloads(t)...}
+map_julia_arg_type(t::Type) = Union{smart_pointer_type(t),argument_overloads(t)...}
 map_julia_arg_type{T}(a::Type{StrictlyTypedNumber{T}}) = T
 
 # Build the expression to wrap the given function
@@ -228,9 +228,9 @@ function build_function_expression(func::CppFunctionInfo)
   # Thunk
   thunk = func.thunk_pointer
 
-  map_c_arg_type(t::DataType) = t
+  map_c_arg_type(t::Type) = t
   map_c_arg_type{T <: AbstractString}(::Type{Array{T,1}}) = Any
-  map_c_arg_type(::Type{DataType}) = Any
+  map_c_arg_type(::Type{Type}) = Any
   map_c_arg_type{T <: Tuple}(::Type{T}) = Any
   map_c_arg_type{T,N}(::Type{ConstArray{T,N}}) = Any
   map_c_arg_type{T <: SmartPointer}(::Type{T}) = Any
@@ -396,11 +396,11 @@ end
 
 immutable SafeCFunction
   fptr::Ptr{Void}
-  return_type::DataType
-  argtypes::Array{DataType,1}
+  return_type::Type
+  argtypes::Array{Type,1}
 end
 
-safe_cfunction(f::Function, rt::DataType, args::Tuple) = SafeCFunction(cfunction(f, rt, args), rt, [t for t in args])
+safe_cfunction(f::Function, rt::Type, args::Tuple) = SafeCFunction(cfunction(f, rt, args), rt, [t for t in args])
 
 wstring_to_julia(p::Ptr{Cwchar_t}, L::Int) = transcode(String, unsafe_wrap(Array, p, L))
 wstring_to_cpp(s::String) = transcode(Cwchar_t, s)
