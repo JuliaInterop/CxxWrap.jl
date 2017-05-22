@@ -1,6 +1,6 @@
 ﻿#include <string>
 
-#include "cxx_wrap/cxx_wrap.hpp"
+#include "jlcxx/jlcxx.hpp"
 
 namespace extended
 {
@@ -17,7 +17,7 @@ struct ExtendedWorld
 JULIA_CPP_MODULE_BEGIN(registry)
   using namespace extended;
 
-  cxx_wrap::Module& types = registry.create_module("ExtendedTypes");
+  jlcxx::Module& types = registry.create_module("ExtendedTypes");
 
   types.add_type<ExtendedWorld>("ExtendedWorld")
     .method("greet", &ExtendedWorld::greet);

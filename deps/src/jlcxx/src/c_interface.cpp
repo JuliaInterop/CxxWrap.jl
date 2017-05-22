@@ -1,42 +1,42 @@
-﻿#include "cxx_wrap/array.hpp"
-#include "cxx_wrap/cxx_wrap.hpp"
-#include "cxx_wrap/cxx_wrap_config.hpp"
+﻿#include "jlcxx/array.hpp"
+#include "jlcxx/jlcxx.hpp"
+#include "jlcxx/jlcxx_config.hpp"
 
 extern "C"
 {
 
-using namespace cxx_wrap;
+using namespace jlcxx;
 
 jl_datatype_t* g_any_type = nullptr;
 
 /// Initialize the module
-CXXWRAP_API void initialize(jl_value_t* julia_module, jl_value_t* cpp_any_type, jl_value_t* cppfunctioninfo_type)
+JLCXX_API void initialize(jl_value_t* julia_module, jl_value_t* cpp_any_type, jl_value_t* cppfunctioninfo_type)
 {
-  g_cxx_wrap_module = (jl_module_t*)julia_module;
+  g_cxxwrap_module = (jl_module_t*)julia_module;
   g_any_type = (jl_datatype_t*)cpp_any_type;
   g_cppfunctioninfo_type = (jl_datatype_t*)cppfunctioninfo_type;
 
   InitHooks::instance().run_hooks();
 }
 
-CXXWRAP_API jl_datatype_t* get_any_type()
+JLCXX_API jl_datatype_t* get_any_type()
 {
   return g_any_type;
 }
 
-CXXWRAP_API jl_module_t* get_cxxwrap_module()
+JLCXX_API jl_module_t* get_cxxwrap_module()
 {
-  return g_cxx_wrap_module;
+  return g_cxxwrap_module;
 }
 
 /// Create a new registry
-CXXWRAP_API void* create_registry()
+JLCXX_API void* create_registry()
 {
   return static_cast<void*>(new ModuleRegistry());
 }
 
 /// Get the names of all modules in the registry
-CXXWRAP_API jl_array_t* get_module_names(void* void_registry)
+JLCXX_API jl_array_t* get_module_names(void* void_registry)
 {
   assert(void_registry != nullptr);
   const ModuleRegistry& registry = *reinterpret_cast<ModuleRegistry*>(void_registry);
@@ -51,7 +51,7 @@ CXXWRAP_API jl_array_t* get_module_names(void* void_registry)
 }
 
 /// Bind jl_datatype_t structures to corresponding Julia symbols in the given module
-CXXWRAP_API void bind_module_constants(void* void_registry, jl_value_t* module_any)
+JLCXX_API void bind_module_constants(void* void_registry, jl_value_t* module_any)
 {
   assert(void_registry != nullptr);
   ModuleRegistry& registry = *reinterpret_cast<ModuleRegistry*>(void_registry);
@@ -69,7 +69,7 @@ void fill_types_vec(Array<jl_datatype_t*>& types_array, const std::vector<jl_dat
 }
 
 /// Get the functions defined in the modules. Any classes used by these functions must be defined on the Julia side first
-CXXWRAP_API jl_array_t* get_module_functions(void* void_registry)
+JLCXX_API jl_array_t* get_module_functions(void* void_registry)
 {
   assert(void_registry != nullptr);
   const ModuleRegistry& registry = *reinterpret_cast<ModuleRegistry*>(void_registry);
@@ -113,7 +113,7 @@ CXXWRAP_API jl_array_t* get_module_functions(void* void_registry)
   return module_array.wrapped();
 }
 
-CXXWRAP_API jl_array_t* get_exported_symbols(void* void_registry, jl_value_t* mod_name)
+JLCXX_API jl_array_t* get_exported_symbols(void* void_registry, jl_value_t* mod_name)
 {
   assert(void_registry != nullptr);
   ModuleRegistry& registry = *reinterpret_cast<ModuleRegistry*>(void_registry);
@@ -138,14 +138,14 @@ jl_array_t* convert_type_vector(const std::vector<jl_datatype_t*> types_vec)
   return datatypes.wrapped();
 }
 
-CXXWRAP_API jl_array_t* get_reference_types(void* void_registry, jl_value_t* mod_name)
+JLCXX_API jl_array_t* get_reference_types(void* void_registry, jl_value_t* mod_name)
 {
   assert(void_registry != nullptr);
   ModuleRegistry& registry = *reinterpret_cast<ModuleRegistry*>(void_registry);
   return convert_type_vector(registry.get_module(convert_to_cpp<std::string>(mod_name)).reference_types());
 }
 
-CXXWRAP_API jl_array_t* get_allocated_types(void* void_registry, jl_value_t* mod_name)
+JLCXX_API jl_array_t* get_allocated_types(void* void_registry, jl_value_t* mod_name)
 {
   assert(void_registry != nullptr);
   ModuleRegistry& registry = *reinterpret_cast<ModuleRegistry*>(void_registry);

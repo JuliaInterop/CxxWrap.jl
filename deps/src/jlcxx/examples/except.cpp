@@ -3,12 +3,12 @@
 #include <julia.h>
 
 #ifdef _WIN32
-  #define CXX_WRAP_EXCEPT_EXPORT __declspec(dllexport)
+  #define jlcxx_EXCEPT_EXPORT __declspec(dllexport)
 #else
-  #define CXX_WRAP_EXCEPT_EXPORT
+  #define jlcxx_EXCEPT_EXPORT
 #endif
 
-extern "C" CXX_WRAP_EXCEPT_EXPORT int internalthrow(int i);
+extern "C" jlcxx_EXCEPT_EXPORT int internalthrow(int i);
 
 int internalthrow(int i)
 {

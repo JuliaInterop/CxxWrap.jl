@@ -1,10 +1,10 @@
-﻿#ifndef CXXWRAP_CONST_ARRAY_HPP
-#define CXXWRAP_CONST_ARRAY_HPP
+﻿#ifndef JLCXX_CONST_ARRAY_HPP
+#define JLCXX_CONST_ARRAY_HPP
 
-#include "cxx_wrap.hpp"
+#include "jlcxx.hpp"
 #include "tuple.hpp"
 
-namespace cxx_wrap
+namespace jlcxx
 {
 
 typedef int_t index_t;
@@ -119,10 +119,10 @@ struct static_type_mapping<ConstArray<T,N>>
     static jl_datatype_t* app_dt = nullptr;
     if(app_dt == nullptr)
     {
-      jl_datatype_t* pdt = ::cxx_wrap::julia_type("ConstArray");
+      jl_datatype_t* pdt = ::jlcxx::julia_type("ConstArray");
       jl_value_t* boxed_n = box(N);
       JL_GC_PUSH1(&boxed_n);
-      app_dt = (jl_datatype_t*)apply_type((jl_value_t*)pdt, jl_svec2(::cxx_wrap::julia_type<T>(), boxed_n));
+      app_dt = (jl_datatype_t*)apply_type((jl_value_t*)pdt, jl_svec2(::jlcxx::julia_type<T>(), boxed_n));
       protect_from_gc(app_dt);
       JL_GC_POP();
     }
@@ -130,5 +130,5 @@ struct static_type_mapping<ConstArray<T,N>>
   }
 };
 
-} // namespace cxx_wrap
+} // namespace jlcxx
 #endif

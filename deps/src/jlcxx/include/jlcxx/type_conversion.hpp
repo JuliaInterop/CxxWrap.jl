@@ -1,5 +1,5 @@
-﻿#ifndef CXXWRAP_TYPE_CONVERSION_HPP
-#define CXXWRAP_TYPE_CONVERSION_HPP
+﻿#ifndef JLCXX_TYPE_CONVERSION_HPP
+#define JLCXX_TYPE_CONVERSION_HPP
 
 #include <julia.h>
 #if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR > 4
@@ -16,9 +16,9 @@
 #include <type_traits>
 #include <iostream>
 
-#include "cxx_wrap_config.hpp"
+#include "jlcxx_config.hpp"
 
-namespace cxx_wrap
+namespace jlcxx
 {
 
 namespace detail
@@ -41,9 +41,9 @@ namespace detail
   };
 }
 
-CXXWRAP_API jl_array_t* gc_protected();
-CXXWRAP_API std::stack<std::size_t>& gc_free_stack();
-CXXWRAP_API std::map<jl_value_t*, std::pair<std::size_t,std::size_t>>& gc_index_map();
+JLCXX_API jl_array_t* gc_protected();
+JLCXX_API std::stack<std::size_t>& gc_free_stack();
+JLCXX_API std::map<jl_value_t*, std::pair<std::size_t,std::size_t>>& gc_index_map();
 
 template<typename T>
 inline void protect_from_gc(T* x)
@@ -107,7 +107,7 @@ inline std::string symbol_name(jl_sym_t* symbol)
 }
 
 /// Backwards-compatible apply_type
-CXXWRAP_API jl_value_t* apply_type(jl_value_t* tc, jl_svec_t* params);
+JLCXX_API jl_value_t* apply_type(jl_value_t* tc, jl_svec_t* params);
 
 /// Backwards-compatible apply_array_type
 template<typename T>
@@ -531,11 +531,11 @@ inline jl_datatype_t* julia_return_type()
 /// Specializations
 
 // Needed for Visual C++, static members are different in each DLL
-extern "C" CXXWRAP_API jl_datatype_t* get_any_type(); // Implemented in c_interface.cpp
-extern "C" CXXWRAP_API jl_module_t* get_cxxwrap_module();
+extern "C" JLCXX_API jl_datatype_t* get_any_type(); // Implemented in c_interface.cpp
+extern "C" JLCXX_API jl_module_t* get_cxxwrap_module();
 
 template<>
-struct CXXWRAP_API static_type_mapping<CppAny>
+struct JLCXX_API static_type_mapping<CppAny>
 {
   typedef jl_value_t* type;
   static jl_datatype_t* julia_type() { return get_any_type(); }
@@ -870,7 +870,7 @@ struct ConvertToJulia<const std::string*, false, false, false>
 };
 
 template<>
-struct CXXWRAP_API ConvertToJulia<std::wstring, false, false, false>
+struct JLCXX_API ConvertToJulia<std::wstring, false, false, false>
 {
   jl_value_t* operator()(const std::wstring& str) const;
 };
@@ -953,7 +953,7 @@ inline auto convert_to_julia(T&& cpp_val) -> decltype(julia_converter_type<T>()(
 template<typename CppT>
 inline typename std::enable_if<!std::is_same<jl_value_t*, mapped_julia_type<CppT>>::value && !std::is_same<WrappedCppPtr, mapped_julia_type<CppT>>::value, jl_value_t*>::type box(const CppT&)
 {
-  static_assert(sizeof(CppT*) == 0, "Unimplemented box in cxx_wrap");
+  static_assert(sizeof(CppT*) == 0, "Unimplemented box in jlcxx");
   return nullptr;
 }
 
@@ -1316,7 +1316,7 @@ struct ConvertToCpp<std::string, false, false, false>
 };
 
 template<>
-struct CXXWRAP_API ConvertToCpp<std::wstring, false, false, false>
+struct JLCXX_API ConvertToCpp<std::wstring, false, false, false>
 {
   std::wstring operator()(jl_value_t* jstr) const;
 };
@@ -1377,7 +1377,7 @@ inline jl_datatype_t* julia_type()
 }
 
 /// Get the type from a global symbol
-CXXWRAP_API jl_datatype_t* julia_type(const std::string& name, const std::string& module_name = "");
+JLCXX_API jl_datatype_t* julia_type(const std::string& name, const std::string& module_name = "");
 
 /// Helper to encapsulate a strictly typed number type. Numbers typed like this will not be involved in the convenience-overloads that allow passing e.g. an Int to a Float64 argument
 template<typename NumberT>
@@ -1397,7 +1397,7 @@ template<typename NumberT> struct static_type_mapping<StrictlyTypedNumber<Number
     static jl_datatype_t* dt = nullptr;
     if(dt == nullptr)
     {
-      dt = (jl_datatype_t*)apply_type((jl_value_t*)::cxx_wrap::julia_type("StrictlyTypedNumber"), jl_svec1(static_type_mapping<NumberT>::julia_type()));
+      dt = (jl_datatype_t*)apply_type((jl_value_t*)::jlcxx::julia_type("StrictlyTypedNumber"), jl_svec1(static_type_mapping<NumberT>::julia_type()));
       protect_from_gc(dt);
     }
     return dt;
@@ -1408,7 +1408,7 @@ template<typename NumberT> struct static_type_mapping<StrictlyTypedNumber<Number
 template<typename T> struct static_type_mapping<T&, typename std::enable_if<IsFundamental<T>::value>::type>
 {
   typedef T* type;
-  static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_type((jl_value_t*)::cxx_wrap::julia_type("Ref"), jl_svec1(static_type_mapping<T>::julia_type())); }
+  static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_type((jl_value_t*)::jlcxx::julia_type("Ref"), jl_svec1(static_type_mapping<T>::julia_type())); }
 };
 
 }

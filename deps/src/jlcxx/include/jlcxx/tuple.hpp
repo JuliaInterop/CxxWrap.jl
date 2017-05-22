@@ -1,11 +1,11 @@
-﻿#ifndef CXXWRAP_TUPLE_HPP
-#define CXXWRAP_TUPLE_HPP
+﻿#ifndef JLCXX_TUPLE_HPP
+#define JLCXX_TUPLE_HPP
 
 #include <tuple>
 
 #include "type_conversion.hpp"
 
-namespace cxx_wrap
+namespace jlcxx
 {
 
 namespace detail
@@ -79,7 +79,7 @@ template<typename... TypesT> struct static_type_mapping<std::tuple<TypesT...>>
     {
       jl_svec_t* params = nullptr;
       JL_GC_PUSH2(&tuple_type, &params);
-      params = jl_svec(sizeof...(TypesT), cxx_wrap::julia_type<TypesT>()...);
+      params = jl_svec(sizeof...(TypesT), jlcxx::julia_type<TypesT>()...);
       tuple_type = jl_apply_tuple_type(params);
       protect_from_gc(tuple_type);
       JL_GC_POP();
@@ -119,5 +119,5 @@ struct static_type_mapping<NTuple<N,T>>
   }
 };
 
-} // namespace cxx_wrap
+} // namespace jlcxx
 #endif

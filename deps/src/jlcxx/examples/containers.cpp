@@ -1,9 +1,9 @@
 ﻿#include <tuple>
 
-#include "cxx_wrap/array.hpp"
-#include "cxx_wrap/cxx_wrap.hpp"
-#include "cxx_wrap/tuple.hpp"
-#include "cxx_wrap/const_array.hpp"
+#include "jlcxx/array.hpp"
+#include "jlcxx/jlcxx.hpp"
+#include "jlcxx/tuple.hpp"
+#include "jlcxx/const_array.hpp"
 
 const double* const_vector()
 {
@@ -20,19 +20,19 @@ const double* const_matrix()
 double mutable_array[2][3] = {{1., 2., 3}, {4., 5., 6.}};
 
 JULIA_CPP_MODULE_BEGIN(registry)
-  using namespace cxx_wrap;
+  using namespace jlcxx;
 
-  cxx_wrap::Module& containers = registry.create_module("Containers");
+  jlcxx::Module& containers = registry.create_module("Containers");
 
   containers.method("test_tuple", []() { return std::make_tuple(1, 2., 3.f); });
   containers.method("const_ptr", []() { return ConstPtr<double>({const_vector()}); });
   containers.method("const_ptr_arg", [](ConstPtr<double> p) { return std::make_tuple(p.ptr[0], p.ptr[1], p.ptr[2]); });
-  containers.method("const_vector", []() { return cxx_wrap::make_const_array(const_vector(), 3); });
+  containers.method("const_vector", []() { return jlcxx::make_const_array(const_vector(), 3); });
   // Note the column-major order for matrices
-  containers.method("const_matrix", []() { return cxx_wrap::make_const_array(const_matrix(), 3, 2); });
+  containers.method("const_matrix", []() { return jlcxx::make_const_array(const_matrix(), 3, 2); });
 
-  containers.method("mutable_array", []() { return (jl_value_t*)cxx_wrap::ArrayRef<double, 2>(&mutable_array[0][0], 3, 2).wrapped(); });
-  containers.method("check_mutable_array", [](cxx_wrap::ArrayRef<double, 2> arr)
+  containers.method("mutable_array", []() { return (jl_value_t*)jlcxx::ArrayRef<double, 2>(&mutable_array[0][0], 3, 2).wrapped(); });
+  containers.method("check_mutable_array", [](jlcxx::ArrayRef<double, 2> arr)
   {
     for(auto el : arr)
     {

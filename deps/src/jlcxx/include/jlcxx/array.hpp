@@ -1,10 +1,10 @@
-﻿#ifndef CXXWRAP_ARRAY_HPP
-#define CXXWRAP_ARRAY_HPP
+﻿#ifndef JLCXX_ARRAY_HPP
+#define JLCXX_ARRAY_HPP
 
 #include "type_conversion.hpp"
 #include "tuple.hpp"
 
-namespace cxx_wrap
+namespace jlcxx
 {
 
 template<typename PointedT, typename CppT>

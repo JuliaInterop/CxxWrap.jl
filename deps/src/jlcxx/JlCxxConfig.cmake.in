@@ -3,11 +3,11 @@ include(CMakeFindDependencyMacro)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 find_dependency(Julia)
 
-include(CxxWrapConfigExports)
+include(JlCxxConfigExports)
 
-get_target_property(CXX_OLD_INCLUDES CxxWrap::cxx_wrap INTERFACE_INCLUDE_DIRECTORIES)
+get_target_property(CXX_OLD_INCLUDES JlCxx::jlcxx INTERFACE_INCLUDE_DIRECTORIES)
 
-set_target_properties(CxxWrap::cxx_wrap PROPERTIES
+set_target_properties(JlCxx::jlcxx PROPERTIES
   INTERFACE_INCLUDE_DIRECTORIES "${CXX_OLD_INCLUDES};${Julia_INCLUDE_DIRS}"
   INTERFACE_LINK_LIBRARIES "${Julia_LIBRARY}"
 )

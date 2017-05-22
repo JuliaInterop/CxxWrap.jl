@@ -1,20 +1,20 @@
-﻿#include "cxx_wrap/array.hpp"
-#include "cxx_wrap/cxx_wrap.hpp"
-#include "cxx_wrap/functions.hpp"
-#include "cxx_wrap/cxx_wrap_config.hpp"
+﻿#include "jlcxx/array.hpp"
+#include "jlcxx/jlcxx.hpp"
+#include "jlcxx/functions.hpp"
+#include "jlcxx/jlcxx_config.hpp"
 
 #include <julia.h>
 #if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR > 4
 #include <julia_threads.h>
 #endif
 
-namespace cxx_wrap
+namespace jlcxx
 {
 
-jl_module_t* g_cxx_wrap_module;
+jl_module_t* g_cxxwrap_module;
 jl_datatype_t* g_cppfunctioninfo_type;
 
-CXXWRAP_API jl_array_t* gc_protected()
+JLCXX_API jl_array_t* gc_protected()
 {
   static jl_array_t* m_arr = nullptr;
   if (m_arr == nullptr)
@@ -25,18 +25,18 @@ CXXWRAP_API jl_array_t* gc_protected()
 #else
     m_arr = jl_alloc_cell_1d(0);
 #endif
-    jl_set_const(g_cxx_wrap_module, jl_symbol("_gc_protected"), (jl_value_t*)m_arr);
+    jl_set_const(g_cxxwrap_module, jl_symbol("_gc_protected"), (jl_value_t*)m_arr);
   }
   return m_arr;
 }
 
-CXXWRAP_API std::stack<std::size_t>& gc_free_stack()
+JLCXX_API std::stack<std::size_t>& gc_free_stack()
 {
   static std::stack<std::size_t> m_stack;
   return m_stack;
 }
 
-CXXWRAP_API std::map<jl_value_t*, std::pair<std::size_t,std::size_t>>& gc_index_map()
+JLCXX_API std::map<jl_value_t*, std::pair<std::size_t,std::size_t>>& gc_index_map()
 {
   static std::map<jl_value_t*, std::pair<std::size_t,std::size_t>> m_map;
   return m_map;
@@ -56,9 +56,9 @@ Module& ModuleRegistry::create_module(const std::string &name)
   return *mod;
 }
 
-CXXWRAP_API jl_datatype_t* julia_type(const std::string& name, const std::string& module_name)
+JLCXX_API jl_datatype_t* julia_type(const std::string& name, const std::string& module_name)
 {
-  for(jl_module_t* mod : {jl_base_module, g_cxx_wrap_module, jl_current_module, jl_current_module->parent, module_name.empty() ? nullptr : (jl_module_t*)jl_get_global(jl_current_module, jl_symbol(module_name.c_str()))})
+  for(jl_module_t* mod : {jl_base_module, g_cxxwrap_module, jl_current_module, jl_current_module->parent, module_name.empty() ? nullptr : (jl_module_t*)jl_get_global(jl_current_module, jl_symbol(module_name.c_str()))})
   {
     if(mod == nullptr)
     {
@@ -101,7 +101,7 @@ void InitHooks::run_hooks()
   }
 }
 
-CXXWRAP_API jl_value_t* apply_type(jl_value_t* tc, jl_svec_t* params)
+JLCXX_API jl_value_t* apply_type(jl_value_t* tc, jl_svec_t* params)
 {
 #if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 6
   return jl_apply_type(tc, params);

@@ -1,7 +1,7 @@
 ﻿#include <string>
 #include <memory>
 
-#include "cxx_wrap/cxx_wrap.hpp"
+#include "jlcxx/jlcxx.hpp"
 
 struct A
 {
@@ -47,7 +47,7 @@ std::string take_ref(A& a)
   return a.message();
 }
 
-namespace cxx_wrap
+namespace jlcxx
 {
   // Needed for shared pointer downcasting
   template<> struct SuperType<D> { typedef A type; };
@@ -56,11 +56,11 @@ namespace cxx_wrap
 }
 
 JULIA_CPP_MODULE_BEGIN(registry)
-  cxx_wrap::Module& types = registry.create_module("CppInheritance");
+  jlcxx::Module& types = registry.create_module("CppInheritance");
   types.add_type<A>("A").method("message", &A::message);
-  types.add_type<B>("B", cxx_wrap::julia_type<A>());
-  types.add_type<C>("C", cxx_wrap::julia_type<B>());
-  types.add_type<D>("D", cxx_wrap::julia_type<A>());
+  types.add_type<B>("B", jlcxx::julia_type<A>());
+  types.add_type<C>("C", jlcxx::julia_type<B>());
+  types.add_type<D>("D", jlcxx::julia_type<A>());
   types.method("create_abstract", create_abstract);
 
   types.method("shared_b", []() { return std::make_shared<B>(); });

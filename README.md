@@ -47,10 +47,10 @@ std::string greet()
 ```
 Using the C++ side of `CxxWrap`, this can be exposed as follows:
 ```c++
-#include <cxx_wrap.hpp>
+#include <jlcxx.hpp>
 
 JULIA_CPP_MODULE_BEGIN(registry)
-  cxx_wrap::Module& hello = registry.create_module("CppHello");
+  jlcxx::Module& hello = registry.create_module("CppHello");
   hello.method("greet", &greet);
 JULIA_CPP_MODULE_END
 ```
@@ -78,11 +78,11 @@ If creating the Visual Studio project by hand is preferred, however, the followi
 * Right click on the project name in the Solution Explorer, and choose Properties. Make the following changes (modify directory names as needed to match the actual Julia installation path):
   * C/C++ | General | Additional Include Directories: insert "C:\JuliaPro\Julia-0.5.1\include\julia;C:\JuliaPro\pkgs-0.5.1.1\v0.5\CxxWrap\deps\usr\include;"
   * C/C++ | Preprocessor | Preprocessor Definitions: insert "JULIA_ENABLE_THREADING;" before "%(PreprocessorDefinitions)"
-  * Linker | Input | Additional Dependencies: insert "C:\JuliaPro\pkgs-0.5.1.1\v0.5\CxxWrap\deps\usr\lib\cxx_wrap.lib;C:\JuliaPro\Julia-0.5.1\lib\libjulia.dll.a;" before "%(AdditionalIncludeDirectories)"
+  * Linker | Input | Additional Dependencies: insert "C:\JuliaPro\pkgs-0.5.1.1\v0.5\CxxWrap\deps\usr\lib\jlcxx.lib;C:\JuliaPro\Julia-0.5.1\lib\libjulia.dll.a;" before "%(AdditionalIncludeDirectories)"
 * Click OK to exit the CppHello Property Pages.
 * In Solution Explorer, under Source Files, double click "CppHello.cpp" to open it. Append the following code at the end and save:
 ```c++
-#include <cxx_wrap.hpp>
+#include <jlcxx.hpp>
 
 std::string greet()
 {
@@ -90,7 +90,7 @@ std::string greet()
 }
 
 JULIA_CPP_MODULE_BEGIN(registry)
-  cxx_wrap::Module& hello = registry.create_module("CppHello");
+  jlcxx::Module& hello = registry.create_module("CppHello");
   hello.method("greet", &greet);
 JULIA_CPP_MODULE_END
 ```
@@ -192,13 +192,13 @@ struct B : A
 When adding the type, add the supertype as a second argument:
 ```c++
 types.add_type<A>("A").method("message", &A::message);
-types.add_type<B>("B", cxx_wrap::julia_type<A>());
+types.add_type<B>("B", jlcxx::julia_type<A>());
 ```
 
-The supertype is of type `jl_datatype_t*` and using the template variant of `cxx_wrap::julia_type` looks up the corresponding type here. There is also a variant taking a string for the type name and an optional Julia module name as second argument, which is useful for inheriting from a type defined in Julia, e.g:
+The supertype is of type `jl_datatype_t*` and using the template variant of `jlcxx::julia_type` looks up the corresponding type here. There is also a variant taking a string for the type name and an optional Julia module name as second argument, which is useful for inheriting from a type defined in Julia, e.g:
 
 ```c++
-mod.add_type<Teuchos::ParameterList>("ParameterList", cxx_wrap::julia_type("PLAssociative", "Trilinos"))
+mod.add_type<Teuchos::ParameterList>("ParameterList", jlcxx::julia_type("PLAssociative", "Trilinos"))
 ```
 
 The value returned by `add_type` also had a `dt()` method, useful in the case of template types:
@@ -211,7 +211,7 @@ auto vector_base = mod.add_type<Parametric<TypeVar<1>>>("VectorBase", multi_vect
 Since the concrete arguments given to `ccall` are the reference types, we need a way to convert `BRef` into `ARef`. To allow CxxWrap to figure out the correct static_cast to use, the hierarchy must be defined at compile time as follows:
 
 ```c++
-namespace cxx_wrap
+namespace jlcxx
 {
   template<> struct SuperType<B> { typedef A type; };
 }
@@ -234,13 +234,13 @@ enum CppEnum
 This is registered as follows:
 
 ```c++
-namespace cxx_wrap
+namespace jlcxx
 {
   template<> struct IsBits<CppEnum> : std::true_type {};
 }
 
 JULIA_CPP_MODULE_BEGIN(registry)
-  cxx_wrap::Module& types = registry.create_module("CppTypes");
+  jlcxx::Module& types = registry.create_module("CppTypes");
   types.add_bits<CppEnum>("CppEnum");
   types.set_const("EnumValA", EnumValA);
   types.set_const("EnumValB", EnumValB);
@@ -297,9 +297,9 @@ There is also an `apply_combination` method to make applying all combinations of
 Full example and test including non-type parameters at: [`deps/src/examples/parametric.cpp`](deps/src/examples/parametric.cpp) and [`test/parametric.jl`](test/parametric.jl).
 
 ## Constructors and destructors
-The default constructor and any manually added constructor using the `constructor` function will automatically create a Julia object that has a finalizer attached that calls delete to free the memory. To write a C++ function that returns a new object that can be garbage-collected in Julia, use the `cxx_wrap::create` function:
+The default constructor and any manually added constructor using the `constructor` function will automatically create a Julia object that has a finalizer attached that calls delete to free the memory. To write a C++ function that returns a new object that can be garbage-collected in Julia, use the `jlcxx::create` function:
 ```c++
-cxx_wrap::create<Class>(constructor_arg1, ...);
+jlcxx::create<Class>(constructor_arg1, ...);
 ```
 This will return the new C++ object wrapped in a `jl_value_t*` that has a finalizer.
 
@@ -346,7 +346,7 @@ half_lambda(arg1::Float64)
 In some cases (e.g. when a template parameter depends on the number type) this is not desired, so the behavior can be disabled on a per-argument basis using the `StrictlyTypedNumber` type. Wrapping a function like this:
 
 ```c++
-mod.method("strict_half", [](const cxx_wrap::StrictlyTypedNumber<double> a) {return a.value*0.5;});
+mod.method("strict_half", [](const jlcxx::StrictlyTypedNumber<double> a) {return a.value*0.5;});
 ```
 
 will *only* yield the Julia method:
@@ -409,10 +409,10 @@ struct MySmartPointer
 };
 ```
 
-Specializing in the `cxx_wrap` namespace:
+Specializing in the `jlcxx` namespace:
 
 ```c++
-namespace cxx_wrap
+namespace jlcxx
 {
   template<typename T> struct IsSmartPointerType<cpp_types::MySmartPointer<T>> : std::true_type { };
   template<typename T> struct ConstructorPointerType<cpp_types::MySmartPointer<T>> { typedef std::shared_ptr<T> type; };
@@ -432,11 +432,11 @@ Member functions and lambdas are automatically wrapped in an `std::functor` and 
 
 C++11 tuples can be converted to Julia tuples by including the `containers/tuple.hpp` header:
 ```c++
-#include <cxx_wrap.hpp>
+#include <jlcxx.hpp>
 #include <containers/tuple.hpp>
 
 JULIA_CPP_MODULE_BEGIN(registry)
-  cxx_wrap::Module& containers = registry.create_module("Containers");
+  jlcxx::Module& containers = registry.create_module("Containers");
 
   containers.method("test_tuple", []() { return std::make_tuple(1, 2., 3.f); });
 
@@ -459,7 +459,7 @@ using Containers
 ### Reference native Julia arrays
 The `ArrayRef` type is provided to work conveniently with array data from Julia. Defining a function like this in C++:
 ```c++
-void test_array_set(cxx_wrap::ArrayRef<double> a, const int64_t i, const double v)
+void test_array_set(jlcxx::ArrayRef<double> a, const int64_t i, const double v)
 {
   a[i] = v;
 }
@@ -492,7 +492,7 @@ mymodule.method("const_ptr_arg", []() { return std::make_tuple(const_vector().pt
 
 In the case of a larger blob of heap-allocated data it makes more sense to convert this to a `ConstArray`, which implements the read-only part of the Julia array interface, so it exposes the data safely to Julia in a way that can be used natively:
 ```c++
-mymodule.method("const_vector", []() { return cxx_wrap::make_const_array(const_vector(), 3); });
+mymodule.method("const_vector", []() { return jlcxx::make_const_array(const_vector(), 3); });
 ```
 
 For multi-dimensional arrays, the `make_const_array` function takes multiple sizes, e.g.:
@@ -506,7 +506,7 @@ const double* const_matrix()
 
 // ...module definition skipped...
 
-mymodule.method("const_matrix", []() { return cxx_wrap::make_const_array(const_matrix(), 3, 2); });
+mymodule.method("const_matrix", []() { return jlcxx::make_const_array(const_matrix(), 3, 2); });
 ```
 
 Note that because of the column-major convention in Julia, the sizes are in reversed order from C++, so the Julia code:
@@ -530,7 +530,7 @@ Directly calling Julia functions uses `jl_call` from `julia.h` but with a more c
 ```c++
 mymodule.method("julia_max", [](double a, double b)
 {
-  cxx_wrap::JuliaFunction max("max");
+  jlcxx::JuliaFunction max("max");
   return max(a, b);
 });
 ```
@@ -557,11 +557,11 @@ MyModule.call_safe_function(c_func)
 
 Using types different from the expected function pointer call will result in an error. This check incurs a runtime overhead, so the idea here is that the function is converted only once and then applied many times on the C++ side.
 
-If the result of `safe_cfunction` needs to be stored before the calling signature is known, direct conversion of the created structure (type `SafeCFunction`) is also possible. It can then be converted later using `cxx_wrap::make_function_pointer`:
+If the result of `safe_cfunction` needs to be stored before the calling signature is known, direct conversion of the created structure (type `SafeCFunction`) is also possible. It can then be converted later using `jlcxx::make_function_pointer`:
 ```c++
-mymodule.method("call_safe_function", [](cxx_wrap::SafeCFunction f_data)
+mymodule.method("call_safe_function", [](jlcxx::SafeCFunction f_data)
 {
-  auto f = cxx_wrap::make_function_pointer<double(double,double)>(f_data);
+  auto f = jlcxx::make_function_pointer<double(double,double)>(f_data);
   if(f(1.,2.) != 3.)
   {
     throw std::runtime_error("Incorrect callback result, expected 3");
@@ -587,14 +587,14 @@ Here, `ExtendedTypes` is a name that matches the module name passed to `create_m
 It is also possible to split the `wrap_module` into the steps `wrap_module_types` and `wrap_module_functions`. This allows using the types before the functions get called, which is useful for overloading the `argument_overloads` with types defined on the C++ side.
 
 ## Linking with the C++ library
-The library (in [`deps/src/cxx_wrap`](deps/src/cxx_wrap)) is built using CMake, so it can be found from another CMake project using the following line in a `CMakeLists.txt`:
+The library (in [`deps/src/jlcxx`](deps/src/jlcxx)) is built using CMake, so it can be found from another CMake project using the following line in a `CMakeLists.txt`:
 
 ```cmake
 find_package(CxxWrap)
 ```
 The CMake variable `CxxWrap_DIR` should be set to the directory containing the `CxxWrapConfig.cmake`, typically `~/.julia/<Julia version>/CxxWrap/deps/usr/lib/cmake`. One can then link using:
 ```cmake
-target_link_libraries(your_own_lib CxxWrap::cxx_wrap)
+target_link_libraries(your_own_lib CxxWrap::jlcxx)
 ```
 
 A complete `CMakeLists.txt` is at [`deps/src/examples/CMakeLists.txt`](deps/src/examples/CMakeLists.txt).

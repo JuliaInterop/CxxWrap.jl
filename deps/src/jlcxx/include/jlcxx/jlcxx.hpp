@@ -1,5 +1,5 @@
-﻿#ifndef CXXWRAP_HPP
-#define CXXWRAP_HPP
+﻿#ifndef JLCXX_HPP
+#define JLCXX_HPP
 
 #include <cassert>
 #include <functional>
@@ -15,7 +15,7 @@
 #include "smart_pointers.hpp"
 #include "type_conversion.hpp"
 
-namespace cxx_wrap
+namespace jlcxx
 {
 
 /// Some helper functions
@@ -125,7 +125,7 @@ struct DownCast
 };
 
 // The CxxWrap Julia module
-extern jl_module_t* g_cxx_wrap_module;
+extern jl_module_t* g_cxxwrap_module;
 extern jl_datatype_t* g_cppfunctioninfo_type;
 
 /// Abstract base class for storing any function
@@ -250,7 +250,7 @@ struct Parametric
 template<typename T>
 class TypeWrapper;
 
-class CXXWRAP_API Module;
+class JLCXX_API Module;
 
 /// Specialise this to instantiate parametric types when first used in a wrapper
 template<typename T>
@@ -354,7 +354,7 @@ struct ParameterList
 };
 
 /// Store all exposed C++ functions associated with a module
-class CXXWRAP_API Module
+class JLCXX_API Module
 {
 public:
 
@@ -755,7 +755,7 @@ private:
   template<typename AppliedT, typename FunctorT>
   int apply_internal(FunctorT&& apply_ftor)
   {
-    static_assert(parameter_list<AppliedT>::nb_parameters != 0, "No parameters found when applying type. Specialize cxx_wrap::BuildParameterList for your combination of type and non-type parameters.");
+    static_assert(parameter_list<AppliedT>::nb_parameters != 0, "No parameters found when applying type. Specialize jlcxx::BuildParameterList for your combination of type and non-type parameters.");
     static_assert(parameter_list<AppliedT>::nb_parameters >= parameter_list<T>::nb_parameters, "Parametric type applied to wrong number of parameters.");
     const bool is_abstract = jl_is_abstracttype(m_dt);
 
@@ -940,7 +940,7 @@ void Module::add_bits(const std::string& name, jl_datatype_t* super)
 }
 
 /// Registry containing different modules
-class CXXWRAP_API ModuleRegistry
+class JLCXX_API ModuleRegistry
 {
 public:
   /// Create a module and register it
@@ -1000,18 +1000,18 @@ struct RegisterHook
   }
 };
 
-} // namespace cxx_wrap
+} // namespace jlcxx
 
 #ifdef _WIN32
-   #define CXXWRAP_ONLY_EXPORTS __declspec(dllexport)
+   #define JLCXX_ONLY_EXPORTS __declspec(dllexport)
 #else
-   #define CXXWRAP_ONLY_EXPORTS
+   #define JLCXX_ONLY_EXPORTS
 #endif
 
 /// Register a new module
 #define JULIA_CPP_MODULE_BEGIN(registry) \
-extern "C" CXXWRAP_ONLY_EXPORTS void register_julia_modules(void* void_reg) { \
-  cxx_wrap::ModuleRegistry& registry = *reinterpret_cast<cxx_wrap::ModuleRegistry*>(void_reg);
+extern "C" JLCXX_ONLY_EXPORTS void register_julia_modules(void* void_reg) { \
+  jlcxx::ModuleRegistry& registry = *reinterpret_cast<jlcxx::ModuleRegistry*>(void_reg);
 
 #define JULIA_CPP_MODULE_END }
 

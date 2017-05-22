@@ -3,8 +3,8 @@
 #include <memory>
 #include <iostream>
 
-#include "cxx_wrap/cxx_wrap.hpp"
-#include "cxx_wrap/functions.hpp"
+#include "jlcxx/jlcxx.hpp"
+#include "jlcxx/functions.hpp"
 
 namespace cpp_types
 {
@@ -95,9 +95,9 @@ struct JuliaTestType {
 void call_testype_function()
 {
   JuliaTestType A = {2., 3.};
-  jl_value_t* result = jl_new_struct_uninit(cxx_wrap::julia_type("JuliaTestType"));
+  jl_value_t* result = jl_new_struct_uninit(jlcxx::julia_type("JuliaTestType"));
   *reinterpret_cast<JuliaTestType*>(result) = A;
-  cxx_wrap::JuliaFunction("julia_test_func")(result);
+  jlcxx::JuliaFunction("julia_test_func")(result);
 }
 
 enum CppEnum
@@ -108,7 +108,7 @@ enum CppEnum
 
 } // namespace cpp_types
 
-namespace cxx_wrap
+namespace jlcxx
 {
   template<> struct IsBits<cpp_types::CppEnum> : std::true_type {};
   template<typename T> struct IsSmartPointerType<cpp_types::MySmartPointer<T>> : std::true_type { };
@@ -118,7 +118,7 @@ namespace cxx_wrap
 JULIA_CPP_MODULE_BEGIN(registry)
   using namespace cpp_types;
 
-  cxx_wrap::Module& types = registry.create_module("CppTypes");
+  jlcxx::Module& types = registry.create_module("CppTypes");
 
   types.method("call_testype_function", call_testype_function);
 
@@ -176,13 +176,13 @@ JULIA_CPP_MODULE_BEGIN(registry)
   types.method("boxed_world_factory", []()
   {
     static World w("boxed world");
-    return cxx_wrap::box(w);
+    return jlcxx::box(w);
   });
 
   types.method("boxed_world_pointer_factory", []()
   {
     static World w("boxed world pointer");
-    return cxx_wrap::box(&w);
+    return jlcxx::box(&w);
   });
 
   types.add_type<NonCopyable>("NonCopyable");

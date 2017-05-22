@@ -1,6 +1,6 @@
 ﻿#include <type_traits>
 
-#include "cxx_wrap/cxx_wrap.hpp"
+#include "jlcxx/jlcxx.hpp"
 
 namespace parametric
 {
@@ -155,7 +155,7 @@ struct WrapFoo2
 
 } // namespace parametric
 
-namespace cxx_wrap
+namespace jlcxx
 {
   // Match type followed by non-type of the same type
   template<typename NonTT, NonTT Val, template<typename, NonTT> class T>
@@ -169,10 +169,10 @@ namespace cxx_wrap
   {
     typedef ParameterList<T> type;
   };
-} // namespace cxx_wrap
+} // namespace jlcxx
 
 JULIA_CPP_MODULE_BEGIN(registry)
-  using namespace cxx_wrap;
+  using namespace jlcxx;
   using namespace parametric;
   Module& types = registry.create_module("ParametricTypes");
 
@@ -185,13 +185,13 @@ JULIA_CPP_MODULE_BEGIN(registry)
   types.add_type<Parametric<TypeVar<1>>>("TemplateDefaultType")
     .apply<TemplateDefaultType<P1>, TemplateDefaultType<P2>>(WrapTemplateDefaultType());
 
-  types.add_type<Parametric<cxx_wrap::TypeVar<1>, cxx_wrap::TypeVar<2>>>("NonTypeParam")
+  types.add_type<Parametric<jlcxx::TypeVar<1>, jlcxx::TypeVar<2>>>("NonTypeParam")
     .apply<NonTypeParam<int, 1>, NonTypeParam<unsigned int, 2>, NonTypeParam<int64_t, 64>>(WrapNonTypeParam());
 
-  auto abstract_template = types.add_type<Parametric<cxx_wrap::TypeVar<1>>>("AbstractTemplate");
+  auto abstract_template = types.add_type<Parametric<jlcxx::TypeVar<1>>>("AbstractTemplate");
   abstract_template.apply<AbstractTemplate<double>>(WrapAbstractTemplate());
 
-  types.add_type<Parametric<cxx_wrap::TypeVar<1>>>("ConcreteTemplate", abstract_template.dt()).apply<ConcreteTemplate<double>>(WrapConcreteTemplate());
+  types.add_type<Parametric<jlcxx::TypeVar<1>>>("ConcreteTemplate", abstract_template.dt()).apply<ConcreteTemplate<double>>(WrapConcreteTemplate());
 
   types.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>, ParameterList<TypeVar<1>>>("Foo3", abstract_template.dt())
     .apply_combination<Foo3, ParameterList<int32_t, double>, ParameterList<P1,P2,bool>, ParameterList<float>>(WrapFoo3());

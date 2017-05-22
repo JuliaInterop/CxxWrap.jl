@@ -1,6 +1,6 @@
 ﻿#include <string>
 
-#include "cxx_wrap/cxx_wrap.hpp"
+#include "jlcxx/jlcxx.hpp"
 
 std::string greet()
 {
@@ -8,6 +8,6 @@ std::string greet()
 }
 
 JULIA_CPP_MODULE_BEGIN(registry)
-  cxx_wrap::Module& hello = registry.create_module("CppHello");
+  jlcxx::Module& hello = registry.create_module("CppHello");
   hello.method("greet", &greet);
 JULIA_CPP_MODULE_END

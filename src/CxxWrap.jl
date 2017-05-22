@@ -24,7 +24,7 @@ if !isfile(depsfile)
   error("$depsfile not found, CxxWrap did not build properly")
 end
 include(depsfile)
-const cxx_wrap_path = _l_cxx_wrap
+const jlcxx_path = _l_jlcxx
 
 # Base type for wrapped C++ types
 @compat abstract type CppAny end
@@ -113,9 +113,9 @@ end
 
 function __init__()
   @static if is_windows()
-    Libdl.dlopen(cxx_wrap_path, Libdl.RTLD_GLOBAL)
+    Libdl.dlopen(jlcxx_path, Libdl.RTLD_GLOBAL)
   end
-  ccall((:initialize, cxx_wrap_path), Void, (Any, Any, Any), CxxWrap, CppAny, CppFunctionInfo)
+  ccall((:initialize, jlcxx_path), Void, (Any, Any, Any), CxxWrap, CppAny, CppFunctionInfo)
   @compat Base.IndexStyle(::ConstArray) = IndexLinear()
   Base.size(arr::ConstArray) = arr.size
   Base.getindex(arr::ConstArray, i::Integer) = unsafe_load(arr.ptr.ptr, i)
@@ -124,33 +124,33 @@ end
 # Load the modules in the shared library located at the given path
 function load_modules(path::AbstractString)
   module_lib = Libdl.dlopen(path, Libdl.RTLD_GLOBAL)
-  registry = ccall((:create_registry, cxx_wrap_path), Ptr{Void}, ())
+  registry = ccall((:create_registry, jlcxx_path), Ptr{Void}, ())
   ccall(Libdl.dlsym(module_lib, "register_julia_modules"), Void, (Ptr{Void},), registry)
   return registry
 end
 
 function get_module_names(registry::Ptr{Void})
-  ccall((:get_module_names, cxx_wrap_path), Array{AbstractString}, (Ptr{Void},), registry)
+  ccall((:get_module_names, jlcxx_path), Array{AbstractString}, (Ptr{Void},), registry)
 end
 
 function get_module_functions(registry::Ptr{Void})
-  ccall((:get_module_functions, cxx_wrap_path), Array{CppFunctionInfo}, (Ptr{Void},), registry)
+  ccall((:get_module_functions, jlcxx_path), Array{CppFunctionInfo}, (Ptr{Void},), registry)
 end
 
 function bind_constants(registry::Ptr{Void}, m::Module)
-  ccall((:bind_module_constants, cxx_wrap_path), Void, (Ptr{Void},Any), registry, m)
+  ccall((:bind_module_constants, jlcxx_path), Void, (Ptr{Void},Any), registry, m)
 end
 
 function exported_symbols(registry::Ptr{Void}, modname::AbstractString)
-  ccall((:get_exported_symbols, cxx_wrap_path), Array{AbstractString}, (Ptr{Void},AbstractString), registry, modname)
+  ccall((:get_exported_symbols, jlcxx_path), Array{AbstractString}, (Ptr{Void},AbstractString), registry, modname)
 end
 
 function reference_types(registry::Ptr{Void}, modname::AbstractString)
-  ccall((:get_reference_types, cxx_wrap_path), Array{Type}, (Ptr{Void},AbstractString), registry, modname)
+  ccall((:get_reference_types, jlcxx_path), Array{Type}, (Ptr{Void},AbstractString), registry, modname)
 end
 
 function allocated_types(registry::Ptr{Void}, modname::AbstractString)
-  ccall((:get_allocated_types, cxx_wrap_path), Array{Type}, (Ptr{Void},AbstractString), registry, modname)
+  ccall((:get_allocated_types, jlcxx_path), Array{Type}, (Ptr{Void},AbstractString), registry, modname)
 end
 
 # Interpreted as a constructor for Julia  > 0.5

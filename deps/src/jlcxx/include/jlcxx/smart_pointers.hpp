@@ -1,9 +1,9 @@
-﻿#ifndef CXXWRAP_SMART_POINTER_HPP
-#define CXXWRAP_SMART_POINTER_HPP
+﻿#ifndef JLCXX_SMART_POINTER_HPP
+#define JLCXX_SMART_POINTER_HPP
 
 #include "type_conversion.hpp"
 
-namespace cxx_wrap
+namespace jlcxx
 {
 
 template<typename T> struct IsSmartPointerType<std::shared_ptr<T>> : std::true_type { };

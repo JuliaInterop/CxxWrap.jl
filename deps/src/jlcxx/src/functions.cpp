@@ -1,8 +1,8 @@
-﻿#include "cxx_wrap/functions.hpp"
+﻿#include "jlcxx/functions.hpp"
 
 // This header provides helper functions to call Julia functions from C++
 
-namespace cxx_wrap
+namespace jlcxx
 {
 
 JuliaFunction::JuliaFunction(const std::string& name, const std::string& module_name)

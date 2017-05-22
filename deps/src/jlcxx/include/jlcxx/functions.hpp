@@ -1,5 +1,5 @@
-﻿#ifndef CXXWRAP_FUNCTIONS_HPP
-#define CXXWRAP_FUNCTIONS_HPP
+﻿#ifndef JLCXX_FUNCTIONS_HPP
+#define JLCXX_FUNCTIONS_HPP
 
 #include <sstream>
 #include <vector>
@@ -9,11 +9,11 @@
 
 // This header provides helper functions to call Julia functions from C++
 
-namespace cxx_wrap
+namespace jlcxx
 {
 
 /// Wrap a Julia function for easy calling
-class CXXWRAP_API JuliaFunction
+class JLCXX_API JuliaFunction
 {
 public:
   /// Construct using a function name and module name. Searches the current module by default. Throws if the function was not found.
@@ -115,7 +115,7 @@ template<> struct IsImmutable<SafeCFunction> : std::true_type {};
 template<> struct static_type_mapping<SafeCFunction>
 {
   typedef SafeCFunction type;
-  static jl_datatype_t* julia_type() { return cxx_wrap::julia_type("SafeCFunction"); }
+  static jl_datatype_t* julia_type() { return jlcxx::julia_type("SafeCFunction"); }
 };
 
 template<>
@@ -200,7 +200,7 @@ typename detail::SplitSignature<SignatureT>::fptr_t make_function_pointer(SafeCF
 template<typename R, typename...ArgsT> struct static_type_mapping<R(*)(ArgsT...)>
 {
   typedef SafeCFunction type;
-  static jl_datatype_t* julia_type() { return cxx_wrap::julia_type("SafeCFunction"); }
+  static jl_datatype_t* julia_type() { return jlcxx::julia_type("SafeCFunction"); }
 };
 
 template<typename R, typename...ArgsT>

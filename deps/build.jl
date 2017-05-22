@@ -26,13 +26,13 @@ end
 
 @BinDeps.setup
 
-build_type = get(ENV, "CXXWRAP_BUILD_TYPE", "Release")
-build_examples = get(ENV, "CXXWRAP_BUILD_EXAMPLES", "ON")
+build_type = get(ENV, "JLCXX_BUILD_TYPE", "Release")
+build_examples = get(ENV, "JLCXX_BUILD_EXAMPLES", "ON")
 
 # List of the libraries that will be built
-lib_labels = [:cxx_wrap]
+lib_labels = [:jlcxx]
 if build_examples == "ON"
-  lib_labels = vcat(lib_labels, [:cxxwrap_containers, :except, :extended, :functions, :hello, :inheritance, :parametric, :types])
+  lib_labels = vcat(lib_labels, [:jlcxx_containers, :except, :extended, :functions, :hello, :inheritance, :parametric, :types])
 end
 deps = BinDeps.LibraryDependency[]
 for l in lib_labels
@@ -49,8 +49,8 @@ else
     bindir = joinpath(prefix, "lib")
 end
 
-cxx_wrap_srcdir = joinpath(depsdir, "src", "cxx_wrap")
-cxx_wrap_builddir = joinpath(depsdir, "builds", "cxx_wrap")
+jlcxx_srcdir = joinpath(depsdir, "src", "jlcxx")
+jlcxx_builddir = joinpath(depsdir, "builds", "jlcxx")
 lib_prefix = @static is_windows() ? "" : "lib"
 lib_suffix = @static is_windows() ? "dll" : (@static is_apple() ? "dylib" : "so")
 julia_base_dir = splitdir(JULIA_HOME)[1]
@@ -82,23 +82,23 @@ for l in lib_labels
 end
 
 cxx_steps = @build_steps begin
-  `cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="$build_type" -DCMAKE_PROGRAM_PATH=$JULIA_HOME -DCXXWRAP_BUILD_EXAMPLES=$build_examples $cxx_wrap_srcdir`
+  `cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="$build_type" -DCMAKE_PROGRAM_PATH=$JULIA_HOME -DJLCXX_BUILD_EXAMPLES=$build_examples $jlcxx_srcdir`
   `cmake --build . --config $build_type --target install $makeopts`
 end
 
 # If built, always run cmake, in case the code changed
-if isdir(cxx_wrap_builddir)
+if isdir(jlcxx_builddir)
   BinDeps.run(@build_steps begin
-    ChangeDirectory(cxx_wrap_builddir)
+    ChangeDirectory(jlcxx_builddir)
     cxx_steps
   end)
 end
 
 provides(BuildProcess,
   (@build_steps begin
-    CreateDirectory(cxx_wrap_builddir)
+    CreateDirectory(jlcxx_builddir)
     @build_steps begin
-      ChangeDirectory(cxx_wrap_builddir)
+      ChangeDirectory(jlcxx_builddir)
       FileRule(deps_paths, cxx_steps)
     end
   end), deps)
@@ -117,8 +117,8 @@ provides(BuildProcess,
 end
 
 if build_examples == "ON"
-  @BinDeps.install Dict([(:cxx_wrap, :_l_cxx_wrap),
-                         (:cxxwrap_containers, :_l_containers),
+  @BinDeps.install Dict([(:jlcxx, :_l_jlcxx),
+                         (:jlcxx_containers, :_l_containers),
                          (:except, :_l_except),
                          (:extended, :_l_extended),
                          (:functions, :_l_functions),
@@ -127,7 +127,7 @@ if build_examples == "ON"
                          (:parametric, :_l_parametric),
                          (:types, :_l_types)])
 else
-  @BinDeps.install Dict([(:cxx_wrap, :_l_cxx_wrap)])
+  @BinDeps.install Dict([(:jlcxx, :_l_jlcxx)])
 end
 
 @static if is_windows()
