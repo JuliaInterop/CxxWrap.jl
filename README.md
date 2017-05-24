@@ -47,7 +47,7 @@ std::string greet()
 ```
 Using the C++ side of `CxxWrap`, this can be exposed as follows:
 ```c++
-#include <jlcxx.hpp>
+#include "jlcxx/jlcxx.hpp"
 
 JULIA_CPP_MODULE_BEGIN(registry)
   jlcxx::Module& hello = registry.create_module("CppHello");
@@ -82,7 +82,7 @@ If creating the Visual Studio project by hand is preferred, however, the followi
 * Click OK to exit the CppHello Property Pages.
 * In Solution Explorer, under Source Files, double click "CppHello.cpp" to open it. Append the following code at the end and save:
 ```c++
-#include <jlcxx.hpp>
+#include "jlcxx/jlcxx.hpp"
 
 std::string greet()
 {
@@ -432,8 +432,8 @@ Member functions and lambdas are automatically wrapped in an `std::functor` and 
 
 C++11 tuples can be converted to Julia tuples by including the `containers/tuple.hpp` header:
 ```c++
-#include <jlcxx.hpp>
-#include <containers/tuple.hpp>
+#include "jlcxx/jlcxx.hpp"
+#include "jlcxx/tuple.hpp"
 
 JULIA_CPP_MODULE_BEGIN(registry)
   jlcxx::Module& containers = registry.create_module("Containers");
