@@ -740,7 +740,12 @@ jl_value_t* boxed_cpp_pointer(T* cpp_ptr, jl_datatype_t* dt, bool add_finalizer)
   if(add_finalizer)
   {
     finalizer = jl_box_voidpointer((void*)detail::finalizer<T>);
+#if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 5
+    jl_gc_add_finalizer(result, (jl_function_t*)finalizer);
+#else
     jl_gc_add_finalizer(result, finalizer);
+#endif
+
   }
   JL_GC_POP();
   return result;
