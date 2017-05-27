@@ -103,6 +103,11 @@ unsafe_store!(cppdref, 1.0)
 @test CppTestFunctions.test_wstring_to_julia() == "šČô_φ_привет_일보"
 @test CppTestFunctions.test_wstring_to_cpp("šČô_φ_привет_일보")
 
+@test CppTestFunctions.real_part(2.0 + 1.0*im) == 2.0
+@test CppTestFunctions.imag_part(2.0 + 1.0*im) == 1.0
+@test CppTestFunctions.make_complex(Float32(3.0), Float32(4.0)) == 3.0 + 4.0*im
+@test typeof(CppTestFunctions.make_complex(Float32(3.0), Float32(4.0))) == Complex{Float32}
+
 # Performance tests
 const test_size = Sys.ARCH == :armv7l ? 1000000 : 50000000
 const numbers = rand(test_size)

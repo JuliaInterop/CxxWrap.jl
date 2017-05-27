@@ -6,6 +6,7 @@
 #include <julia_threads.h>
 #endif
 
+#include <complex>
 #include <map>
 #include <memory>
 #include <stack>
@@ -1414,6 +1415,25 @@ template<typename T> struct static_type_mapping<T&, typename std::enable_if<IsFu
 {
   typedef T* type;
   static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_type((jl_value_t*)::jlcxx::julia_type("Ref"), jl_svec1(static_type_mapping<T>::julia_type())); }
+};
+
+// Complex numbers
+template<typename NumberT> struct IsBits<std::complex<NumberT>> : std::true_type {};
+template<typename NumberT> struct IsImmutable<std::complex<NumberT>> : std::true_type {};
+
+template<typename NumberT> struct static_type_mapping<std::complex<NumberT>>
+{
+  typedef std::complex<NumberT> type;
+  static jl_datatype_t* julia_type()
+  {
+    static jl_datatype_t* dt = nullptr;
+    if(dt == nullptr)
+    {
+      dt = (jl_datatype_t*)apply_type((jl_value_t*)jl_complex_type, jl_svec1(static_type_mapping<NumberT>::julia_type()));
+      protect_from_gc(dt);
+    }
+    return dt;
+  }
 };
 
 }

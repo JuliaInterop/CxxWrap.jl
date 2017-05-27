@@ -225,6 +225,11 @@ void init_test_module(jlcxx::Module& mod)
   // wstring
   mod.method("test_wstring_to_julia", [] () { return std::wstring(L"šČô_φ_привет_일보"); });
   mod.method("test_wstring_to_cpp", [] (const std::wstring& ws) { return ws == L"šČô_φ_привет_일보"; });
+
+  // complex
+  mod.method("real_part", [](const std::complex<double>& c) { return c.real(); } );
+  mod.method("imag_part", [](const std::complex<double>& c) { return c.imag(); } );
+  mod.method("make_complex", [](const float a, const float b) { return std::complex<float>(a,b); });
 }
 
 }
