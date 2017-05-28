@@ -1417,13 +1417,25 @@ template<typename T> struct static_type_mapping<T&, typename std::enable_if<IsFu
   static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_type((jl_value_t*)::jlcxx::julia_type("Ref"), jl_svec1(static_type_mapping<T>::julia_type())); }
 };
 
+namespace detail
+{
+
+template<typename T>
+struct JuliaComplex
+{
+  T a;
+  T b;
+};
+
+}
+
 // Complex numbers
 template<typename NumberT> struct IsBits<std::complex<NumberT>> : std::true_type {};
 template<typename NumberT> struct IsImmutable<std::complex<NumberT>> : std::true_type {};
 
 template<typename NumberT> struct static_type_mapping<std::complex<NumberT>>
 {
-  typedef std::complex<NumberT> type;
+  typedef detail::JuliaComplex<NumberT> type;
   static jl_datatype_t* julia_type()
   {
     static jl_datatype_t* dt = nullptr;
@@ -1433,6 +1445,24 @@ template<typename NumberT> struct static_type_mapping<std::complex<NumberT>>
       protect_from_gc(dt);
     }
     return dt;
+  }
+};
+
+template<typename NumberT>
+struct ConvertToCpp<std::complex<NumberT>, false, true, true>
+{
+  std::complex<NumberT> operator()(detail::JuliaComplex<NumberT> julia_value) const
+  {
+    return std::complex<NumberT>(julia_value.a, julia_value.b);
+  }
+};
+
+template<typename NumberT>
+struct ConvertToJulia<std::complex<NumberT>, false, true, true>
+{
+  detail::JuliaComplex<NumberT> operator()(const std::complex<NumberT> cpp_val) const
+  {
+    return {cpp_val.real(), cpp_val.imag()};
   }
 };
 
