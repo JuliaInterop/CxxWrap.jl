@@ -30,23 +30,27 @@ MESSAGE(STATUS "Julia_VERSION_STRING: ${Julia_VERSION_STRING}")
 # Julia Includes #
 ##################
 
-execute_process(
-    COMMAND ${Julia_EXECUTABLE} -E "julia_include_dir = joinpath(match(r\"(.*)(bin)\",JULIA_HOME).captures[1],\"include\",\"julia\")\n
-        if !isdir(julia_include_dir)  # then we're running directly from build\n
-          julia_base_dir_aux = splitdir(splitdir(JULIA_HOME)[1])[1]  # useful for running-from-build\n
-          julia_include_dir = joinpath(julia_base_dir_aux, \"usr\", \"include\" )\n
-          julia_include_dir *= \";\" * joinpath(julia_base_dir_aux, \"src\", \"support\" )\n
-          julia_include_dir *= \";\" * joinpath(julia_base_dir_aux, \"src\" )\n
-        end\n
-        julia_include_dir"
-    OUTPUT_VARIABLE Julia_INCLUDE_DIRS
-)
+if(DEFINED ENV{JULIA_INCLUDE_DIRS})
+    set(Julia_INCLUDE_DIRS $ENV{JULIA_INCLUDE_DIRS}
+        CACHE PATH "Location of Julia include files")
+else()
+    execute_process(
+        COMMAND ${Julia_EXECUTABLE} -E "julia_include_dir = joinpath(match(r\"(.*)(bin)\",JULIA_HOME).captures[1],\"include\",\"julia\")\n
+            if !isdir(julia_include_dir)  # then we're running directly from build\n
+            julia_base_dir_aux = splitdir(splitdir(JULIA_HOME)[1])[1]  # useful for running-from-build\n
+            julia_include_dir = joinpath(julia_base_dir_aux, \"usr\", \"include\" )\n
+            julia_include_dir *= \";\" * joinpath(julia_base_dir_aux, \"src\", \"support\" )\n
+            julia_include_dir *= \";\" * joinpath(julia_base_dir_aux, \"src\" )\n
+            end\n
+            julia_include_dir"
+        OUTPUT_VARIABLE Julia_INCLUDE_DIRS
+    )
 
-string(REGEX REPLACE "\"" "" Julia_INCLUDE_DIRS ${Julia_INCLUDE_DIRS})
-string(REGEX REPLACE "\n" "" Julia_INCLUDE_DIRS ${Julia_INCLUDE_DIRS})
-set(Julia_INCLUDE_DIRS ${Julia_INCLUDE_DIRS}
-    CACHE PATH "Location of Julia include files")
-
+    string(REGEX REPLACE "\"" "" Julia_INCLUDE_DIRS ${Julia_INCLUDE_DIRS})
+    string(REGEX REPLACE "\n" "" Julia_INCLUDE_DIRS ${Julia_INCLUDE_DIRS})
+    set(Julia_INCLUDE_DIRS ${Julia_INCLUDE_DIRS}
+        CACHE PATH "Location of Julia include files")
+endif()
 MESSAGE(STATUS "Julia_INCLUDE_DIRS:   ${Julia_INCLUDE_DIRS}")
 
 ###################
