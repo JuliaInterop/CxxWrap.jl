@@ -616,6 +616,56 @@ namespace detail
   };
 }
 
+/// Execute a functor on each type
+template<typename... Types>
+struct ForEachType;
+
+template<>
+struct ForEachType<>
+{
+  template<typename FunctorT>
+  void operator()(FunctorT&&)
+  {
+  }
+};
+
+template<typename AppT>
+struct ForEachType<AppT>
+{
+  template<typename FunctorT>
+  void operator()(FunctorT&& ftor)
+  {
+    ftor.template operator()<AppT>();
+  }
+};
+
+template<typename... Types>
+struct ForEachType<ParameterList<Types...>>
+{
+  template<typename FunctorT>
+  void operator()(FunctorT&& ftor)
+  {
+    ForEachType<Types...>()(std::forward<FunctorT>(ftor));
+  }
+};
+
+template<typename T1, typename... Types>
+struct ForEachType<T1, Types...>
+{
+  template<typename FunctorT>
+  void operator()(FunctorT&& ftor)
+  {
+    ForEachType<T1>()(std::forward<FunctorT>(ftor));
+    ForEachType<Types...>()(std::forward<FunctorT>(ftor));
+  }
+};
+
+template<typename T, typename FunctorT>
+void for_each_type(FunctorT&& f)
+{
+  ForEachType<T>()(f);
+}
+
 /// Trait to allow user-controlled disabling of the default constructor
 template<typename T>
 struct DefaultConstructible : std::is_default_constructible<T>
@@ -626,6 +676,43 @@ struct DefaultConstructible : std::is_default_constructible<T>
 template<typename T>
 struct CopyConstructible : std::is_copy_constructible<T>
 {
+};
+
+template<typename... Types>
+struct UnpackedTypeList
+{
+};
+
+template<typename ApplyT, typename... TypeLists>
+struct CombineTypes;
+
+template<typename ApplyT, typename... UnpackedTypes>
+struct CombineTypes<ApplyT, UnpackedTypeList<UnpackedTypes...>>
+{
+  typedef typename ApplyT::template apply<UnpackedTypes...> type;
+};
+
+template<typename ApplyT, typename... UnpackedTypes, typename... Types, typename... OtherTypeLists>
+struct CombineTypes<ApplyT, UnpackedTypeList<UnpackedTypes...>, ParameterList<Types...>, OtherTypeLists...>
+{
+  typedef CombineTypes<ApplyT, UnpackedTypeList<UnpackedTypes...>, ParameterList<Types...>, OtherTypeLists...> ThisT;
+  template<typename T1> using type_unpack = CombineTypes<ApplyT, UnpackedTypeList<UnpackedTypes..., T1>, OtherTypeLists...>;
+  typedef ParameterList<typename ThisT::template type_unpack<Types>::type...> type;
+};
+
+template<typename ApplyT, typename... Types, typename... OtherTypeLists>
+struct CombineTypes<ApplyT, ParameterList<Types...>, OtherTypeLists...>
+{
+  typedef CombineTypes<ApplyT, ParameterList<Types...>, OtherTypeLists...> ThisT;
+  template<typename T1> using type_unpack = CombineTypes<ApplyT, UnpackedTypeList<T1>, OtherTypeLists...>;
+  typedef ParameterList<typename ThisT::template type_unpack<Types>::type...> type;
+};
+
+// Default ApplyT implementation
+template<template<typename...> class TemplateT>
+struct ApplyType
+{
+  template<typename... Types> using apply = TemplateT<Types...>;
 };
 
 /// Helper class to wrap type methods
@@ -715,43 +802,6 @@ public:
 
 private:
 
-  // Default ApplyT implementation
-  template<template<typename...> class TemplateT>
-  struct ApplyType
-  {
-    template<typename... Types> using apply = TemplateT<Types...>;
-  };
-
-  template<typename... Types>
-  struct UnpackedTypeList
-  {
-  };
-
-  template<typename ApplyT, typename... TypeLists>
-  struct CombineTypes;
-
-  template<typename ApplyT, typename... UnpackedTypes>
-  struct CombineTypes<ApplyT, UnpackedTypeList<UnpackedTypes...>>
-  {
-    typedef typename ApplyT::template apply<UnpackedTypes...> type;
-  };
-
-  template<typename ApplyT, typename... UnpackedTypes, typename... Types, typename... OtherTypeLists>
-  struct CombineTypes<ApplyT, UnpackedTypeList<UnpackedTypes...>, ParameterList<Types...>, OtherTypeLists...>
-  {
-    typedef CombineTypes<ApplyT, UnpackedTypeList<UnpackedTypes...>, ParameterList<Types...>, OtherTypeLists...> ThisT;
-    template<typename T1> using type_unpack = CombineTypes<ApplyT, UnpackedTypeList<UnpackedTypes..., T1>, OtherTypeLists...>;
-    typedef ParameterList<typename ThisT::template type_unpack<Types>::type...> type;
-  };
-
-  template<typename ApplyT, typename... Types, typename... OtherTypeLists>
-  struct CombineTypes<ApplyT, ParameterList<Types...>, OtherTypeLists...>
-  {
-    typedef CombineTypes<ApplyT, ParameterList<Types...>, OtherTypeLists...> ThisT;
-    template<typename T1> using type_unpack = CombineTypes<ApplyT, UnpackedTypeList<T1>, OtherTypeLists...>;
-    typedef ParameterList<typename ThisT::template type_unpack<Types>::type...> type;
-  };
-
   template<typename AppliedT, typename FunctorT>
   int apply_internal(FunctorT&& apply_ftor)
   {
@@ -785,6 +835,8 @@ private:
   jl_datatype_t* m_ref_dt;
   jl_datatype_t* m_alloc_dt;
 };
+
+template<typename ApplyT, typename... TypeLists> using combine_types = typename CombineTypes<ApplyT, TypeLists...>::type;
 
 template<typename T>
 template<template<typename...> class TemplateT, typename... TypeLists, typename FunctorT>

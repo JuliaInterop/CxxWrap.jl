@@ -133,6 +133,21 @@ struct WrapFoo3
   }
 };
 
+struct Foo3FreeMethod
+{
+  Foo3FreeMethod(jlcxx::Module& mod) : m_module(mod)
+  {
+  }
+
+  template<typename T>
+  void operator()()
+  {
+    m_module.method("foo3_free_method", [] (T) {});
+  }
+
+  jlcxx::Module& m_module;
+};
+
 template<typename T1, bool B = false>
 struct Foo2
 {
@@ -195,6 +210,10 @@ JULIA_CPP_MODULE_BEGIN(registry)
 
   types.add_type<Parametric<TypeVar<1>, TypeVar<2>, TypeVar<3>>, ParameterList<TypeVar<1>>>("Foo3", abstract_template.dt())
     .apply_combination<Foo3, ParameterList<int32_t, double>, ParameterList<P1,P2,bool>, ParameterList<float>>(WrapFoo3());
+
+  /// Add a non-member function that uses Foo3
+  typedef jlcxx::combine_types<jlcxx::ApplyType<Foo3>, ParameterList<int32_t, double>, ParameterList<P1,P2,bool>, ParameterList<float>> foo3_types;
+  jlcxx::for_each_type<foo3_types>(Foo3FreeMethod(types));
 
   types.add_type<Parametric<TypeVar<1>>>("Foo2")
     .apply_combination<ApplyFoo2, ParameterList<int32_t, double>>(WrapFoo2());
