@@ -197,7 +197,7 @@ JULIA_CPP_MODULE_BEGIN(registry)
     .method("greet", &ConstPtrConstruct::greet);
 
   // Enum
-  types.add_bits<CppEnum>("CppEnum");
+  types.add_bits<CppEnum>("CppEnum", jlcxx::julia_type("CppEnum"));
   types.set_const("EnumValA", EnumValA);
   types.set_const("EnumValB", EnumValB);
   types.method("enum_to_int", [] (const CppEnum e) { return static_cast<int>(e); });

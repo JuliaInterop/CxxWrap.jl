@@ -4,7 +4,7 @@ module CxxWrap
 
 using Compat
 
-export wrap_modules, wrap_module, wrap_module_types, wrap_module_functions, safe_cfunction, load_modules, ptrunion
+export wrap_modules, wrap_module, wrap_module_types, wrap_module_functions, safe_cfunction, load_modules, ptrunion, CppEnum
 
 # Convert path if it contains lib prefix on windows
 function lib_path(so_path::AbstractString)
@@ -32,6 +32,13 @@ const jlcxx_path = _l_jlcxx
 @compat abstract type CppDisplay <: Display end
 @compat abstract type CppArray{T,N} <: AbstractArray{T,N} end
 @compat abstract type CppAssociative{K,V} <: Associative{K,V} end
+
+# Enum type interface
+@compat abstract type CppEnum end
+Base.convert(::Type{Int32}, x::CppEnum) = reinterpret(Int32, x)
+import Base: +, |
++(a::T, b::T) where T <: CppEnum = reinterpret(T, Int32(a) + Int32(b))
+|(a::T, b::T) where T <: CppEnum = reinterpret(T, Int32(a) | Int32(b))
 
 cxxdowncast(x) = error("No downcast for type $(supertype(typeof(x))). Did you specialize SuperType to enable automatic downcasting?")
 

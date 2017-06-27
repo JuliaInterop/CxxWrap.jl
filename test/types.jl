@@ -101,3 +101,5 @@ CppTypes.call_testype_function()
 @test enum_to_int(CppTypes.EnumValA) == 0
 @test enum_to_int(CppTypes.EnumValB) == 1
 @test get_enum_b() == CppTypes.EnumValB
+@test CppTypes.EnumValA + CppTypes.EnumValB == CppTypes.EnumValB
+@test CppTypes.EnumValA | CppTypes.EnumValB == CppTypes.EnumValB
