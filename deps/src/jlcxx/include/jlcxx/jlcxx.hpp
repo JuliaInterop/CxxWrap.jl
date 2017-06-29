@@ -26,7 +26,9 @@ namespace detail
 template<typename R, typename... Args>
 struct ReturnTypeAdapter
 {
-  inline mapped_return_type<R> operator()(const void* functor, mapped_julia_type<Args>... args)
+  using return_type = decltype(convert_to_julia(std::declval<R>()));
+
+  inline return_type operator()(const void* functor, mapped_julia_type<Args>... args)
   {
     auto std_func = reinterpret_cast<const std::function<R(Args...)>*>(functor);
     assert(std_func != nullptr);
@@ -49,7 +51,9 @@ struct ReturnTypeAdapter<void, Args...>
 template<typename R, typename... Args>
 struct CallFunctor
 {
-  static mapped_return_type<R> apply(const void* functor, mapped_julia_type<Args>... args)
+  using return_type = decltype(ReturnTypeAdapter<R, Args...>()(std::declval<const void*>(), std::declval<mapped_julia_type<Args>>()...));
+
+  static return_type apply(const void* functor, mapped_julia_type<Args>... args)
   {
     try
     {
@@ -60,7 +64,7 @@ struct CallFunctor
       jl_error(err.what());
     }
 
-    return mapped_return_type<R>();
+    return return_type();
   }
 };
 

@@ -465,36 +465,11 @@ namespace detail
   {
     typedef T type;
   };
-
-  template<typename CppT, typename MappedT>
-  struct MappedReturnType
-  {
-    typedef MappedT type;
-  };
-
-  template<typename CppT>
-  struct MappedReturnType<CppT*, WrappedCppPtr>
-  {
-    typedef WrappedCppPtr type;
-  };
-
-  template<typename CppT>
-  struct MappedReturnType<CppT&, WrappedCppPtr>
-  {
-    typedef WrappedCppPtr type;
-  };
-
-  template<typename CppT>
-  struct MappedReturnType<CppT, WrappedCppPtr>
-  {
-    typedef jl_value_t* type; // Make sure a copy can be made if a function returns a C++ object by value
-  };
 }
 
 template<typename SourceT> using dereference_for_mapping = typename detail::JuliaReferenceMapping<SourceT>::type;
 template<typename SourceT> using dereferenced_type_mapping = static_type_mapping<dereference_for_mapping<SourceT>>;
 template<typename SourceT> using mapped_julia_type = typename dereferenced_type_mapping<SourceT>::type;
-template<typename SourceT> using mapped_return_type = typename detail::MappedReturnType<SourceT, mapped_julia_type<SourceT>>::type;
 
 namespace detail
 {
@@ -1417,6 +1392,18 @@ template<typename T> struct static_type_mapping<T&, typename std::enable_if<IsFu
   static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_type((jl_value_t*)::jlcxx::julia_type("Ref"), jl_svec1(static_type_mapping<T>::julia_type())); }
 };
 
+namespace detail
+{
+
+template<typename T>
+struct JuliaComplex
+{
+  T real;
+  T imag;
+};
+
+}
+
 // Complex numbers
 template<typename NumberT> struct IsBits<std::complex<NumberT>> : std::true_type {};
 template<typename NumberT> struct IsImmutable<std::complex<NumberT>> : std::true_type {};
@@ -1448,9 +1435,9 @@ struct ConvertToCpp<std::complex<NumberT>, false, true, true>
 template<typename NumberT>
 struct ConvertToJulia<std::complex<NumberT>, false, true, true>
 {
-  std::complex<NumberT> operator()(std::complex<NumberT> cpp_value) const
+  detail::JuliaComplex<NumberT> operator()(std::complex<NumberT> cpp_value) const
   {
-    return cpp_value;
+    return {cpp_value.real(), cpp_value.imag()};
   }
 };
 
