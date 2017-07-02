@@ -35,5 +35,7 @@ matrix:
     - os: osx
       compiler: "clang"
       julia: nightly
+  allow_failures:
+      julia: nightly
 notifications:
   email: true
