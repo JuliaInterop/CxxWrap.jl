@@ -465,36 +465,11 @@ namespace detail
   {
     typedef T type;
   };
-
-  template<typename CppT, typename MappedT>
-  struct MappedReturnType
-  {
-    typedef MappedT type;
-  };
-
-  template<typename CppT>
-  struct MappedReturnType<CppT*, WrappedCppPtr>
-  {
-    typedef WrappedCppPtr type;
-  };
-
-  template<typename CppT>
-  struct MappedReturnType<CppT&, WrappedCppPtr>
-  {
-    typedef WrappedCppPtr type;
-  };
-
-  template<typename CppT>
-  struct MappedReturnType<CppT, WrappedCppPtr>
-  {
-    typedef jl_value_t* type; // Make sure a copy can be made if a function returns a C++ object by value
-  };
 }
 
 template<typename SourceT> using dereference_for_mapping = typename detail::JuliaReferenceMapping<SourceT>::type;
 template<typename SourceT> using dereferenced_type_mapping = static_type_mapping<dereference_for_mapping<SourceT>>;
 template<typename SourceT> using mapped_julia_type = typename dereferenced_type_mapping<SourceT>::type;
-template<typename SourceT> using mapped_return_type = typename detail::MappedReturnType<SourceT, mapped_julia_type<SourceT>>::type;
 
 namespace detail
 {
@@ -1423,8 +1398,8 @@ namespace detail
 template<typename T>
 struct JuliaComplex
 {
-  T a;
-  T b;
+  T real;
+  T imag;
 };
 
 }
@@ -1435,7 +1410,7 @@ template<typename NumberT> struct IsImmutable<std::complex<NumberT>> : std::true
 
 template<typename NumberT> struct static_type_mapping<std::complex<NumberT>>
 {
-  typedef detail::JuliaComplex<NumberT> type;
+  typedef std::complex<NumberT> type;
   static jl_datatype_t* julia_type()
   {
     static jl_datatype_t* dt = nullptr;
@@ -1451,18 +1426,18 @@ template<typename NumberT> struct static_type_mapping<std::complex<NumberT>>
 template<typename NumberT>
 struct ConvertToCpp<std::complex<NumberT>, false, true, true>
 {
-  std::complex<NumberT> operator()(detail::JuliaComplex<NumberT> julia_value) const
+  std::complex<NumberT> operator()(std::complex<NumberT> julia_value) const
   {
-    return std::complex<NumberT>(julia_value.a, julia_value.b);
+    return julia_value;
   }
 };
 
 template<typename NumberT>
 struct ConvertToJulia<std::complex<NumberT>, false, true, true>
 {
-  detail::JuliaComplex<NumberT> operator()(const std::complex<NumberT> cpp_val) const
+  detail::JuliaComplex<NumberT> operator()(std::complex<NumberT> cpp_value) const
   {
-    return {cpp_val.real(), cpp_val.imag()};
+    return {cpp_value.real(), cpp_value.imag()};
   }
 };
 
