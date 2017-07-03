@@ -36,6 +36,7 @@ matrix:
       compiler: "clang"
       julia: nightly
   allow_failures:
-      julia: nightly
+    - julia: nightly
+      
 notifications:
   email: true
