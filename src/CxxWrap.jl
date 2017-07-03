@@ -37,8 +37,8 @@ const jlcxx_path = _l_jlcxx
 @compat abstract type CppEnum end
 Base.convert(::Type{Int32}, x::CppEnum) = reinterpret(Int32, x)
 import Base: +, |
-@compat +(a::T, b::T) where T <: CppEnum = reinterpret(T, Int32(a) + Int32(b))
-@compat |(a::T, b::T) where T <: CppEnum = reinterpret(T, Int32(a) | Int32(b))
++{T <: CppEnum}(a::T, b::T) = reinterpret(T, Int32(a) + Int32(b))
+|{T <: CppEnum}(a::T, b::T) = reinterpret(T, Int32(a) | Int32(b))
 
 cxxdowncast(x) = error("No downcast for type $(supertype(typeof(x))). Did you specialize SuperType to enable automatic downcasting?")
 
