@@ -639,7 +639,11 @@ struct ForEachType<AppT>
   template<typename FunctorT>
   void operator()(FunctorT&& ftor)
   {
+#ifdef _MSC_VER
+    ftor.operator()<AppT>();
+#else 
     ftor.template operator()<AppT>();
+#endif
   }
 };
 
