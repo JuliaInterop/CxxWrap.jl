@@ -144,7 +144,7 @@ std::wstring ConvertToCpp<std::wstring, false, false, false>::operator()(jl_valu
   return std::wstring(arr.data(), arr.size());
 }
 
-jl_datatype_t* new_datatype(jl_sym_t *name,
+JLCXX_API jl_datatype_t* new_datatype(jl_sym_t *name,
                             jl_module_t* module,
                             jl_datatype_t *super,
                             jl_svec_t *parameters,
