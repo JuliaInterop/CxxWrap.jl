@@ -18,6 +18,15 @@
 namespace jlcxx
 {
 
+/// Compatibility between 0.6 and 0.7
+jl_datatype_t* new_datatype(jl_sym_t *name,
+                            jl_module_t* module,
+                            jl_datatype_t *super,
+                            jl_svec_t *parameters,
+                            jl_svec_t *fnames, jl_svec_t *ftypes,
+                            int abstract, int mutabl,
+                            int ninitialized);
+
 /// Some helper functions
 namespace detail
 {
@@ -362,7 +371,7 @@ class JLCXX_API Module
 {
 public:
 
-  Module(const std::string& name);
+  Module(const std::string& name, jl_module_t* jl_mod);
 
   void append_function(FunctionWrapperBase* f)
   {
@@ -501,6 +510,11 @@ public:
     return m_allocated_types;
   }
 
+  jl_module_t* julia_module() const
+  {
+    return m_jl_mod;
+  }
+
 private:
 
   template<typename T>
@@ -535,6 +549,7 @@ private:
   }
 
   std::string m_name;
+  jl_module_t* m_jl_mod;
   std::vector<std::shared_ptr<FunctionWrapperBase>> m_functions;
   std::map<std::string, jl_value_t*> m_jl_constants;
   std::vector<std::string> m_exported_symbols;
@@ -903,14 +918,14 @@ TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t*
   const std::string allocname = name+"Allocated";
 
   // Create the datatypes
-  jl_datatype_t* base_dt = jl_new_datatype(jl_symbol(name.c_str()), super, parameters, jl_emptysvec, jl_emptysvec, 1, 0, 0);
+  jl_datatype_t* base_dt = new_datatype(jl_symbol(name.c_str()), m_jl_mod, super, parameters, jl_emptysvec, jl_emptysvec, 1, 0, 0);
   protect_from_gc(base_dt);
 
   super = is_parametric ? (jl_datatype_t*)apply_type((jl_value_t*)base_dt, parameters) : base_dt;
 
-  jl_datatype_t* ref_dt = jl_new_datatype(jl_symbol(refname.c_str()), super, parameters, fnames, ftypes, 0, 0, 1);
+  jl_datatype_t* ref_dt = new_datatype(jl_symbol(refname.c_str()), m_jl_mod, super, parameters, fnames, ftypes, 0, 0, 1);
   protect_from_gc(ref_dt);
-  jl_datatype_t* alloc_dt = jl_new_datatype(jl_symbol(allocname.c_str()), super, parameters, fnames, ftypes, 0, 1, 1);
+  jl_datatype_t* alloc_dt = new_datatype(jl_symbol(allocname.c_str()), m_jl_mod, super, parameters, fnames, ftypes, 0, 1, 1);
   protect_from_gc(alloc_dt);
 
   // Register the type
@@ -990,8 +1005,10 @@ void Module::add_bits(const std::string& name, jl_datatype_t* super)
   JL_GC_PUSH1(&params);
 #if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 6
   jl_datatype_t* dt = jl_new_bitstype((jl_value_t*)jl_symbol(name.c_str()), super, params, 8*sizeof(T));
-#else
+#elif JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 7
   jl_datatype_t* dt = jl_new_primitivetype((jl_value_t*)jl_symbol(name.c_str()), super, params, 8*sizeof(T));
+#else
+  jl_datatype_t* dt = jl_new_primitivetype((jl_value_t*)jl_symbol(name.c_str()), m_jl_mod, super, params, 8*sizeof(T));
 #endif
   protect_from_gc(dt);
   JL_GC_POP();
@@ -1003,6 +1020,11 @@ void Module::add_bits(const std::string& name, jl_datatype_t* super)
 class JLCXX_API ModuleRegistry
 {
 public:
+
+  ModuleRegistry(jl_module_t* parent_mod, jl_module_t* mod) : m_parent_mod(parent_mod), m_jl_mod(mod)
+  {
+  }
+
   /// Create a module and register it
   Module& create_module(const std::string& name);
 
@@ -1029,6 +1051,8 @@ public:
 
 private:
   std::map<std::string, std::shared_ptr<Module>> m_modules;
+  jl_module_t* m_parent_mod;
+  jl_module_t* m_jl_mod;
 };
 
 /// Registry for functions that are called when the CxxWrap module is initialized
@@ -1071,8 +1095,9 @@ struct RegisterHook
 /// Register a new module
 #define JULIA_CPP_MODULE_BEGIN(registry) \
 extern "C" JLCXX_ONLY_EXPORTS void register_julia_modules(void* void_reg) { \
-  jlcxx::ModuleRegistry& registry = *reinterpret_cast<jlcxx::ModuleRegistry*>(void_reg);
+  jlcxx::ModuleRegistry& registry = *reinterpret_cast<jlcxx::ModuleRegistry*>(void_reg); \
+  try {
 
-#define JULIA_CPP_MODULE_END }
+#define JULIA_CPP_MODULE_END } catch (const std::runtime_error& e) { jl_error(e.what()); } }
 
 #endif

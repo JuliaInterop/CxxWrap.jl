@@ -42,7 +42,7 @@ JLCXX_API std::map<jl_value_t*, std::pair<std::size_t,std::size_t>>& gc_index_ma
   return m_map;
 }
 
-Module::Module(const std::string& name) : m_name(name)
+Module::Module(const std::string& name, jl_module_t* jmod) : m_name(name), m_jl_mod(jmod)
 {
 }
 
@@ -51,7 +51,28 @@ Module& ModuleRegistry::create_module(const std::string &name)
   if(m_modules.count(name))
     throw std::runtime_error("Error registering module: " + name + " was already registered");
 
-  Module* mod = new Module(name);
+  jl_module_t* jmod = m_jl_mod;
+  if(jmod == nullptr)
+  {
+    jl_sym_t* modsym = nullptr;
+    JL_GC_PUSH2(&jmod, &modsym);
+    modsym = jl_symbol(name.c_str());
+    jmod = jl_new_module(modsym);
+    jmod->parent = m_parent_mod;
+    jl_set_const(m_parent_mod, modsym, (jl_value_t*)jmod);
+    jl_add_standard_imports(jmod);
+    JL_GC_POP();
+  }
+  else
+  {
+    const std::string my_name = symbol_name(jmod->name);
+    if(my_name != name)
+    {
+      throw std::runtime_error("Name mismatch between Julia-declared module \"" + my_name + "\" and C++ module name \"" + name + "\"");
+    }
+  }
+
+  Module* mod = new Module(name, jmod);
   m_modules[name].reset(mod);
   return *mod;
 }
@@ -121,6 +142,25 @@ std::wstring ConvertToCpp<std::wstring, false, false, false>::operator()(jl_valu
   static const JuliaFunction wstring_to_cpp("wstring_to_cpp", "CxxWrap");
   ArrayRef<wchar_t> arr((jl_array_t*)wstring_to_cpp(jstr));
   return std::wstring(arr.data(), arr.size());
+}
+
+jl_datatype_t* new_datatype(jl_sym_t *name,
+                            jl_module_t* module,
+                            jl_datatype_t *super,
+                            jl_svec_t *parameters,
+                            jl_svec_t *fnames, jl_svec_t *ftypes,
+                            int abstract, int mutabl,
+                            int ninitialized)
+{
+  if(module == nullptr)
+  {
+    throw std::runtime_error("null module when creating type");
+  }
+#if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 7
+  return jl_new_datatype(name, super, parameters, fnames, ftypes, abstract, mutabl, ninitialized);
+#else
+  return jl_new_datatype(name, module, super, parameters, fnames, ftypes, abstract, mutabl, ninitialized);
+#endif
 }
 
 }

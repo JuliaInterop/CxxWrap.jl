@@ -30,24 +30,25 @@ JLCXX_API jl_module_t* get_cxxwrap_module()
 }
 
 /// Create a new registry
-JLCXX_API void* create_registry()
+JLCXX_API void* create_registry(jl_value_t* parent_module, jl_value_t* wrapped_module)
 {
-  return static_cast<void*>(new ModuleRegistry());
+  jl_module_t* mod = jl_is_nothing(wrapped_module) ? nullptr : (jl_module_t*)wrapped_module;
+  return static_cast<void*>(new ModuleRegistry((jl_module_t*)parent_module, mod));
 }
 
 /// Get the names of all modules in the registry
-JLCXX_API jl_array_t* get_module_names(void* void_registry)
+JLCXX_API jl_array_t* get_modules(void* void_registry)
 {
   assert(void_registry != nullptr);
   const ModuleRegistry& registry = *reinterpret_cast<ModuleRegistry*>(void_registry);
-  Array<std::string> names_array;
-  JL_GC_PUSH1(names_array.gc_pointer());
+  Array<jl_value_t*> modules_array;
+  JL_GC_PUSH1(modules_array.gc_pointer());
   registry.for_each_module([&](Module& module)
   {
-    names_array.push_back(module.name());
+    modules_array.push_back((jl_value_t*)module.julia_module());
   });
   JL_GC_POP();
-  return names_array.wrapped();
+  return modules_array.wrapped();
 }
 
 /// Bind jl_datatype_t structures to corresponding Julia symbols in the given module

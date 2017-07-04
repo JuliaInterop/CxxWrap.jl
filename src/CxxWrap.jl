@@ -129,15 +129,15 @@ function __init__()
 end
 
 # Load the modules in the shared library located at the given path
-function load_modules(path::AbstractString)
+function load_modules(path::AbstractString, parent_module, wrapped_module)
   module_lib = Libdl.dlopen(path, Libdl.RTLD_GLOBAL)
-  registry = ccall((:create_registry, jlcxx_path), Ptr{Void}, ())
+  registry = ccall((:create_registry, jlcxx_path), Ptr{Void}, (Any,Any), parent_module, wrapped_module)
   ccall(Libdl.dlsym(module_lib, "register_julia_modules"), Void, (Ptr{Void},), registry)
   return registry
 end
 
-function get_module_names(registry::Ptr{Void})
-  ccall((:get_module_names, jlcxx_path), Array{AbstractString}, (Ptr{Void},), registry)
+function get_modules(registry::Ptr{Void})
+  ccall((:get_modules, jlcxx_path), Array{AbstractString}, (Ptr{Void},), registry)
 end
 
 function get_module_functions(registry::Ptr{Void})
@@ -146,6 +146,7 @@ end
 
 function bind_constants(registry::Ptr{Void}, m::Module)
   ccall((:bind_module_constants, jlcxx_path), Void, (Ptr{Void},Any), registry, m)
+  return
 end
 
 function exported_symbols(registry::Ptr{Void}, modname::AbstractString)
@@ -318,16 +319,8 @@ end
 
 # Create modules defined in the given library, wrapping all their functions and types
 function wrap_modules(registry::Ptr{Void}, parent_mod=Main)
-  module_names = get_module_names(registry)
-  jl_modules = Module[]
-  for mod_name in module_names
-    modsym = Symbol(mod_name)
-    if isdefined(parent_mod, modsym)
-      jl_mod = getfield(parent_mod, modsym)
-    else
-      jl_mod = Core.eval(parent_mod, :(module $modsym end))
-    end
-    push!(jl_modules, jl_mod)
+  jl_modules = get_modules(registry)
+  for jl_mod in jl_modules
     bind_constants(registry, jl_mod)
   end
 
@@ -337,49 +330,31 @@ function wrap_modules(registry::Ptr{Void}, parent_mod=Main)
     wrap_functions(mod_functions, jl_mod)
   end
 
-  for (jl_mod, mod_name) in zip(jl_modules, module_names)
-    exps = [Symbol(s) for s in exported_symbols(registry, mod_name)]
+  for jl_mod in jl_modules
+    exps = [Symbol(s) for s in exported_symbols(registry, string(jl_mod))]
     Core.eval(jl_mod, :(export $(exps...)))
   end
 end
 
 # Wrap modules in the given path
 function wrap_modules(so_path::AbstractString, parent_mod=Main)
-  registry = CxxWrap.load_modules(lib_path(so_path))
+  registry = CxxWrap.load_modules(lib_path(so_path), parent_mod, nothing)
   wrap_modules(registry, parent_mod)
 end
 
 # Place the types for the module with the name corresponding to the current module name in the current module
 function wrap_module_types(registry, parent_mod=Main)
-  module_names = get_module_names(registry)
-  mod_idx = 0
   wanted_name = string(module_name(current_module()))
-  for (i,mod_name) in enumerate(module_names)
-    if mod_name == wanted_name
-      bind_constants(registry, current_module())
-      mod_idx = i
-      break
-    end
-  end
-
-  if mod_idx == 0
-    error("Module $wanted_name not found in C++")
-  end
-
+  bind_constants(registry, current_module())
+  
   exps = [Symbol(s) for s in exported_symbols(registry, wanted_name)]
   Core.eval(current_module(), :(export $(exps...)))
 end
 
 function wrap_module_functions(registry, parent_mod=Main)
-  module_names = get_module_names(registry)
-  mod_idx = 0
-  wanted_name = string(module_name(current_module()))
-  for (i,mod_name) in enumerate(module_names)
-    if mod_name == wanted_name
-      mod_idx = i
-      break
-    end
-  end
+  modules = get_modules(registry)
+  @assert length(modules) == 1
+  mod_idx = 1
 
   if mod_idx == 0
     error("Module $wanted_name not found in C++")
@@ -397,7 +372,7 @@ function wrap_module(registry, parent_mod=Main)
 end
 
 function wrap_module(so_path::AbstractString, parent_mod=Main)
-  registry = CxxWrap.load_modules(lib_path(so_path))
+  registry = CxxWrap.load_modules(lib_path(so_path), parent_mod, current_module())
   wrap_module(registry, parent_mod)
 end
 
