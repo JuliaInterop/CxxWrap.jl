@@ -777,6 +777,14 @@ public:
     return *this;
   }
 
+  /// Define a "member" function using a lambda
+  template<typename LambdaT>
+  TypeWrapper<T>& method(const std::string& name, LambdaT&& lambda)
+  {
+    m_module.method(name, std::forward<LambdaT>(lambda));
+    return *this;
+  }
+
   /// Call operator overload. For both reference and allocated type to work around https://github.com/JuliaLang/julia/issues/14919
   template<typename R, typename CT, typename... ArgsT>
   TypeWrapper<T>& method(R(CT::*f)(ArgsT...))
@@ -793,6 +801,17 @@ public:
     m_module.method("operator()", [f](const T& obj, ArgsT... args) -> R { return (obj.*f)(args...); } )
       .set_name(detail::make_fname("CallOpOverload", m_ref_dt));
     m_module.method("operator()", [f](const T& obj, ArgsT... args) -> R { return (obj.*f)(args...); } )
+      .set_name(detail::make_fname("CallOpOverload", m_alloc_dt));
+    return *this;
+  }
+
+  /// Overload operator() using a lambda
+  template<typename LambdaT>
+  TypeWrapper<T>& method(LambdaT&& lambda)
+  {
+    m_module.method("operator()", std::forward<LambdaT>(lambda))
+      .set_name(detail::make_fname("CallOpOverload", m_ref_dt));
+    m_module.method("operator()", std::forward<LambdaT>(lambda))
       .set_name(detail::make_fname("CallOpOverload", m_alloc_dt));
     return *this;
   }

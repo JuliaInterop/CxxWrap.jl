@@ -51,6 +51,7 @@ byval = CppTypes.world_by_value()
 CppTypes.set(w, "hello")
 @show CppTypes.greet(w)
 @test CppTypes.greet(w) == "hello"
+@test CppTypes.greet_lambda(w) == "hello"
 
 w = World("constructed")
 @test CppTypes.greet(w) == "constructed"
@@ -84,6 +85,7 @@ wptr = World()
 
 call_op = CallOperator()
 @test call_op() == 43
+@test call_op(42) == 42
 
 type JuliaTestType
     a::Float64

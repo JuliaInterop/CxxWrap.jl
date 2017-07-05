@@ -127,7 +127,9 @@ JULIA_CPP_MODULE_BEGIN(registry)
   types.add_type<World>("World")
     .constructor<const std::string&>()
     .method("set", &World::set)
-    .method("greet", &World::greet);
+    .method("greet", &World::greet)
+    .method("greet_lambda", [] (const World& w) { return w.greet(); } );
+
   types.method("world_factory", []()
   {
     return new World("factory hello");
@@ -190,7 +192,8 @@ JULIA_CPP_MODULE_BEGIN(registry)
   types.add_type<AConstRef>("AConstRef").method("value", &AConstRef::value);
   types.add_type<ReturnConstRef>("ReturnConstRef").method("value", &ReturnConstRef::operator());
 
-  types.add_type<CallOperator>("CallOperator").method(&CallOperator::operator());
+  types.add_type<CallOperator>("CallOperator").method(&CallOperator::operator())
+    .method([] (const CallOperator&, int i)  { return i; } );
 
   types.add_type<ConstPtrConstruct>("ConstPtrConstruct")
     .constructor<const World*>()
