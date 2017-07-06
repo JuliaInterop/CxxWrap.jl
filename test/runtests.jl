@@ -1,16 +1,13 @@
-using Compat
+using Base.Test
 
-myname = splitdir(@__FILE__)[end]
-
-excluded = []
+excluded = ["runtests.jl"]
 
 if is_windows() && Sys.WORD_SIZE == 32
   push!(excluded, "except.jl")
 end
 
-for fname in readdir()
-  if fname != myname && endswith(fname, ".jl") && fname ∉ excluded
-    println("running test ", fname, "...")
-    include(fname)
+@testset "CxxWrap tests" begin
+  @testset "$f" for f in filter(fname -> fname ∉ excluded, readdir())
+    include(f)
   end
 end
