@@ -108,6 +108,10 @@ immutable ConstArray{T,N} <: CppArray{T,N}
   size::NTuple{N,Int}
 end
 
+@compat Base.IndexStyle(::ConstArray) = IndexLinear()
+Base.size(arr::ConstArray) = arr.size
+Base.getindex(arr::ConstArray, i::Integer) = unsafe_load(arr.ptr.ptr, i)
+
 # Encapsulate information about a function
 type CppFunctionInfo
   name::Any
@@ -123,9 +127,6 @@ function __init__()
     Libdl.dlopen(jlcxx_path, Libdl.RTLD_GLOBAL)
   end
   ccall((:initialize, jlcxx_path), Void, (Any, Any, Any), CxxWrap, CppAny, CppFunctionInfo)
-  @compat Base.IndexStyle(::ConstArray) = IndexLinear()
-  Base.size(arr::ConstArray) = arr.size
-  Base.getindex(arr::ConstArray, i::Integer) = unsafe_load(arr.ptr.ptr, i)
 end
 
 # Helper function to create a Module in a parent module
