@@ -1068,6 +1068,15 @@ public:
     return *(iter->second);
   }
 
+  jl_module_t* get_wrapped_module() const
+  {
+    if(m_jl_mod == nullptr)
+    {
+      throw std::runtime_error("Wrapped Julia module is null");
+    }
+    return m_jl_mod;
+  }
+
 private:
   std::map<std::string, std::shared_ptr<Module>> m_modules;
   jl_module_t* m_parent_mod;

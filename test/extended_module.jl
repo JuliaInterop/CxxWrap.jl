@@ -5,7 +5,7 @@ module ExtendedTypes
 
 using CxxWrap
 
-wrap_module(CxxWrap._l_extended)
+wrap_module(CxxWrap._l_extended, ExtendedTypes)
 
 export ExtendedWorld, greet
 

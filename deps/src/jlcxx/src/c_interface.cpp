@@ -61,6 +61,14 @@ JLCXX_API void bind_module_constants(void* void_registry, jl_value_t* module_any
   registry.get_module(mod_name).bind_constants(mod);
 }
 
+/// Get the single wrapped module, in case we are combining a C++ module with Julia code
+JLCXX_API jl_value_t* get_wrapped_module(void* void_registry)
+{
+  assert(void_registry != nullptr);
+  ModuleRegistry& registry = *reinterpret_cast<ModuleRegistry*>(void_registry);
+  return (jl_value_t*)registry.get_wrapped_module();
+}
+
 void fill_types_vec(Array<jl_datatype_t*>& types_array, const std::vector<jl_datatype_t*>& types_vec)
 {
   for(const auto& t : types_vec)

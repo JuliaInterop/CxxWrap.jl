@@ -4,7 +4,7 @@ module CxxWrap
 
 using Compat
 
-export wrap_modules, wrap_module, wrap_module_types, wrap_module_functions, safe_cfunction, load_modules, ptrunion, CppEnum
+export wrap_modules, wrap_module, wrap_module_types, wrap_module_functions, safe_cfunction, load_module, ptrunion, CppEnum
 
 # Convert path if it contains lib prefix on windows
 function lib_path(so_path::AbstractString)
@@ -128,37 +128,55 @@ function __init__()
   Base.getindex(arr::ConstArray, i::Integer) = unsafe_load(arr.ptr.ptr, i)
 end
 
+# Helper function to create a Module in a parent module
+function create_module(name::String, parent::Module)
+  return Core.eval(parent, :(module $(Symbol(name)) end))
+end
+
 # Load the modules in the shared library located at the given path
-function load_modules(path::AbstractString, parent_module, wrapped_module)
+function load_modules(path::AbstractString, parent_module)
   module_lib = Libdl.dlopen(path, Libdl.RTLD_GLOBAL)
-  registry = ccall((:create_registry, jlcxx_path), Ptr{Void}, (Any,Any), parent_module, wrapped_module)
+  registry = ccall((:create_registry, jlcxx_path), Ptr{Void}, (Any,Any), parent_module, nothing)
+  ccall(Libdl.dlsym(module_lib, "register_julia_modules"), Void, (Ptr{Void},), registry)
+  return registry
+end
+
+"""
+Load a single module, to be wrapped in wrapped_module
+"""
+function load_module(path::AbstractString, wrapped_module)
+  module_lib = Libdl.dlopen(path, Libdl.RTLD_GLOBAL)
+  registry = ccall((:create_registry, jlcxx_path), Ptr{Void}, (Any,Any), module_parent(wrapped_module), wrapped_module)
   ccall(Libdl.dlsym(module_lib, "register_julia_modules"), Void, (Ptr{Void},), registry)
   return registry
 end
 
 function get_modules(registry::Ptr{Void})
-  ccall((:get_modules, jlcxx_path), Array{AbstractString}, (Ptr{Void},), registry)
+  ccall((:get_modules, jlcxx_path), Any, (Ptr{Void},), registry)
+end
+
+function get_wrapped_module(registry::Ptr{Void})
+  ccall((:get_wrapped_module, jlcxx_path), Any, (Ptr{Void},), registry)
 end
 
 function get_module_functions(registry::Ptr{Void})
-  ccall((:get_module_functions, jlcxx_path), Array{CppFunctionInfo}, (Ptr{Void},), registry)
+  ccall((:get_module_functions, jlcxx_path), Any, (Ptr{Void},), registry)
 end
 
 function bind_constants(registry::Ptr{Void}, m::Module)
   ccall((:bind_module_constants, jlcxx_path), Void, (Ptr{Void},Any), registry, m)
-  return
 end
 
 function exported_symbols(registry::Ptr{Void}, modname::AbstractString)
-  ccall((:get_exported_symbols, jlcxx_path), Array{AbstractString}, (Ptr{Void},AbstractString), registry, modname)
+  ccall((:get_exported_symbols, jlcxx_path), Any, (Ptr{Void},AbstractString), registry, modname)
 end
 
 function reference_types(registry::Ptr{Void}, modname::AbstractString)
-  ccall((:get_reference_types, jlcxx_path), Array{Type}, (Ptr{Void},AbstractString), registry, modname)
+  ccall((:get_reference_types, jlcxx_path), Any, (Ptr{Void},AbstractString), registry, modname)
 end
 
 function allocated_types(registry::Ptr{Void}, modname::AbstractString)
-  ccall((:get_allocated_types, jlcxx_path), Array{Type}, (Ptr{Void},AbstractString), registry, modname)
+  ccall((:get_allocated_types, jlcxx_path), Any, (Ptr{Void},AbstractString), registry, modname)
 end
 
 # Interpreted as a constructor for Julia  > 0.5
@@ -318,7 +336,7 @@ function wrap_functions(functions, julia_mod)
 end
 
 # Create modules defined in the given library, wrapping all their functions and types
-function wrap_modules(registry::Ptr{Void}, parent_mod=Main)
+function wrap_modules(registry::Ptr{Void})
   jl_modules = get_modules(registry)
   for jl_mod in jl_modules
     bind_constants(registry, jl_mod)
@@ -338,20 +356,21 @@ end
 
 # Wrap modules in the given path
 function wrap_modules(so_path::AbstractString, parent_mod=Main)
-  registry = CxxWrap.load_modules(lib_path(so_path), parent_mod, nothing)
-  wrap_modules(registry, parent_mod)
+  registry = CxxWrap.load_modules(lib_path(so_path), parent_mod)
+  wrap_modules(registry)
 end
 
 # Place the types for the module with the name corresponding to the current module name in the current module
-function wrap_module_types(registry, parent_mod=Main)
-  wanted_name = string(module_name(current_module()))
-  bind_constants(registry, current_module())
+function wrap_module_types(registry)
+  jlmod = get_wrapped_module(registry)
+  wanted_name = string(module_name(jlmod))
+  bind_constants(registry, jlmod)
   
   exps = [Symbol(s) for s in exported_symbols(registry, wanted_name)]
-  Core.eval(current_module(), :(export $(exps...)))
+  Core.eval(jlmod, :(export $(exps...)))
 end
 
-function wrap_module_functions(registry, parent_mod=Main)
+function wrap_module_functions(registry)
   modules = get_modules(registry)
   @assert length(modules) == 1
   mod_idx = 1
@@ -360,20 +379,24 @@ function wrap_module_functions(registry, parent_mod=Main)
     error("Module $wanted_name not found in C++")
   end
 
+  jlmod = get_wrapped_module(registry)
   module_functions = get_module_functions(registry)
-  wrap_reference_converters(registry, current_module())
-  wrap_functions(module_functions[mod_idx], current_module())
+  wrap_reference_converters(registry, jlmod)
+  wrap_functions(module_functions[mod_idx], jlmod)
 end
 
 # Place the functions and types into the current module
-function wrap_module(registry, parent_mod=Main)
-  wrap_module_types(registry, parent_mod)
-  wrap_module_functions(registry, parent_mod)
+function wrap_module(registry::Ptr{Void})
+  wrap_module_types(registry)
+  wrap_module_functions(registry)
 end
 
-function wrap_module(so_path::AbstractString, parent_mod=Main)
-  registry = CxxWrap.load_modules(lib_path(so_path), parent_mod, current_module())
-  wrap_module(registry, parent_mod)
+"""
+Wrap C++ types into module m. Assumes the library adds only a single module with the same name as m.
+"""
+function wrap_module(so_path::AbstractString, m::Module)
+  registry = CxxWrap.load_module(lib_path(so_path), m)
+  wrap_module(registry)
 end
 
 immutable SafeCFunction
