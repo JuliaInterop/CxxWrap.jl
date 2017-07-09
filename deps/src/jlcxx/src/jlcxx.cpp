@@ -72,9 +72,11 @@ Module& ModuleRegistry::create_module(const std::string &name)
   return *mod;
 }
 
-JLCXX_API jl_datatype_t* julia_type(const std::string& name, const std::string& module_name)
+JLCXX_API jl_value_t* julia_type(const std::string& name, const std::string& module_name)
 {
-  for(jl_module_t* mod : {jl_base_module, g_cxxwrap_module, jl_current_module, jl_current_module->parent, module_name.empty() ? nullptr : (jl_module_t*)jl_get_global(jl_current_module, jl_symbol(module_name.c_str()))})
+  const auto mods = {module_name.empty() ? nullptr : (jl_module_t*)jl_get_global(jl_current_module, jl_symbol(module_name.c_str())), jl_base_module, g_cxxwrap_module, jl_current_module, jl_current_module->parent};
+  std::string found_type;
+  for(jl_module_t* mod : mods)
   {
     if(mod == nullptr)
     {
@@ -83,15 +85,27 @@ JLCXX_API jl_datatype_t* julia_type(const std::string& name, const std::string& 
 
     jl_value_t* gval = jl_get_global(mod, jl_symbol(name.c_str()));
 #if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 6
-    if(gval != nullptr && jl_is_datatype(gval))
+    if(gval != nullptr && (jl_is_datatype(gval) || jl_is_typector(gval)))
 #else
     if(gval != nullptr && (jl_is_datatype(gval) || jl_is_unionall(gval)))
 #endif
     {
-      return (jl_datatype_t*)gval;
+      return gval;
+    }
+    if(gval != nullptr)
+    {
+      found_type = julia_type_name(jl_typeof(gval));
     }
   }
-  throw std::runtime_error("Symbol for type " + name + " was not found");
+  std::string errmsg = "Symbol for type " + name + " was not found. A Value of type " + found_type + " was found instead. Searched modules:";
+  for(jl_module_t* mod : mods)
+  {
+    if(mod != nullptr)
+    {
+      errmsg +=  " " + symbol_name(mod->name);
+    }
+  }
+  throw std::runtime_error(errmsg);
 }
 
 InitHooks& InitHooks::instance()

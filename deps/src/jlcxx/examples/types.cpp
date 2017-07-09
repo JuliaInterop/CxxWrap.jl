@@ -95,7 +95,7 @@ struct JuliaTestType {
 void call_testype_function()
 {
   JuliaTestType A = {2., 3.};
-  jl_value_t* result = jl_new_struct_uninit(jlcxx::julia_type("JuliaTestType"));
+  jl_value_t* result = jl_new_struct_uninit((jl_datatype_t*)jlcxx::julia_type("JuliaTestType"));
   *reinterpret_cast<JuliaTestType*>(result) = A;
   jlcxx::JuliaFunction("julia_test_func")(result);
 }

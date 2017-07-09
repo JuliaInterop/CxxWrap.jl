@@ -337,7 +337,7 @@ inline jl_value_t* make_fname(const std::string& nametype, ArgsT... args)
 {
   jl_value_t* name = nullptr;
   JL_GC_PUSH1(&name);
-  name = jl_new_struct(julia_type(nametype), args...);
+  name = jl_new_struct((jl_datatype_t*)julia_type(nametype), args...);
   protect_from_gc(name);
   JL_GC_POP();
 
@@ -437,11 +437,11 @@ public:
   }
 
   /// Add a composite type
-  template<typename T, typename SuperParametersT=ParameterList<>>
-  TypeWrapper<T> add_type(const std::string& name, jl_datatype_t* super = julia_type<CppAny>());
+  template<typename T, typename SuperParametersT=ParameterList<>, typename JLSuperT=jl_datatype_t>
+  TypeWrapper<T> add_type(const std::string& name, JLSuperT* super = julia_type<CppAny>());
 
-  template<typename T>
-  void add_bits(const std::string& name, jl_datatype_t* super = julia_type("CppBits"));
+  template<typename T, typename JLSuperT=jl_datatype_t>
+  void add_bits(const std::string& name, JLSuperT* super = (jl_datatype_t*)julia_type("CppBits"));
 
   /// Set a global constant value at the module level
   template<typename T>
@@ -539,8 +539,8 @@ private:
   {
   }
 
-  template<typename T, typename SuperParametersT>
-  TypeWrapper<T> add_type_internal(const std::string& name, jl_datatype_t* super);
+  template<typename T, typename SuperParametersT, typename JLSuperT>
+  TypeWrapper<T> add_type_internal(const std::string& name, JLSuperT* super);
 
   template<typename R, typename LambdaT, typename... ArgsT>
   FunctionWrapperBase& add_lambda(const std::string& name, LambdaT&& lambda, R(LambdaT::*)(ArgsT...) const)
@@ -895,8 +895,8 @@ void TypeWrapper<T>::apply_combination(FunctorT&& ftor)
   detail::DoApply<applied_list>()(*this, std::forward<FunctorT>(ftor));
 }
 
-template<typename T, typename SuperParametersT>
-TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t* super)
+template<typename T, typename SuperParametersT, typename JLSuperT>
+TypeWrapper<T> Module::add_type_internal(const std::string& name, JLSuperT* super_generic)
 {
   static constexpr bool is_parametric = detail::IsParametric<T>::value;
   static_assert(!IsImmutable<T>::value, "Immutable types (marked with IsImmutable) can't be added using add_type, map them directly to a struct instead");
@@ -906,6 +906,8 @@ TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t*
   {
     throw std::runtime_error("Duplicate registration of type or constant " + name);
   }
+
+  jl_datatype_t* super = nullptr;
 
   jl_svec_t* parameters = nullptr;
   jl_svec_t* super_parameters = nullptr;
@@ -917,20 +919,14 @@ TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t*
   fnames = jl_svec1(jl_symbol("cpp_object"));
   ftypes = jl_svec1(jl_voidpointer_type);
 
-  size_t n_super_params = jl_nparams(super);
-  if(is_parametric && n_super_params != 0)
+  if(jl_is_datatype(super_generic) && jl_nparams((jl_datatype_t*)super_generic) == 0)
+  {
+    super = (jl_datatype_t*)super_generic;
+  }
+  else
   {
     super_parameters = SuperParametersT::nb_parameters == 0 ? parameter_list<T>()() : SuperParametersT()();
-    if(n_super_params == jl_svec_len(super_parameters))
-    {
-      super = (jl_datatype_t*)apply_type((jl_value_t*)super, super_parameters);
-    }
-    else
-    {
-      std::stringstream err_msg;
-      err_msg << "Invalid number of parameters for supertype " << julia_type_name(super) << ": wanted " << n_super_params << " parameters, " << " got " << jl_svec_len(super_parameters) << " parameters" << std::endl;
-      throw std::runtime_error(err_msg.str());
-    }
+    super = (jl_datatype_t*)apply_type((jl_value_t*)super_generic, super_parameters);
   }
 
   const std::string refname = name+"Ref";
@@ -982,8 +978,8 @@ TypeWrapper<T> Module::add_type_internal(const std::string& name, jl_datatype_t*
 }
 
 /// Add a composite type
-template<typename T, typename SuperParametersT>
-TypeWrapper<T> Module::add_type(const std::string& name, jl_datatype_t* super)
+template<typename T, typename SuperParametersT, typename JLSuperT>
+TypeWrapper<T> Module::add_type(const std::string& name, JLSuperT* super)
 {
   return add_type_internal<T, SuperParametersT>(name, super);
 }
@@ -1014,20 +1010,21 @@ namespace detail
 }
 
 /// Add a bits type
-template<typename T>
-void Module::add_bits(const std::string& name, jl_datatype_t* super)
+template<typename T, typename JLSuperT>
+void Module::add_bits(const std::string& name, JLSuperT* super)
 {
+  assert(jl_is_datatype(super));
   static constexpr bool is_parametric = detail::IsParametric<T>::value;
   static_assert(IsBits<T>::value || is_parametric, "Bits types must be marked as such by specializing the IsBits template");
   static_assert(std::is_scalar<T>::value, "Bits types must be a scalar type");
   jl_svec_t* params = is_parametric ? parameter_list<T>()() : jl_emptysvec;
   JL_GC_PUSH1(&params);
 #if JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 6
-  jl_datatype_t* dt = jl_new_bitstype((jl_value_t*)jl_symbol(name.c_str()), super, params, 8*sizeof(T));
+  jl_datatype_t* dt = jl_new_bitstype((jl_value_t*)jl_symbol(name.c_str()), (jl_datatype_t*)super, params, 8*sizeof(T));
 #elif JULIA_VERSION_MAJOR == 0 && JULIA_VERSION_MINOR < 7
-  jl_datatype_t* dt = jl_new_primitivetype((jl_value_t*)jl_symbol(name.c_str()), super, params, 8*sizeof(T));
+  jl_datatype_t* dt = jl_new_primitivetype((jl_value_t*)jl_symbol(name.c_str()), (jl_datatype_t*)super, params, 8*sizeof(T));
 #else
-  jl_datatype_t* dt = jl_new_primitivetype((jl_value_t*)jl_symbol(name.c_str()), m_jl_mod, super, params, 8*sizeof(T));
+  jl_datatype_t* dt = jl_new_primitivetype((jl_value_t*)jl_symbol(name.c_str()), m_jl_mod, (jl_datatype_t*)super, params, 8*sizeof(T));
 #endif
   protect_from_gc(dt);
   JL_GC_POP();

@@ -115,7 +115,7 @@ template<> struct IsImmutable<SafeCFunction> : std::true_type {};
 template<> struct static_type_mapping<SafeCFunction>
 {
   typedef SafeCFunction type;
-  static jl_datatype_t* julia_type() { return jlcxx::julia_type("SafeCFunction"); }
+  static jl_datatype_t* julia_type() { return (jl_datatype_t*)jlcxx::julia_type("SafeCFunction"); }
 };
 
 template<>
@@ -200,7 +200,7 @@ typename detail::SplitSignature<SignatureT>::fptr_t make_function_pointer(SafeCF
 template<typename R, typename...ArgsT> struct static_type_mapping<R(*)(ArgsT...)>
 {
   typedef SafeCFunction type;
-  static jl_datatype_t* julia_type() { return jlcxx::julia_type("SafeCFunction"); }
+  static jl_datatype_t* julia_type() { return (jl_datatype_t*)jlcxx::julia_type("SafeCFunction"); }
 };
 
 template<typename R, typename...ArgsT>

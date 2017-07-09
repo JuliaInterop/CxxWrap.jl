@@ -144,6 +144,10 @@ inline std::string julia_type_name(jl_datatype_t* dt)
 {
   return jl_typename_str((jl_value_t*)dt);
 }
+inline std::string julia_type_name(jl_value_t* dt)
+{
+  return jl_typename_str(dt);
+}
 
 /// Base type for all wrapped classes
 struct CppAny
@@ -1358,7 +1362,7 @@ inline jl_datatype_t* julia_type()
 }
 
 /// Get the type from a global symbol
-JLCXX_API jl_datatype_t* julia_type(const std::string& name, const std::string& module_name = "");
+JLCXX_API jl_value_t* julia_type(const std::string& name, const std::string& module_name = "");
 
 /// Helper to encapsulate a strictly typed number type. Numbers typed like this will not be involved in the convenience-overloads that allow passing e.g. an Int to a Float64 argument
 template<typename NumberT>

@@ -119,7 +119,7 @@ struct static_type_mapping<ConstArray<T,N>>
     static jl_datatype_t* app_dt = nullptr;
     if(app_dt == nullptr)
     {
-      jl_datatype_t* pdt = ::jlcxx::julia_type("ConstArray");
+      jl_datatype_t* pdt = (jl_datatype_t*)::jlcxx::julia_type("ConstArray");
       jl_value_t* boxed_n = box(N);
       JL_GC_PUSH1(&boxed_n);
       app_dt = (jl_datatype_t*)apply_type((jl_value_t*)pdt, jl_svec2(::jlcxx::julia_type<T>(), boxed_n));

@@ -168,6 +168,32 @@ struct WrapFoo2
   }
 };
 
+template<typename T>
+struct CppVector
+{
+};
+
+struct WrapCppVector
+{
+  template<typename TypeWrapperT>
+  void operator()(TypeWrapperT&&)
+  {
+  }
+};
+
+template<typename T1, typename T2>
+struct CppVector2
+{
+};
+
+struct WrapCppVector2
+{
+  template<typename TypeWrapperT>
+  void operator()(TypeWrapperT&&)
+  {
+  }
+};
+
 } // namespace parametric
 
 namespace jlcxx
@@ -217,4 +243,10 @@ JULIA_CPP_MODULE_BEGIN(registry)
 
   types.add_type<Parametric<TypeVar<1>>>("Foo2")
     .apply_combination<ApplyFoo2, ParameterList<int32_t, double>>(WrapFoo2());
+
+  types.add_type<Parametric<TypeVar<1>>>("CppVector", jlcxx::julia_type("AbstractVector"))
+    .apply<CppVector<double>>(WrapCppVector());
+
+  types.add_type<Parametric<TypeVar<1>, TypeVar<2>>, ParameterList<TypeVar<1>>>("CppVector2", jlcxx::julia_type("AbstractVector"))
+    .apply<CppVector2<double,float>>(WrapCppVector2());
 JULIA_CPP_MODULE_END
