@@ -315,7 +315,6 @@ function wrap_functions(functions, julia_mod)
     :setindex!,
     :convert,
     :deepcopy_internal,
-    :size,
     :+,
     :*,
     :(==)
