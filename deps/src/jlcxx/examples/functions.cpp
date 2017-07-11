@@ -230,6 +230,9 @@ void init_test_module(jlcxx::Module& mod)
   mod.method("real_part", [](std::complex<double> c) { return c.real(); } );
   mod.method("imag_part", [](const std::complex<double>& c) { return c.imag(); } );
   mod.method("make_complex", [](const float a, const float b) { return std::complex<float>(a,b); });
+
+  // Irrational
+  mod.method("process_irrational", [] (const double irr, const double fact) { return irr*fact; });
 }
 
 }

@@ -211,7 +211,7 @@ end
 else
   argument_overloads(t::Type{Cuint}) = [Int]
 end
-argument_overloads(t::Type{Float64}) = [Int]
+argument_overloads(t::Type{Float64}) = [Int, Irrational]
 function argument_overloads(t::Type{Array{AbstractString,1}})
   @static if VERSION < v"0.5-dev"
     return [Array{ASCIIString,1}]

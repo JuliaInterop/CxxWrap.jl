@@ -108,6 +108,8 @@ unsafe_store!(cppdref, 1.0)
 @test CppTestFunctions.make_complex(Float32(3.0), Float32(4.0)) == 3.0 + 4.0*im
 @test typeof(CppTestFunctions.make_complex(Float32(3.0), Float32(4.0))) == Complex{Float32}
 
+@test CppTestFunctions.process_irrational(φ, 2) == 2*φ
+
 # Performance tests
 const test_size = Sys.ARCH == :armv7l ? 1000000 : 50000000
 const numbers = rand(test_size)
