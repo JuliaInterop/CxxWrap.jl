@@ -2,6 +2,7 @@
 #include <memory>
 
 #include "jlcxx/jlcxx.hpp"
+#include "jlcxx/functions.hpp"
 
 struct A
 {
@@ -47,12 +48,46 @@ std::string take_ref(A& a)
   return a.message();
 }
 
+// Example based on https://discourse.julialang.org/t/simplest-way-to-wrap-virtual-c-class/4977
+namespace virtualsolver
+{
+  typedef double (*history_f) (double);
+
+  class Base
+  {
+      virtual double history(double) = 0;
+    public:
+      void solve(){
+        for (int i=0;i<3;i++) {
+          std::cout<<history((double) i)<<" \n";
+        }
+      }
+  };
+
+  class A: public Base
+  {
+    double history(double x){return x;}   
+  };
+
+  class B: public Base
+  {
+    public:
+      B(history_f h){f=h;}
+      double history(double x){return f(x);}
+
+      history_f f;    
+  };
+}
+
 namespace jlcxx
 {
   // Needed for shared pointer downcasting
   template<> struct SuperType<D> { typedef A type; };
   template<> struct SuperType<C> { typedef B type; };
   template<> struct SuperType<B> { typedef A type; };
+
+  template<> struct SuperType<virtualsolver::A> { typedef virtualsolver::Base type; };
+  template<> struct SuperType<virtualsolver::B> { typedef virtualsolver::Base type; };
 }
 
 JULIA_CPP_MODULE_BEGIN(registry)
@@ -76,4 +111,13 @@ JULIA_CPP_MODULE_BEGIN(registry)
   types.method("take_ref", take_ref);
 
   types.export_symbols("A", "B", "C", "D", "message", "create_abstract", "shared_ptr_message", "shared_b", "shared_c", "shared_d", "weak_ptr_message_a", "weak_ptr_message_b", "dynamic_message_c", "take_ref");
+
+  jlcxx::Module& vsolver_mod = registry.create_module("VirtualSolver");
+
+  vsolver_mod.add_type<virtualsolver::Base>("BaseV")
+    .method("solve", &virtualsolver::Base::solve);
+
+  vsolver_mod.add_type<virtualsolver::A>("A", jlcxx::julia_type<virtualsolver::Base>());
+  vsolver_mod.add_type<virtualsolver::B>("B", jlcxx::julia_type<virtualsolver::Base>())
+    .constructor<virtualsolver::history_f>();
 JULIA_CPP_MODULE_END
