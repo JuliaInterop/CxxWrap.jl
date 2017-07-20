@@ -149,6 +149,17 @@ JULIA_CPP_MODULE_BEGIN(registry)
     return w->greet();
   });
 
+  types.method("shared_world_ref", []() -> std::shared_ptr<World>&
+  {
+    static std::shared_ptr<World> refworld(new World("shared factory hello ref"));
+    return refworld;
+  });
+
+  types.method("reset_shared_world!", [](std::shared_ptr<World>& target, std::string message)
+  {
+    target.reset(new World(message));
+  });
+
   types.method("smart_world_factory", []()
   {
     return MySmartPointer<World>(new World("smart factory hello"));
@@ -185,6 +196,12 @@ JULIA_CPP_MODULE_BEGIN(registry)
   {
     static World w("boxed world pointer");
     return jlcxx::box(&w);
+  });
+
+  types.method("world_ref_factory", []() -> World&
+  {
+    static World w("reffed world");
+    return w;
   });
 
   types.add_type<NonCopyable>("NonCopyable");

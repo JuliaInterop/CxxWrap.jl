@@ -160,7 +160,7 @@ struct SmartJuliaType<std::unique_ptr<const T>>
 }
 
 template<typename T>
-struct static_type_mapping<T, typename std::enable_if<IsSmartPointerType<T>::value>::type>
+struct static_type_mapping<T, typename std::enable_if<IsSmartPointerType<typename std::remove_reference<T>::type>::value>::type>
 {
   typedef jl_value_t* type;
   static jl_datatype_t* julia_type()
@@ -182,6 +182,24 @@ template<typename T>
 struct ConvertToCpp<T, false, false, false, typename std::enable_if<IsSmartPointerType<T>::value>::type>
 {
   T operator()(jl_value_t* julia_val) const
+  {
+    return *unbox_wrapped_ptr<T>(julia_val);
+  }
+};
+
+template<typename T>
+struct ConvertToJulia<T&, false, false, false, typename std::enable_if<IsSmartPointerType<T>::value && !std::is_const<T>::value>::type>
+{
+  jl_value_t* operator()(T& cpp_val) const
+  {
+    return boxed_cpp_pointer(&cpp_val, static_type_mapping<T>::julia_type(), false);
+  }
+};
+
+template<typename T>
+struct ConvertToCpp<T&, false, false, false, typename std::enable_if<IsSmartPointerType<T>::value && !std::is_const<T>::value>::type>
+{
+  T& operator()(jl_value_t* julia_val) const
   {
     return *unbox_wrapped_ptr<T>(julia_val);
   }

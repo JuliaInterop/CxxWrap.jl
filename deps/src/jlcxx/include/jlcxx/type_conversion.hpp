@@ -819,7 +819,7 @@ struct ConvertToJulia<T*, false, false, false, typename std::enable_if<IsFundame
 
 // Reference to wrapped type
 template<typename T>
-struct ConvertToJulia<T&, false, false, false>
+struct ConvertToJulia<T&, false, false, false, typename std::enable_if<!IsSmartPointerType<T>::value>::type>
 {
   WrappedCppPtr operator()(T& cpp_obj) const
   {

@@ -1,7 +1,7 @@
 using Compat
 using BinDeps
 
-const CXXWRAP_JL_VERSION = v"0.5.0"
+const CXXWRAP_JL_VERSION = v"0.5.0+"
 
 function prompt_cmake()
   try
