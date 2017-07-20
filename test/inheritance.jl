@@ -43,8 +43,8 @@ d_ptr = shared_d()
 @test weak_ptr_message_a(c_ptr) == "C"
 @test weak_ptr_message_a(d_ptr) == "D"
 
-a = VirtualSolver.A()
+a = VirtualSolver.E()
 VirtualSolver.solve(a)
 
-b = VirtualSolver.B(safe_cfunction(x -> 2x, Float64, (Float64,)))
+b = VirtualSolver.F(safe_cfunction(x -> 2x, Float64, (Float64,)))
 VirtualSolver.solve(b)

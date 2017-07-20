@@ -64,15 +64,15 @@ namespace virtualsolver
       }
   };
 
-  class A: public Base
+  class E: public Base
   {
     double history(double x){return x;}   
   };
 
-  class B: public Base
+  class F: public Base
   {
     public:
-      B(history_f h){f=h;}
+      F(history_f h){f=h;}
       double history(double x){return f(x);}
 
       history_f f;    
@@ -86,8 +86,8 @@ namespace jlcxx
   template<> struct SuperType<C> { typedef B type; };
   template<> struct SuperType<B> { typedef A type; };
 
-  template<> struct SuperType<virtualsolver::A> { typedef virtualsolver::Base type; };
-  template<> struct SuperType<virtualsolver::B> { typedef virtualsolver::Base type; };
+  template<> struct SuperType<virtualsolver::E> { typedef virtualsolver::Base type; };
+  template<> struct SuperType<virtualsolver::F> { typedef virtualsolver::Base type; };
 }
 
 JULIA_CPP_MODULE_BEGIN(registry)
@@ -117,7 +117,7 @@ JULIA_CPP_MODULE_BEGIN(registry)
   vsolver_mod.add_type<virtualsolver::Base>("BaseV")
     .method("solve", &virtualsolver::Base::solve);
 
-  vsolver_mod.add_type<virtualsolver::A>("A", jlcxx::julia_type<virtualsolver::Base>());
-  vsolver_mod.add_type<virtualsolver::B>("B", jlcxx::julia_type<virtualsolver::Base>())
+  vsolver_mod.add_type<virtualsolver::E>("E", jlcxx::julia_type<virtualsolver::Base>());
+  vsolver_mod.add_type<virtualsolver::F>("F", jlcxx::julia_type<virtualsolver::Base>())
     .constructor<virtualsolver::history_f>();
 JULIA_CPP_MODULE_END
