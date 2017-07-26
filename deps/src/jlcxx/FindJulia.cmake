@@ -15,7 +15,7 @@ MESSAGE(STATUS "Julia_EXECUTABLE:     ${Julia_EXECUTABLE}")
 #################
 
 execute_process(
-    COMMAND ${Julia_EXECUTABLE} --version
+    COMMAND ${Julia_EXECUTABLE} --startup-file=no --version
     OUTPUT_VARIABLE Julia_VERSION_STRING
 )
 
@@ -35,7 +35,7 @@ if(DEFINED ENV{JULIA_INCLUDE_DIRS})
         CACHE PATH "Location of Julia include files")
 else()
     execute_process(
-        COMMAND ${Julia_EXECUTABLE} -E "julia_include_dir = joinpath(match(r\"(.*)(bin)\",JULIA_HOME).captures[1],\"include\",\"julia\")\n
+        COMMAND ${Julia_EXECUTABLE} --startup-file=no -E "julia_include_dir = joinpath(match(r\"(.*)(bin)\",JULIA_HOME).captures[1],\"include\",\"julia\")\n
             if !isdir(julia_include_dir)  # then we're running directly from build\n
             julia_base_dir_aux = splitdir(splitdir(JULIA_HOME)[1])[1]  # useful for running-from-build\n
             julia_include_dir = joinpath(julia_base_dir_aux, \"usr\", \"include\" )\n
@@ -58,7 +58,7 @@ MESSAGE(STATUS "Julia_INCLUDE_DIRS:   ${Julia_INCLUDE_DIRS}")
 ###################
 
 execute_process(
-    COMMAND ${Julia_EXECUTABLE} -E "abspath(dirname(Libdl.dlpath(\"libjulia\")))"
+    COMMAND ${Julia_EXECUTABLE} --startup-file=no -E "abspath(dirname(Libdl.dlpath(\"libjulia\")))"
     OUTPUT_VARIABLE Julia_LIBRARY_DIR
 )
 
@@ -92,7 +92,7 @@ MESSAGE(STATUS "Julia_LIBRARY:        ${Julia_LIBRARY}")
 ##############
 
 execute_process(
-    COMMAND ${Julia_EXECUTABLE} -E "JULIA_HOME"
+    COMMAND ${Julia_EXECUTABLE} --startup-file=no -E "JULIA_HOME"
     OUTPUT_VARIABLE JULIA_HOME
 )
 
@@ -106,7 +106,7 @@ MESSAGE(STATUS "JULIA_HOME:           ${JULIA_HOME}")
 ###################
 
 execute_process(
-    COMMAND ${Julia_EXECUTABLE} -E "Base.libllvm_version"
+    COMMAND ${Julia_EXECUTABLE} --startup-file=no -E "Base.libllvm_version"
     OUTPUT_VARIABLE Julia_LLVM_VERSION
 )
 
