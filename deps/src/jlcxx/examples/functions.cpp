@@ -210,6 +210,11 @@ void init_test_module(jlcxx::Module& mod)
       throw std::runtime_error("Incorrect callback result, expected 3");
     }
   });
+  mod.method("test_safe_cfunction3", [](void (*f) (const double* const, int_t))
+  {
+    static const double arr[] = {1.0, 2.0};
+    f(arr,2);
+  });
   // Write to reference
   mod.method("test_double_ref", [](double& d) { d = 1.0; });
   mod.method("get_test_double_ref", get_test_double_ref);

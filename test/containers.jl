@@ -1,6 +1,12 @@
 using CxxWrap
 using Base.Test
 
+function func1(arr)
+  @test arr[1] == 1.0
+  @test arr[2] == 2.0
+  @test arr[3] == 3.0
+end
+
 wrap_modules(CxxWrap._l_containers)
 using Containers
 
@@ -29,3 +35,4 @@ display(mm)
 println()
 mm[:,:] = 1.0
 @test Containers.check_mutable_array(mm)
+Containers.do_embedding_test()

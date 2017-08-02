@@ -4,6 +4,7 @@
 #include "jlcxx/jlcxx.hpp"
 #include "jlcxx/tuple.hpp"
 #include "jlcxx/const_array.hpp"
+#include "jlcxx/functions.hpp"
 
 const double* const_vector()
 {
@@ -42,6 +43,13 @@ JULIA_CPP_MODULE_BEGIN(registry)
       }
     }
     return true;
+  });
+
+  containers.method("do_embedding_test", [] ()
+  {
+    jlcxx::JuliaFunction func1("func1");
+    float arr1_jl[] = {1.0, 2.0, 3.0};
+    func1((jl_value_t*)jlcxx::ArrayRef<float, 1>(&arr1_jl[0], 3).wrapped());
   });
 
   containers.export_symbols("test_tuple", "const_ptr", "const_ptr_arg", "const_vector", "const_matrix");

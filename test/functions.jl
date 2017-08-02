@@ -80,6 +80,15 @@ testf(x,y) = x+y
 CppTestFunctions.test_safe_cfunction(c_func)
 CppTestFunctions.test_safe_cfunction2(c_func)
 
+function testf2(p::ConstPtr{Float64}, n_elems::Int)
+  arr = ConstArray(p, n_elems)
+  @test arr[1] == 1.0
+  @test arr[2] == 2.0
+  return
+end
+c_func2 = safe_cfunction(testf2, Void, (ConstPtr{Float64},Int))
+CppTestFunctions.test_safe_cfunction3(c_func2)
+
 dref = Ref(0.0)
 CppTestFunctions.test_double_ref(dref)
 @test dref[] == 1.0

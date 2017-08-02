@@ -4,7 +4,7 @@ module CxxWrap
 
 using Compat
 
-export wrap_modules, wrap_module, wrap_module_types, wrap_module_functions, safe_cfunction, load_module, ptrunion, CppEnum
+export wrap_modules, wrap_module, wrap_module_types, wrap_module_functions, safe_cfunction, load_module, ptrunion, CppEnum, ConstPtr, ConstArray
 
 # Convert path if it contains lib prefix on windows
 function lib_path(so_path::AbstractString)
@@ -107,6 +107,8 @@ immutable ConstArray{T,N} <: CppArray{T,N}
   ptr::ConstPtr{T}
   size::NTuple{N,Int}
 end
+
+ConstArray{T,N}(ptr::ConstPtr{T}, args::Vararg{Int,N}) = ConstArray{T,N}(ptr, (args...))
 
 @compat Base.IndexStyle(::ConstArray) = IndexLinear()
 Base.size(arr::ConstArray) = arr.size

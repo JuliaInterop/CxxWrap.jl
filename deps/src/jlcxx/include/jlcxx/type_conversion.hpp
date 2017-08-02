@@ -110,6 +110,9 @@ inline std::string symbol_name(jl_sym_t* symbol)
 /// Backwards-compatible apply_type
 JLCXX_API jl_value_t* apply_type(jl_value_t* tc, jl_svec_t* params);
 
+/// Get the type from a global symbol
+JLCXX_API jl_value_t* julia_type(const std::string& name, const std::string& module_name = "");
+
 /// Backwards-compatible apply_array_type
 template<typename T>
 inline jl_value_t* apply_array_type(T* type, std::size_t dim)
@@ -655,10 +658,17 @@ struct static_type_mapping<std::wstring>
 };
 
 template<typename T>
-struct static_type_mapping<T*, typename std::enable_if<IsFundamental<T>::value>::type>
+struct static_type_mapping<T*, typename std::enable_if<IsFundamental<T>::value && !std::is_const<T>::value>::type>
 {
   typedef T* type;
   static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_type((jl_value_t*)jl_pointer_type, jl_svec1(static_type_mapping<T>::julia_type())); }
+};
+
+template<typename T>
+struct static_type_mapping<const T*, typename std::enable_if<IsFundamental<T>::value>::type>
+{
+  typedef T* type;
+  static jl_datatype_t* julia_type() { return (jl_datatype_t*)apply_type((jl_value_t*)jlcxx::julia_type("ConstPtr"), jl_svec1(static_type_mapping<T>::julia_type())); }
 };
 
 template<>
@@ -1360,9 +1370,6 @@ inline jl_datatype_t* julia_type()
 {
   return static_type_mapping<T>::julia_type();
 }
-
-/// Get the type from a global symbol
-JLCXX_API jl_value_t* julia_type(const std::string& name, const std::string& module_name = "");
 
 /// Helper to encapsulate a strictly typed number type. Numbers typed like this will not be involved in the convenience-overloads that allow passing e.g. an Int to a Float64 argument
 template<typename NumberT>
