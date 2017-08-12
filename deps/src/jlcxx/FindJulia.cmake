@@ -21,7 +21,7 @@ execute_process(
 
 string(
     REGEX REPLACE ".*([0-9]+\\.[0-9]+\\.[0-9]+).*" "\\1"
-      Julia_VERSION_STRING ${Julia_VERSION_STRING}
+      Julia_VERSION_STRING "${Julia_VERSION_STRING}"
 )
 
 MESSAGE(STATUS "Julia_VERSION_STRING: ${Julia_VERSION_STRING}")
@@ -46,8 +46,8 @@ else()
         OUTPUT_VARIABLE Julia_INCLUDE_DIRS
     )
 
-    string(REGEX REPLACE "\"" "" Julia_INCLUDE_DIRS ${Julia_INCLUDE_DIRS})
-    string(REGEX REPLACE "\n" "" Julia_INCLUDE_DIRS ${Julia_INCLUDE_DIRS})
+    string(REGEX REPLACE "\"" "" Julia_INCLUDE_DIRS "${Julia_INCLUDE_DIRS}")
+    string(REGEX REPLACE "\n" "" Julia_INCLUDE_DIRS "${Julia_INCLUDE_DIRS}")
     set(Julia_INCLUDE_DIRS ${Julia_INCLUDE_DIRS}
         CACHE PATH "Location of Julia include files")
 endif()
@@ -62,8 +62,8 @@ execute_process(
     OUTPUT_VARIABLE Julia_LIBRARY_DIR
 )
 
-string(REGEX REPLACE "\"" "" Julia_LIBRARY_DIR ${Julia_LIBRARY_DIR})
-string(REGEX REPLACE "\n" "" Julia_LIBRARY_DIR ${Julia_LIBRARY_DIR})
+string(REGEX REPLACE "\"" "" Julia_LIBRARY_DIR "${Julia_LIBRARY_DIR}")
+string(REGEX REPLACE "\n" "" Julia_LIBRARY_DIR "${Julia_LIBRARY_DIR}")
 
 string(STRIP ${Julia_LIBRARY_DIR} Julia_LIBRARY_DIR)
 set(Julia_LIBRARY_DIR ${Julia_LIBRARY_DIR}
@@ -96,8 +96,8 @@ execute_process(
     OUTPUT_VARIABLE JULIA_HOME
 )
 
-string(REGEX REPLACE "\"" "" JULIA_HOME ${JULIA_HOME})
-string(REGEX REPLACE "\n" "" JULIA_HOME ${JULIA_HOME})
+string(REGEX REPLACE "\"" "" JULIA_HOME "${JULIA_HOME}")
+string(REGEX REPLACE "\n" "" JULIA_HOME "${JULIA_HOME}")
 
 MESSAGE(STATUS "JULIA_HOME:           ${JULIA_HOME}")
 
@@ -110,8 +110,8 @@ execute_process(
     OUTPUT_VARIABLE Julia_LLVM_VERSION
 )
 
-string(REGEX REPLACE "\"" "" Julia_LLVM_VERSION ${Julia_LLVM_VERSION})
-string(REGEX REPLACE "\n" "" Julia_LLVM_VERSION ${Julia_LLVM_VERSION})
+string(REGEX REPLACE "\"" "" Julia_LLVM_VERSION "${Julia_LLVM_VERSION}")
+string(REGEX REPLACE "\n" "" Julia_LLVM_VERSION "${Julia_LLVM_VERSION}")
 
 ##################################
 # Check for Existence of Headers #
