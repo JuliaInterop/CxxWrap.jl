@@ -82,7 +82,7 @@ for l in lib_labels
 end
 
 cxx_steps = @build_steps begin
-  `cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="$build_type" -DCMAKE_PROGRAM_PATH=$JULIA_HOME -DJLCXX_BUILD_EXAMPLES=$build_examples $jlcxx_srcdir`
+  `cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="$build_type" -DCMAKE_PROGRAM_PATH=$JULIA_HOME -DJLCXX_BUILD_EXAMPLES=$build_examples -DCMAKE_INSTALL_LIBDIR=lib $jlcxx_srcdir`
   `cmake --build . --config $build_type --target install $makeopts`
 end
 

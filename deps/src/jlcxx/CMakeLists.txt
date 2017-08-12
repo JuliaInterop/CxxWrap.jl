@@ -127,8 +127,8 @@ endif()
 # Installation
 # ============
 
-# GNUInstallDirs "DATADIR" wrong here; CMake search path wants "share".
-set(JLCXX_CMAKECONFIG_INSTALL_DIR "share/cmake/${PROJECT_NAME}" CACHE STRING "install path for jlcxxConfig.cmake")
+set(JLCXX_CMAKECONFIG_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}" CACHE STRING "install path for jlcxxConfig.cmake")
+
 
 install(TARGETS ${JLCXX_TARGET} EXPORT JlCxxTargets
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
