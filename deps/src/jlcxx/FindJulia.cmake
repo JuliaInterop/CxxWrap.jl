@@ -15,7 +15,7 @@ MESSAGE(STATUS "Julia_EXECUTABLE:     ${Julia_EXECUTABLE}")
 #################
 
 execute_process(
-    COMMAND ${Julia_EXECUTABLE} --startup-file=no --version
+    COMMAND "${Julia_EXECUTABLE}" --startup-file=no --version
     OUTPUT_VARIABLE Julia_VERSION_STRING
 )
 
@@ -65,8 +65,8 @@ execute_process(
 string(REGEX REPLACE "\"" "" Julia_LIBRARY_DIR "${Julia_LIBRARY_DIR}")
 string(REGEX REPLACE "\n" "" Julia_LIBRARY_DIR "${Julia_LIBRARY_DIR}")
 
-string(STRIP ${Julia_LIBRARY_DIR} Julia_LIBRARY_DIR)
-set(Julia_LIBRARY_DIR ${Julia_LIBRARY_DIR}
+string(STRIP "${Julia_LIBRARY_DIR}" Julia_LIBRARY_DIR)
+set(Julia_LIBRARY_DIR "${Julia_LIBRARY_DIR}"
     CACHE PATH "Julia library directory")
 
 if(WIN32)
