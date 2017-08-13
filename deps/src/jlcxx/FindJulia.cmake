@@ -32,7 +32,7 @@ MESSAGE(STATUS "Julia_VERSION_STRING: ${Julia_VERSION_STRING}")
 
 if(DEFINED ENV{JULIA_INCLUDE_DIRS})
     set(Julia_INCLUDE_DIRS $ENV{JULIA_INCLUDE_DIRS}
-        CACHE PATH "Location of Julia include files")
+        CACHE STRING "Location of Julia include files")
 else()
     execute_process(
         COMMAND ${Julia_EXECUTABLE} --startup-file=no -E "julia_include_dir = joinpath(match(r\"(.*)(bin)\",JULIA_HOME).captures[1],\"include\",\"julia\")\n
@@ -127,7 +127,7 @@ MESSAGE(STATUS "Julia_LLVM_VERSION:   ${Julia_LLVM_VERSION}")
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Julia
-    REQUIRED_VARS   Julia_LIBRARY Julia_LIBRARY_DIR Julia_INCLUDE_DIRS
+    REQUIRED_VARS   Julia_LIBRARY Julia_LIBRARY_DIR Julia_INCLUDE_DIRS Julia_MAIN_HEADER
     VERSION_VAR     Julia_VERSION_STRING
     FAIL_MESSAGE    "Julia not found"
 )
