@@ -203,10 +203,11 @@ public:
 
   void push_back(const ValueT& val)
   {
-    JL_GC_PUSH1(&(IndexedArrayRef<julia_t, ValueT>::m_array));
+    jl_array_t* arr_ptr = wrapped();
+    JL_GC_PUSH1(&arr_ptr);
     const size_t pos = size();
-    jl_array_grow_end(wrapped(), 1);
-    jl_arrayset(wrapped(), box(val), pos);
+    jl_array_grow_end(arr_ptr, 1);
+    jl_arrayset(arr_ptr, box(val), pos);
     JL_GC_POP();
   }
 

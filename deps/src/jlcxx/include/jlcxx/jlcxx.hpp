@@ -719,16 +719,30 @@ template<typename ApplyT, typename... UnpackedTypes, typename... Types, typename
 struct CombineTypes<ApplyT, UnpackedTypeList<UnpackedTypes...>, ParameterList<Types...>, OtherTypeLists...>
 {
   typedef CombineTypes<ApplyT, UnpackedTypeList<UnpackedTypes...>, ParameterList<Types...>, OtherTypeLists...> ThisT;
-  template<typename T1> using type_unpack = CombineTypes<ApplyT, UnpackedTypeList<UnpackedTypes..., T1>, OtherTypeLists...>;
-  typedef ParameterList<typename ThisT::template type_unpack<Types>::type...> type;
+
+  template<typename T1>
+  struct type_unpack
+  {
+    typedef UnpackedTypeList<UnpackedTypes..., T1> unpacked_t;
+    typedef CombineTypes<ApplyT, unpacked_t, OtherTypeLists...> combined_t;
+  };
+  
+  typedef ParameterList<typename ThisT::template type_unpack<Types>::combined_t::type...> type;
 };
 
 template<typename ApplyT, typename... Types, typename... OtherTypeLists>
 struct CombineTypes<ApplyT, ParameterList<Types...>, OtherTypeLists...>
 {
   typedef CombineTypes<ApplyT, ParameterList<Types...>, OtherTypeLists...> ThisT;
-  template<typename T1> using type_unpack = CombineTypes<ApplyT, UnpackedTypeList<T1>, OtherTypeLists...>;
-  typedef ParameterList<typename ThisT::template type_unpack<Types>::type...> type;
+
+  template<typename T1>
+  struct type_unpack
+  {
+    typedef UnpackedTypeList<T1> unpacked_t;
+    typedef CombineTypes<ApplyT, unpacked_t, OtherTypeLists...> combined_t;
+  };
+
+  typedef ParameterList<typename ThisT::template type_unpack<Types>::combined_t::type...> type;
 };
 
 // Default ApplyT implementation
