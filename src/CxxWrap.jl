@@ -215,11 +215,7 @@ else
 end
 argument_overloads(t::Type{Float64}) = [Int, Irrational]
 function argument_overloads(t::Type{Array{AbstractString,1}})
-  @static if VERSION < v"0.5-dev"
-    return [Array{ASCIIString,1}]
-  else
-    return [Array{String,1}]
-  end
+  return [Array{String,1}]
 end
 argument_overloads{T <: Number}(t::Type{Ptr{T}}) = [Array{T,1}]
 
