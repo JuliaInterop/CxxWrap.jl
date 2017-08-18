@@ -134,6 +134,13 @@ CppTypes.set(w, "hello")
 @test CppTypes.greet(w) == "hello"
 ```
 
+The manually added constructor using the `constructor` function also creates a finalizer. This can be disabled by adding the argument `false`:
+
+```c++
+types.add_type<World>("World")
+  .constructor<const std::string&>(false);
+```
+
 The `add_type` function actually builds 3 Julia types related to World. The first is an abstract type that by default inherits from the `CppAny` base type:
 
 ```julia

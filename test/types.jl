@@ -80,6 +80,11 @@ end
 @test CppTypes.greet(w_deep) == "constructed"
 println("completed deepcopy test")
 
+wnum = World(1)
+@test CppTypes.greet(wnum) == "NumberedWorld"
+finalize(wnum)
+@test CppTypes.greet(wnum) == "NumberedWorld"
+
 noncopyable = CppTypes.NonCopyable()
 other_noncopyable = deepcopy(noncopyable)
 @test other_noncopyable.cpp_object == noncopyable.cpp_object
