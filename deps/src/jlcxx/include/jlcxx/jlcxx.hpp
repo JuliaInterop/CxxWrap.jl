@@ -116,7 +116,7 @@ struct NeedConvertHelper<>
 } // end namespace detail
 
 /// Convenience function to create an object with a finalizer attached
-template<typename T, typename... ArgsT>
+template<typename T, bool finalize=true, typename... ArgsT>
 jl_value_t* create(ArgsT&&... args)
 {
   jl_datatype_t* dt = static_type_mapping<T>::julia_allocated_type();
@@ -124,7 +124,7 @@ jl_value_t* create(ArgsT&&... args)
 
   T* cpp_obj = new T(std::forward<ArgsT>(args)...);
 
-  return boxed_cpp_pointer(cpp_obj, dt, true);
+  return boxed_cpp_pointer(cpp_obj, dt, finalize);
 }
 
 /// Safe downcast to base type
@@ -420,9 +420,9 @@ public:
 
   /// Add a constructor with the given argument types for the given datatype (used to get the name)
   template<typename T, typename... ArgsT>
-  void constructor(jl_datatype_t* dt)
+  void constructor(jl_datatype_t* dt, bool finalize=true)
   {
-    FunctionWrapperBase& new_wrapper = method("dummy", [](ArgsT... args) { return create<T>(args...); });
+    FunctionWrapperBase &new_wrapper = finalize ? method("dummy", [](ArgsT... args) { return create<T, true>(args...); }) : method("dummy", [](ArgsT... args) { return create<T, false>(args...); });
     new_wrapper.set_name(detail::make_fname("ConstructorFname", dt));
   }
 
@@ -769,9 +769,9 @@ public:
 
   /// Add a constructor with the given argument types
   template<typename... ArgsT>
-  TypeWrapper<T>& constructor()
+  TypeWrapper<T>& constructor(bool finalize=true)
   {
-    m_module.constructor<T, ArgsT...>(m_dt);
+    m_module.constructor<T, ArgsT...>(m_dt, finalize);
     return *this;
   }
 

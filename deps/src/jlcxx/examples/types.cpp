@@ -37,6 +37,7 @@ struct DoubleData
 struct World
 {
   World(const std::string& message = "default hello") : msg(message){}
+  World(int_t) : msg("NumberedWorld") {}
   void set(const std::string& msg) { this->msg = msg; }
   const std::string& greet() const { return msg; }
   std::string msg;
@@ -126,6 +127,7 @@ JULIA_CPP_MODULE_BEGIN(registry)
 
   types.add_type<World>("World")
     .constructor<const std::string&>()
+    .constructor<int_t>(false) // no finalizer
     .method("set", &World::set)
     .method("greet", &World::greet)
     .method("greet_lambda", [] (const World& w) { return w.greet(); } );
