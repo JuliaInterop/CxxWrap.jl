@@ -4,7 +4,7 @@ module CxxWrap
 
 using Compat
 
-export wrap_modules, wrap_module, wrap_module_types, wrap_module_functions, safe_cfunction, load_module, ptrunion, CppEnum, ConstPtr, ConstArray
+export wrap_modules, wrap_module, wrap_module_types, wrap_module_functions, safe_cfunction, load_module, ptrunion, CppEnum, ConstPtr, ConstArray, gcprotect, gcunprotect
 
 # Convert path if it contains lib prefix on windows
 function lib_path(so_path::AbstractString)
@@ -180,6 +180,20 @@ end
 
 function allocated_types(registry::Ptr{Void}, modname::AbstractString)
   ccall((:get_allocated_types, jlcxx_path), Any, (Ptr{Void},AbstractString), registry, modname)
+end
+
+"""
+Protect a variable from garbage collection by adding it to the global array kept by CxxWrap
+"""
+function gcprotect(x)
+  ccall((:gcprotect, jlcxx_path), Void, (Any,), x)
+end
+
+"""
+Unprotect a variable from garbage collection by removing it from the global array kept by CxxWrap
+"""
+function gcunprotect(x)
+  ccall((:gcunprotect, jlcxx_path), Void, (Any,), x)
 end
 
 # Interpreted as a constructor for Julia  > 0.5

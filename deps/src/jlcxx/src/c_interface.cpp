@@ -161,4 +161,14 @@ JLCXX_API jl_array_t* get_allocated_types(void* void_registry, jl_value_t* mod_n
   return convert_type_vector(registry.get_module(convert_to_cpp<std::string>(mod_name)).allocated_types());
 }
 
+JLCXX_API void gcprotect(jl_value_t* val)
+{
+  jlcxx::protect_from_gc(val);
+}
+
+JLCXX_API void gcunprotect(jl_value_t *val)
+{
+  jlcxx::unprotect_from_gc(val);
+}
+
 }

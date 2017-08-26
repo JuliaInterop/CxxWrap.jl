@@ -56,16 +56,16 @@ b = "str2"
 c = "str3"
 protect_arr = CxxWrap._gc_protected
 start_len = length(protect_arr)
-CppTestFunctions.test_protect_from_gc(a)
-CppTestFunctions.test_protect_from_gc(b)
+gcprotect(a)
+gcprotect(b)
 @test length(protect_arr) == start_len + 2
 @test protect_arr[end-1] == a
 @test protect_arr[end] == b
-CppTestFunctions.test_unprotect_from_gc(a)
+gcunprotect(a)
 @test length(protect_arr) == start_len + 2
 @test protect_arr[end-1] == nothing
 @test protect_arr[end] == b
-CppTestFunctions.test_protect_from_gc(c)
+gcprotect(c)
 @test length(protect_arr) == start_len + 2
 @test protect_arr[end-1] == c
 @test protect_arr[end] == b

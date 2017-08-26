@@ -176,8 +176,6 @@ void init_test_module(jlcxx::Module& mod)
   mod.method("test_type_name", test_type_name);
   mod.method("test_long_long", test_long_long);
   mod.method("test_short", test_short);
-  mod.method("test_protect_from_gc", [](jl_value_t* v) { jlcxx::protect_from_gc(v); });
-  mod.method("test_unprotect_from_gc", [](jl_value_t* v) { jlcxx::unprotect_from_gc(v); });
   mod.method("test_julia_call", [](double a, double b)
   {
     jlcxx::JuliaFunction julia_max("max");
