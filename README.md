@@ -65,7 +65,7 @@ wrap_modules(joinpath("path/to/built/lib","libhello"))
 # Call greet and show the result
 @show CppHello.greet()
 ```
-The code for this example can be found in [`deps/src/examples/hello.cpp`](deps/src/examples/hello.cpp) and [`test/hello.jl`](test/hello.jl).
+The code for this example can be found in [`deps/src/jlcxx/examples/hello.cpp`](deps/src/jlcxx/examples/hello.cpp) and [`test/hello.jl`](test/hello.jl).
 
 ## Hello World example on Windows
 On Windows, it is not necessary to create the Visual Studio project by hand: CMake creates a .sln file in the deps/build directory of the package, and that can be opened using Visual Studio to edit the source files and so on. The drawback is that this file gets overwritten if you add a new C++ source file for example.
@@ -104,7 +104,7 @@ hello.export_symbols("greet");
 ```
 
 ## More extensive example and function call performance
-A more extensive example, including wrapping a C++11 lambda and conversion for arrays can be found in [`deps/src/examples/functions.cpp`](deps/src/examples/functions.cpp) and [`test/functions.jl`](test/functions.jl). This test also includes some performance measurements, showing that the function call overhead is the same as using ccall on a C function if the C++ function is a regular function and does not require argument conversion. When `std::function` is used (e.g. for C++ lambdas) extra overhead appears, as expected.
+A more extensive example, including wrapping a C++11 lambda and conversion for arrays can be found in [`deps/src/jlcxx/examples/functions.cpp`](deps/src/jlcxx/examples/functions.cpp) and [`test/functions.jl`](test/functions.jl). This test also includes some performance measurements, showing that the function call overhead is the same as using ccall on a C function if the C++ function is a regular function and does not require argument conversion. When `std::function` is used (e.g. for C++ lambdas) extra overhead appears, as expected.
 
 ## Exposing classes
 Consider the following C++ class to be wrapped:
@@ -175,7 +175,7 @@ Here, the `cconvert` from `WorldAllocated` to `WorldRef` is defined automaticall
 
 **Warning:** The ordering of the C++ code matters: types used as function arguments or return types must be added before they are used in a function.
 
-The full code for this example and more info on immutables and bits types can be found in [`deps/src/examples/types.cpp`](deps/src/examples/types.cpp) and [`test/types.jl`](test/types.jl).
+The full code for this example and more info on immutables and bits types can be found in [`deps/src/jlcxx/examples/types.cpp`](deps/src/jlcxx/examples/types.cpp) and [`test/types.jl`](test/types.jl).
 
 ## Inheritance
 To encapsulate inheritance, types must first inherit from each other in C++, so a `static_cast` to the base type can work:
@@ -224,7 +224,7 @@ namespace jlcxx
 }
 ```
 
-See the test at [`deps/src/examples/inheritance.cpp`](deps/src/examples/inheritance.cpp) and [`test/inheritance.jl`](test/inheritance.jl).
+See the test at [`deps/src/jlcxx/examples/inheritance.cpp`](deps/src/jlcxx/examples/inheritance.cpp) and [`test/inheritance.jl`](test/inheritance.jl).
 
 ## Enum types
 
@@ -301,7 +301,7 @@ p2 = TemplateType{P2, P1}()
 
 There is also an `apply_combination` method to make applying all combinations of parameters shorter to write.
 
-Full example and test including non-type parameters at: [`deps/src/examples/parametric.cpp`](deps/src/examples/parametric.cpp) and [`test/parametric.jl`](test/parametric.jl).
+Full example and test including non-type parameters at: [`deps/src/jlcxx/examples/parametric.cpp`](deps/src/jlcxx/examples/parametric.cpp) and [`test/parametric.jl`](test/parametric.jl).
 
 ## Constructors and destructors
 The default constructor and any manually added constructor using the `constructor` function will automatically create a Julia object that has a finalizer attached that calls delete to free the memory. To write a C++ function that returns a new object that can be garbage-collected in Julia, use the `jlcxx::create` function:
