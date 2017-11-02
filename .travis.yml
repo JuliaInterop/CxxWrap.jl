@@ -31,7 +31,7 @@ matrix:
       env:
         - CC=gcc-4.9
         - CXX=g++-4.9
-      julia: 0.6
+      julia: 0.6.1
     - os: osx
       compiler: "clang"
       julia: nightly
