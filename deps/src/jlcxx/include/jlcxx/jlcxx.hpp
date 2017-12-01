@@ -834,7 +834,7 @@ public:
   TypeWrapper<T>& apply(FunctorT&& apply_ftor)
   {
     static_assert(detail::IsParametric<T>::value, "Apply can only be called on parametric types");
-    auto dummy = {apply_internal<AppliedTypesT>(std::forward<FunctorT>(apply_ftor))...};
+    auto dummy = {this->template apply_internal<AppliedTypesT>(std::forward<FunctorT>(apply_ftor))...};
     return *this;
   }
 
@@ -898,7 +898,7 @@ template<typename T>
 template<template<typename...> class TemplateT, typename... TypeLists, typename FunctorT>
 void TypeWrapper<T>::apply_combination(FunctorT&& ftor)
 {
-  apply_combination<ApplyType<TemplateT>, TypeLists...>(std::forward<FunctorT>(ftor));
+  this->template apply_combination<ApplyType<TemplateT>, TypeLists...>(std::forward<FunctorT>(ftor));
 }
 
 template<typename T>

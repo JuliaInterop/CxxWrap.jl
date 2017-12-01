@@ -198,17 +198,16 @@ struct WrapCppVector2
 
 namespace jlcxx
 {
-  // Match type followed by non-type of the same type
-  template<typename NonTT, NonTT Val, template<typename, NonTT> class T>
-  struct BuildParameterList<T<NonTT, Val>>
-  {
-    typedef ParameterList<NonTT, std::integral_constant<NonTT, Val>> type;
-  };
-
   template<typename T>
   struct BuildParameterList<parametric::Foo2<T>>
   {
     typedef ParameterList<T> type;
+  };
+
+  template<typename T, T Val>
+  struct BuildParameterList<parametric::NonTypeParam<T, Val>>
+  {
+    typedef ParameterList<T, std::integral_constant<T, Val>> type;
   };
 } // namespace jlcxx
 
