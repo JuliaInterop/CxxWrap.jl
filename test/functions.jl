@@ -80,6 +80,17 @@ testf(x,y) = x+y
 CppTestFunctions.test_safe_cfunction(c_func)
 CppTestFunctions.test_safe_cfunction2(c_func)
 
+function testf_arf(v::Vector{Float64}, s::String)
+  r = sum(v)
+  print_with_color(:green, "callback in Julia: $(s) = $(r)\n")
+  return r
+end
+
+c_func_arf = safe_cfunction(testf_arf, Float64, (Any,Any))
+
+CppTestFunctions.fn_clb(c_func_arf)
+CppTestFunctions.fn_clb2(testf_arf)
+
 function testf2(p::ConstPtr{Float64}, n_elems::Int)
   arr = ConstArray(p, n_elems)
   @test arr[1] == 1.0

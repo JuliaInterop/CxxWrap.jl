@@ -107,6 +107,16 @@ enum CppEnum
   EnumValB
 };
 
+struct Foo
+{
+  Foo(const std::wstring& n, jlcxx::ArrayRef<double,1> d) : name(n), data(d.begin(), d.end())
+  {
+  }
+
+  std::wstring name;
+  std::vector<double> data;
+};
+
 } // namespace cpp_types
 
 namespace jlcxx
@@ -224,6 +234,26 @@ JULIA_CPP_MODULE_BEGIN(registry)
   types.set_const("EnumValB", EnumValB);
   types.method("enum_to_int", [] (const CppEnum e) { return static_cast<int>(e); });
   types.method("get_enum_b", [] () { return EnumValB; });
+
+  types.add_type<Foo>("Foo")
+    .constructor<const std::wstring&, jlcxx::ArrayRef<double,1>>()
+    .method("name", [](Foo& f) { return f.name; })
+    .method("data", [](Foo& f) { return jlcxx::ArrayRef<double,1>(&(f.data[0]), f.data.size()); });
+
+  types.method("print_foo_array", [] (jlcxx::ArrayRef<jl_value_t*> farr)
+  {
+    for(jl_value_t* v : farr)
+    {
+      const Foo& f = *jlcxx::unbox_wrapped_ptr<Foo>(v);
+      std::wcout << f.name << ":";
+      for(const double d : f.data)
+      {
+        std::wcout << " " << d;
+      }
+      std::wcout << std::endl;
+    }
+  });
+
 
   types.export_symbols("enum_to_int", "get_enum_b", "World");
   types.export_symbols("AConstRef", "ReturnConstRef", "value", "CallOperator", "ConstPtrConstruct");

@@ -213,6 +213,20 @@ void init_test_module(jlcxx::Module& mod)
     static const double arr[] = {1.0, 2.0};
     f(arr,2);
   });
+
+  mod.method("fn_clb", [](double (*fnClb)(jl_value_t*, jl_value_t*)) {
+    std::vector<double> v{1., 2.};
+    auto ar = jlcxx::ArrayRef<double, 1>(v.data(), v.size());
+    fnClb((jl_value_t *)ar.wrapped(), jlcxx::box(std::wstring(L"calledFromCPP"))); // ???
+  });
+
+  mod.method("fn_clb2", [] (jl_function_t* f) {
+    std::vector<double> v{1., 2.};
+    auto ar = jlcxx::ArrayRef<double, 1>(v.data(), v.size());
+    jlcxx::JuliaFunction fnClb(f);
+    fnClb((jl_value_t*)ar.wrapped(), std::wstring(L"calledFromCPP"));
+  });
+
   // Write to reference
   mod.method("test_double_ref", [](double& d) { d = 1.0; });
   mod.method("get_test_double_ref", get_test_double_ref);

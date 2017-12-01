@@ -116,3 +116,10 @@ CppTypes.call_testype_function()
 @test get_enum_b() == CppTypes.EnumValB
 @test CppTypes.EnumValA + CppTypes.EnumValB == CppTypes.EnumValB
 @test CppTypes.EnumValA | CppTypes.EnumValB == CppTypes.EnumValB
+
+using CppTypes: Foo, name, data, print_foo_array
+
+foovec = Any[Foo("a", [1.0, 2.0, 3.0]), Foo("b", [11.0, 12.0, 13.0])] # Must be Any because of the boxing
+@show name(foovec[1])
+@show data(foovec[1])
+print_foo_array(foovec)
