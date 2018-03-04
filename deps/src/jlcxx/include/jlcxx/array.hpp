@@ -328,38 +328,6 @@ std::ptrdiff_t operator-(const array_iterator_base<T,T>& l, const array_iterator
   return l.ptr() - r.ptr();
 }
 
-/// Julia Matrix parametric singleton type
-struct JuliaMatrix {};
-
-template<> struct IsValueType<JuliaMatrix> : std::true_type {};
-
-template<> struct static_type_mapping<JuliaMatrix>
-{
-  typedef jl_datatype_t* type;
-  static jl_datatype_t* julia_type()
-  {
-    static jl_tvar_t* this_tvar = jl_new_typevar(jl_symbol("T"), (jl_value_t*)jl_bottom_type, (jl_value_t*)jl_any_type);
-    protect_from_gc(this_tvar);
-    jl_value_t* boxed_2 = jl_box_long(2);
-    jl_value_t* arr_t = nullptr;
-    JL_GC_PUSH2(&boxed_2, &arr_t);
-    arr_t = apply_type((jl_value_t*)jl_array_type, jl_svec2(this_tvar, jl_box_long(2)));
-    jl_datatype_t* result = (jl_datatype_t*)apply_type((jl_value_t*)jl_type_type,
-                                              jl_svec1(arr_t));
-    JL_GC_POP();
-    return result;
-  }
-};
-
-template<>
-struct ConvertToCpp<JuliaMatrix, false, false, false>
-{
-  JuliaMatrix operator()(jl_datatype_t*) const
-  {
-    return JuliaMatrix();
-  }
-};
-
 }
 
 #endif
