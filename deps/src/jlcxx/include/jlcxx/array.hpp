@@ -203,6 +203,7 @@ public:
 
   void push_back(const ValueT& val)
   {
+    static_assert(Dim == 1, "push_back is only for 1D ArrayRef");
     jl_array_t* arr_ptr = wrapped();
     JL_GC_PUSH1(&arr_ptr);
     const size_t pos = size();
