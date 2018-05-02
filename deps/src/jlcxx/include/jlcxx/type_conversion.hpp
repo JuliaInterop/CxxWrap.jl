@@ -350,7 +350,7 @@ struct static_type_mapping
   {
     if(type_pointer() != nullptr)
     {
-      throw std::runtime_error("Type " + std::string(typeid(SourceT).name()) + " was already registered");
+      jl_printf(jl_stderr_stream(), "Warning: re-registering type %s\n", julia_type_name(dt).c_str());
     }
     type_pointer() = dt;
   }

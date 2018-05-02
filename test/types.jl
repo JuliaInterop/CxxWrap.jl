@@ -7,8 +7,7 @@ using CxxWrap
 # Wrap the functions defined in C++
 wrap_modules(CxxWrap._l_types)
 
-using CppTypes
-using CppTypes.World
+#using CppTypes
 
 # Stress test
 for i in 1:1000000
@@ -16,9 +15,9 @@ for i in 1:1000000
 end
 
 # Default constructor
-@test World <: CxxWrap.CppAny
-@test supertype(World) == CxxWrap.CppAny
-w = World()
+@test CppTypes.World <: CxxWrap.CppAny
+@test supertype(CppTypes.World) == CxxWrap.CppAny
+w = CppTypes.World()
 println("Dumping type w...")
 dump(w)
 @test CppTypes.greet(w) == "default hello"
@@ -43,6 +42,7 @@ swfr = CppTypes.shared_world_ref()
 @test CppTypes.greet(swfr) == "shared factory hello ref"
 CppTypes.reset_shared_world!(swfr, "reset shared pointer")
 @test CppTypes.greet(swfr) == "reset shared pointer"
+CppTypes.reset_shared_world!(swfr, "shared factory hello ref")
 
 @test CppTypes.greet(CppTypes.boxed_world_factory()) == "boxed world"
 @test CppTypes.greet(CppTypes.boxed_world_pointer_factory()) == "boxed world pointer"
@@ -59,7 +59,7 @@ CppTypes.set(w, "hello")
 @test CppTypes.greet(w) == "hello"
 @test CppTypes.greet_lambda(w) == "hello"
 
-w = World("constructed")
+w = CppTypes.World("constructed")
 @test CppTypes.greet(w) == "constructed"
 
 w_assigned = w
@@ -80,7 +80,7 @@ end
 @test CppTypes.greet(w_deep) == "constructed"
 println("completed deepcopy test")
 
-wnum = World(1)
+wnum = CppTypes.World(1)
 @test CppTypes.greet(wnum) == "NumberedWorld"
 finalize(wnum)
 @test CppTypes.greet(wnum) == "NumberedWorld"
@@ -89,12 +89,12 @@ noncopyable = CppTypes.NonCopyable()
 other_noncopyable = deepcopy(noncopyable)
 @test other_noncopyable.cpp_object == noncopyable.cpp_object
 
-@test value(value(ReturnConstRef())) == 42
+@test CppTypes.value(CppTypes.value(CppTypes.ReturnConstRef())) == 42
 
-wptr = World()
-@test CppTypes.greet(ConstPtrConstruct(wptr)) == "default hello"
+wptr = CppTypes.World()
+@test CppTypes.greet(CppTypes.ConstPtrConstruct(wptr)) == "default hello"
 
-call_op = CallOperator()
+call_op = CppTypes.CallOperator()
 @test call_op() == 43
 @test call_op(42) == 42
 
@@ -111,15 +111,13 @@ end
 
 CppTypes.call_testype_function()
 
-@test enum_to_int(CppTypes.EnumValA) == 0
-@test enum_to_int(CppTypes.EnumValB) == 1
-@test get_enum_b() == CppTypes.EnumValB
+@test CppTypes.enum_to_int(CppTypes.EnumValA) == 0
+@test CppTypes.enum_to_int(CppTypes.EnumValB) == 1
+@test CppTypes.get_enum_b() == CppTypes.EnumValB
 @test CppTypes.EnumValA + CppTypes.EnumValB == CppTypes.EnumValB
 @test CppTypes.EnumValA | CppTypes.EnumValB == CppTypes.EnumValB
 
-using CppTypes: Foo, name, data, print_foo_array
-
-foovec = Any[Foo("a", [1.0, 2.0, 3.0]), Foo("b", [11.0, 12.0, 13.0])] # Must be Any because of the boxing
-@show name(foovec[1])
-@show data(foovec[1])
-print_foo_array(foovec)
+foovec = Any[CppTypes.Foo("a", [1.0, 2.0, 3.0]), CppTypes.Foo("b", [11.0, 12.0, 13.0])] # Must be Any because of the boxing
+@show CppTypes.name(foovec[1])
+@show CppTypes.data(foovec[1])
+CppTypes.print_foo_array(foovec)

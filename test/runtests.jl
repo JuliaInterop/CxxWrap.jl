@@ -10,4 +10,6 @@ end
   @testset "$f" for f in filter(fname -> fname ∉ excluded, readdir())
     include(f)
   end
+  # second include for types.jl, to test reloading
+  include("types.jl")
 end

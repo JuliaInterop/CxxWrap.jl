@@ -106,7 +106,16 @@ namespace detail
 template<typename PtrT, typename DefaultPtrT, typename T>
 inline jl_datatype_t* smart_julia_type()
 {
+  static jl_datatype_t* wrapped_dt = nullptr;
   static jl_datatype_t* result = nullptr;
+
+  jl_datatype_t* current_dt = static_type_mapping<remove_const_ref<T>>::julia_type();
+  if(current_dt != wrapped_dt)
+  {
+    wrapped_dt = current_dt;
+    result = nullptr;
+  }
+
   if(result == nullptr)
   {
     jl_value_t* type_hash = nullptr;
@@ -118,7 +127,7 @@ inline jl_datatype_t* smart_julia_type()
     deref_ptr = jl_box_voidpointer(reinterpret_cast<void*>(DereferenceSmartPointer<PtrT>::apply));
     construct_ptr = jl_box_voidpointer(reinterpret_cast<void*>(ConstructFromOther<PtrT, typename ConstructorPointerType<PtrT>::type>::apply));
     cast_ptr = jl_box_voidpointer(reinterpret_cast<void*>(ConvertToBase<PtrT>::apply));
-    result = (jl_datatype_t*)apply_type(julia_smartpointer_type(), jl_svec(5, static_type_mapping<remove_const_ref<T>>::julia_type(), type_hash, deref_ptr, construct_ptr, cast_ptr));
+    result = (jl_datatype_t*)apply_type(julia_smartpointer_type(), jl_svec(5, wrapped_dt, type_hash, deref_ptr, construct_ptr, cast_ptr));
     protect_from_gc(result);
     JL_GC_POP();
   }
