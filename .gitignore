@@ -4,6 +4,8 @@
 /deps/builds
 /deps/deps.jl
 /deps/usr
+/deps/src
+/deps/downloads
 CMakeLists.txt.user
 
 deps/downloads/CxxWrap.zip

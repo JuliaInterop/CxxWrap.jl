@@ -3,6 +3,7 @@ using BinDeps
 import BinDeps.generate_steps
 
 const JLCXX_VERSION = v"0.2.0"
+const use_master = true
 
 JLCXX_LIBDIR=get(ENV, "JLCXX_LIBDIR", "")
 
@@ -49,6 +50,16 @@ for l in lib_labels
   push!(deps, eval(:($l)))
 end
 
+dep = first(deps)
+depsdir = BinDeps.depsdir(dep)
+if use_master
+  provides(Sources,URI("https://github.com/JuliaInterop/libcxxwrap-julia/archive/master.zip"), dep, unpacked_dir="libcxxwrap-julia-master")
+  jlcxx_srcdir = joinpath(depsdir, "src", "libcxxwrap-julia-master")
+else
+  provides(Sources,URI("https://github.com/JuliaInterop/libcxxwrap-julia/archive/v$(JLCXX_VERSION).zip"), dep, unpacked_dir="libcxxwrap-julia-v$(JLCXX_VERSION)")
+  jlcxx_srcdir = joinpath(depsdir, "src", "libcxxwrap-julia-v$(JLCXX_VERSION)")
+end
+
 if JLCXX_LIBDIR != ""
   saved_defaults = deepcopy(BinDeps.defaults)
   empty!(BinDeps.defaults)
@@ -56,7 +67,6 @@ if JLCXX_LIBDIR != ""
   provides(Binaries, Dict(JLCXX_LIBDIR => deps))
 end
 
-depsdir = BinDeps.depsdir(first(deps))
 prefix = joinpath(depsdir, "usr")
 
 @static if is_windows()
@@ -65,7 +75,6 @@ else
     bindir = joinpath(prefix, "lib")
 end
 
-jlcxx_srcdir = joinpath(depsdir, "src", "jlcxx")
 jlcxx_builddir = joinpath(depsdir, "builds", "jlcxx")
 lib_prefix = @static is_windows() ? "" : "lib"
 lib_suffix = @static is_windows() ? "dll" : (@static is_apple() ? "dylib" : "so")
@@ -112,6 +121,7 @@ end
 
 provides(BuildProcess,
   (@build_steps begin
+    GetSources(dep)
     CreateDirectory(jlcxx_builddir)
     @build_steps begin
       ChangeDirectory(jlcxx_builddir)
@@ -121,13 +131,13 @@ provides(BuildProcess,
 
 @static if is_windows()
   shortversion = "$(VERSION.major).$(VERSION.minor)"
-  zipfilename = "CxxWrap-julia-$(shortversion)-win$(Sys.WORD_SIZE).zip"
+  zipfilename = "jlcxx-julia$(shortversion)-$(Sys.WORD_SIZE)-v$(JLCXX_VERSION).zip"
   archname = Sys.WORD_SIZE == 64 ? "x64" : "x86"
   pkgverstring = string(JLCXX_VERSION)
-  if endswith(pkgverstring,"+")
-    bin_uri = URI("https://ci.appveyor.com/api/projects/barche/cxxwrap-jl/artifacts/$(zipfilename)?job=Environment%3a+JULIAVERSION%3djulialang%2fbin%2fwinnt%2f$(archname)%2f$(shortversion)%2fjulia-$(shortversion)-latest-win$(Sys.WORD_SIZE).exe%2c+BUILD_ON_WINDOWS%3d1")
+  if use_master
+    bin_uri = URI("https://ci.appveyor.com/api/projects/barche/cxxwrap-jl/artifacts/$(zipfilename)?job=Environment%3a+JULIA_URL%3dhttps%3A%2F%2Fjulialang-s3.julialang.org%2Fbin%2Fwinnt%2f$(archname)%2f$(shortversion)%2fjulia-$(shortversion)-latest-win$(Sys.WORD_SIZE).exe%2c+CMAKE_GEN%3dVisual%20Studio%2014%202015$(Sys.WORD_SIZE==64 ? "%20Win64" : "")")
   else
-    bin_uri = URI("https://github.com/JuliaInterop/CxxWrap.jl/releases/download/v$(pkgverstring)/CxxWrapv$(pkgverstring)-julia-$(VERSION.major).$(VERSION.minor)-win$(Sys.WORD_SIZE).zip")
+    bin_uri = URI("https://github.com/JuliaInterop/libcxxwrap-julia/releases/download/v$(pkgverstring)/$(zipfilename)")
   end
   provides(Binaries, Dict(bin_uri => deps), os = :Windows)
 end
@@ -150,16 +160,6 @@ end
   if haskey(ENV, "BUILD_ON_WINDOWS") && ENV["BUILD_ON_WINDOWS"] == "1" && JLCXX_LIBDIR == ""
     empty!(BinDeps.defaults)
     append!(BinDeps.defaults, saved_defaults)
-    if get(ENV, "MSYSTEM", "") == "MINGW32"
-      run(`cp -f $(joinpath("/mingw32", "bin", "libwinpthread-1.dll")) $(bindir)`)
-      run(`cp -f $(joinpath("/mingw32", "bin", "libgcc_s_dw2-1.dll")) $(bindir)`)
-    else
-      redist_dlls = ["concrt140.dll", "msvcp140.dll", "vccorlib140.dll", "vcruntime140.dll"]
-      redistbasepath = "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\redist\\$(Sys.WORD_SIZE == 64 ? "x64" : "x86")\\Microsoft.VC140.CRT"
-      for dll in redist_dlls
-        cp(joinpath(redistbasepath, dll), joinpath(bindir, dll), remove_destination=true)
-      end
-    end
   end
 end
 

@@ -1,11 +1,9 @@
 environment:
   matrix:
-  - JULIA_URL: "https://julialang-s3.julialang.org/bin/winnt/x64/0.5/julia-0.5-latest-win64.exe"
-    BUILD_ON_WINDOWS: 1
   - JULIA_URL: "https://julialang-s3.julialang.org/bin/winnt/x64/0.6/julia-0.6-latest-win64.exe"
     BUILD_ON_WINDOWS: 1
-  - JULIA_URL: "https://julialang-s3.julialang.org/bin/winnt/x86/0.5/julia-0.5-latest-win32.exe"
-    BUILD_ON_WINDOWS: 1
+  - JULIA_URL: "https://julialang-s3.julialang.org/bin/winnt/x64/0.6/julia-0.6-latest-win64.exe"
+    BUILD_ON_WINDOWS: 0
   - JULIA_URL: "https://julialang-s3.julialang.org/bin/winnt/x86/0.6/julia-0.6-latest-win32.exe"
     BUILD_ON_WINDOWS: 1
   - JULIA_URL: "https://julialang-s3.julialang.org/bin/winnt/x64/0.6/julia-0.6-latest-win64.exe"
@@ -41,18 +39,3 @@ build_script:
 
 test_script:
   - C:\projects\julia\bin\julia --check-bounds=yes -e "Pkg.test(\"CxxWrap\")"
-
-after_test:
-  - IF NOT DEFINED MSYSTEM C:\projects\julia\bin\julia -e "cd(joinpath(Pkg.dir(\"CxxWrap\"), \"deps\"));  run(`7z a $(ENV[\"APPVEYOR_BUILD_FOLDER\"])\\CxxWrap$(get(ENV, \"APPVEYOR_REPO_TAG_NAME\", \"\"))-julia-$(VERSION.major).$(VERSION.minor)-win$(Sys.WORD_SIZE).zip usr`)"
-  - echo %APPVEYOR_JOB_NAME%
-
-artifacts:
-  - path: 'CxxWrap*-julia*.zip'
-
-deploy:
-  provider: GitHub
-  auth_token:
-    secure: gT/6HUmJMkLU89J2qu3FZ/OR2Velz//TSA/GJr65M1iNRjTimZLnAk73oRPGtA7d # your encrypted token from GitHub
-  on:
-    branch: master                 # release from master branch only
-    appveyor_repo_tag: true        # deploy on tag push only
