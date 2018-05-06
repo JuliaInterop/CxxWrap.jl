@@ -107,7 +107,7 @@ for l in lib_labels
 end
 
 cxx_steps = @build_steps begin
-  `cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="$build_type" -DCMAKE_PROGRAM_PATH=$JULIA_HOME -DJLCXX_BUILD_EXAMPLES=$build_examples -DCMAKE_INSTALL_LIBDIR=lib $jlcxx_srcdir`
+  `cmake -G "$genopt" -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_BUILD_TYPE="$build_type" -DCMAKE_PROGRAM_PATH=$JULIA_HOME -DJLCXX_BUILD_EXAMPLES=$build_examples -DJLCXX_BUILD_TESTS=OFF -DCMAKE_INSTALL_LIBDIR=lib $jlcxx_srcdir`
   `cmake --build . --config $build_type --target install $makeopts`
 end
 
@@ -135,7 +135,7 @@ provides(BuildProcess,
   archname = Sys.WORD_SIZE == 64 ? "x64" : "x86"
   pkgverstring = string(JLCXX_VERSION)
   if use_master
-    bin_uri = URI("https://ci.appveyor.com/api/projects/barche/cxxwrap-jl/artifacts/$(zipfilename)?job=Environment%3a+JULIA_URL%3dhttps%3A%2F%2Fjulialang-s3.julialang.org%2Fbin%2Fwinnt%2f$(archname)%2f$(shortversion)%2fjulia-$(shortversion)-latest-win$(Sys.WORD_SIZE).exe%2c+CMAKE_GEN%3dVisual%20Studio%2014%202015$(Sys.WORD_SIZE==64 ? "%20Win64" : "")")
+    bin_uri = URI("https://ci.appveyor.com/api/projects/barche/libcxxwrap-julia/artifacts/$(zipfilename)?job=Environment%3a+JULIA_URL%3dhttps%3A%2F%2Fjulialang-s3.julialang.org%2Fbin%2Fwinnt%2f$(archname)%2f$(shortversion)%2fjulia-$(shortversion)-latest-win$(Sys.WORD_SIZE).exe%2c+CMAKE_GEN%3dVisual%20Studio%2014%202015$(Sys.WORD_SIZE==64 ? "%20Win64" : "")")
   else
     bin_uri = URI("https://github.com/JuliaInterop/libcxxwrap-julia/releases/download/v$(pkgverstring)/$(zipfilename)")
   end
