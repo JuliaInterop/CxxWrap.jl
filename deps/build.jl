@@ -3,7 +3,7 @@ using BinDeps
 import BinDeps.generate_steps
 
 const JLCXX_VERSION = v"0.2.0"
-const use_master = true
+const use_master = false
 
 JLCXX_LIBDIR=get(ENV, "JLCXX_LIBDIR", "")
 
@@ -56,8 +56,8 @@ if use_master
   provides(Sources,URI("https://github.com/JuliaInterop/libcxxwrap-julia/archive/master.zip"), dep, unpacked_dir="libcxxwrap-julia-master")
   jlcxx_srcdir = joinpath(depsdir, "src", "libcxxwrap-julia-master")
 else
-  provides(Sources,URI("https://github.com/JuliaInterop/libcxxwrap-julia/archive/v$(JLCXX_VERSION).zip"), dep, unpacked_dir="libcxxwrap-julia-v$(JLCXX_VERSION)")
-  jlcxx_srcdir = joinpath(depsdir, "src", "libcxxwrap-julia-v$(JLCXX_VERSION)")
+  provides(Sources,URI("https://github.com/JuliaInterop/libcxxwrap-julia/archive/v$(JLCXX_VERSION).zip"), dep, unpacked_dir="libcxxwrap-julia-$(JLCXX_VERSION)")
+  jlcxx_srcdir = joinpath(depsdir, "src", "libcxxwrap-julia-$(JLCXX_VERSION)")
 end
 
 if JLCXX_LIBDIR != ""
