@@ -2,7 +2,7 @@ using Compat
 using BinDeps
 import BinDeps.generate_steps
 
-const JLCXX_VERSION = v"0.2.0"
+const JLCXX_VERSION = v"0.2.1"
 const use_master = false
 
 JLCXX_LIBDIR=get(ENV, "JLCXX_LIBDIR", "")
