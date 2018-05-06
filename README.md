@@ -29,6 +29,9 @@ Just like any registered package:
 ```julia
 Pkg.add("CxxWrap")
 ```
+
+This will also install the [JlCxx](https://github.com/JuliaInterop/libcxxwrap-julia) library (in `deps/usr` relative to the package dir), which is the C++ component of this package. If you want to use existing binaries for this libraries, set the environment variable `JLCXX_LIBDIR` to the directory containing the cxxwrap-julia library and then add the package or run `Pkg.build("CxxWrap")`.
+
 ### Building on Windows
 To install on Windows, you need to do the following before running ```Pkg.add("CxxWrap")```:
 * Make sure the system has Visual Studio 2015 (aka Visual Studio 14) with Visual C++ installed (community edition ISO download link can be found at https://gist.github.com/CHEF-KOCH/8078b39e1aad71ef6c317a3c0edb6ec9).

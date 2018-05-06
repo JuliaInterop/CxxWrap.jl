@@ -1,7 +1,16 @@
 using Compat
 using BinDeps
+import BinDeps.generate_steps
 
-const CXXWRAP_JL_VERSION = v"0.5.0+"
+const JLCXX_VERSION = v"0.2.0"
+
+JLCXX_LIBDIR=get(ENV, "JLCXX_LIBDIR", "")
+
+function generate_steps(dep::BinDeps.LibraryDependency,h::BinDeps.CustomPathBinaries,opts)
+    steps = @build_steps begin
+        BinDeps.ChecksumValidator(get(opts,:SHA,get(opts,:sha,"")),h.path)
+    end
+end
 
 function prompt_cmake()
   try
@@ -14,7 +23,7 @@ end
 
 @static if is_windows()
   # prefer building if requested
-  if haskey(ENV, "BUILD_ON_WINDOWS") && ENV["BUILD_ON_WINDOWS"] == "1"
+  if haskey(ENV, "BUILD_ON_WINDOWS") && ENV["BUILD_ON_WINDOWS"] == "1" && JLCXX_LIBDIR == ""
     prompt_cmake()
     saved_defaults = deepcopy(BinDeps.defaults)
     empty!(BinDeps.defaults)
@@ -30,7 +39,7 @@ build_type = get(ENV, "JLCXX_BUILD_TYPE", "Release")
 build_examples = get(ENV, "JLCXX_BUILD_EXAMPLES", "ON")
 
 # List of the libraries that will be built
-lib_labels = [:jlcxx]
+lib_labels = [:cxxwrap_julia]
 if build_examples == "ON"
   lib_labels = vcat(lib_labels, [:jlcxx_containers, :except, :extended, :functions, :hello, :inheritance, :parametric, :types])
 end
@@ -38,6 +47,13 @@ deps = BinDeps.LibraryDependency[]
 for l in lib_labels
   @eval $l = $(library_dependency(string(l), aliases=["lib"*string(l)]))
   push!(deps, eval(:($l)))
+end
+
+if JLCXX_LIBDIR != ""
+  saved_defaults = deepcopy(BinDeps.defaults)
+  empty!(BinDeps.defaults)
+  append!(BinDeps.defaults, [Binaries])
+  provides(Binaries, Dict(JLCXX_LIBDIR => deps))
 end
 
 depsdir = BinDeps.depsdir(first(deps))
@@ -107,7 +123,7 @@ provides(BuildProcess,
   shortversion = "$(VERSION.major).$(VERSION.minor)"
   zipfilename = "CxxWrap-julia-$(shortversion)-win$(Sys.WORD_SIZE).zip"
   archname = Sys.WORD_SIZE == 64 ? "x64" : "x86"
-  pkgverstring = string(CXXWRAP_JL_VERSION)
+  pkgverstring = string(JLCXX_VERSION)
   if endswith(pkgverstring,"+")
     bin_uri = URI("https://ci.appveyor.com/api/projects/barche/cxxwrap-jl/artifacts/$(zipfilename)?job=Environment%3a+JULIAVERSION%3djulialang%2fbin%2fwinnt%2f$(archname)%2f$(shortversion)%2fjulia-$(shortversion)-latest-win$(Sys.WORD_SIZE).exe%2c+BUILD_ON_WINDOWS%3d1")
   else
@@ -117,7 +133,7 @@ provides(BuildProcess,
 end
 
 if build_examples == "ON"
-  @BinDeps.install Dict([(:jlcxx, :_l_jlcxx),
+  @BinDeps.install Dict([(:cxxwrap_julia, :_l_jlcxx),
                          (:jlcxx_containers, :_l_containers),
                          (:except, :_l_except),
                          (:extended, :_l_extended),
@@ -131,7 +147,7 @@ else
 end
 
 @static if is_windows()
-  if haskey(ENV, "BUILD_ON_WINDOWS") && ENV["BUILD_ON_WINDOWS"] == "1"
+  if haskey(ENV, "BUILD_ON_WINDOWS") && ENV["BUILD_ON_WINDOWS"] == "1" && JLCXX_LIBDIR == ""
     empty!(BinDeps.defaults)
     append!(BinDeps.defaults, saved_defaults)
     if get(ENV, "MSYSTEM", "") == "MINGW32"
@@ -145,4 +161,9 @@ end
       end
     end
   end
+end
+
+if JLCXX_LIBDIR != ""
+  empty!(BinDeps.defaults)
+  append!(BinDeps.defaults, saved_defaults)
 end
