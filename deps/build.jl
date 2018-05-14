@@ -153,7 +153,7 @@ if build_examples == "ON"
                          (:parametric, :_l_parametric),
                          (:types, :_l_types)])
 else
-  @BinDeps.install Dict([(:jlcxx, :_l_jlcxx)])
+  @BinDeps.install Dict([(:cxxwrap_julia, :_l_jlcxx)])
 end
 
 @static if is_windows()
