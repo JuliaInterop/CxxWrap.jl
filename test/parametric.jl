@@ -57,7 +57,16 @@ ParametricTypes.foo3_free_method(f3)
 
 @test supertype(ParametricTypes.Foo3{Float64,ParametricTypes.P1,Float32}) == ParametricTypes.AbstractTemplate{Float64}
 
-vec1 = ParametricTypes.CppVector{Float64}()
+darr = [1.0, 2.0, 3.0]
+carr = Complex{Float32}[1+2im, 3+4im]
+vec1 = ParametricTypes.CppVector{Float64}(pointer(darr), 3)
 vec2 = ParametricTypes.CppVector2{Float64, Float32}()
+vec3 = ParametricTypes.CppVector{Complex{Float32}}(pointer(carr), 2)
 @test isa(vec1, AbstractVector{Float64})
 @test isa(vec2, AbstractVector{Float64})
+@test isa(vec3, AbstractVector{Complex{Float32}})
+@test ParametricTypes.get(vec1,0) == 1.0
+@test ParametricTypes.get(vec1,1) == 2.0
+@test ParametricTypes.get(vec1,2) == 3.0
+@test ParametricTypes.get(vec3,0) == 1+2im
+@test ParametricTypes.get(vec3,1) == 3+4im
