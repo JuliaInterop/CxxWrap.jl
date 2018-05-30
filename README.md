@@ -537,6 +537,11 @@ shows:
  3.0  6.0
 ```
 
+### Mutable arrays
+
+Replacing `make_const_array` in the examples above by `make_julia_array` creates a mutable, regular Julia array with memory owned by Julia.
+
+
 ## Calling Julia functions from C++
 ### Direct call to Julia
 Directly calling Julia functions uses `jl_call` from `julia.h` but with a more convenient syntax and automatic argument conversion and boxing. Use a `JuliaFunction` to get a functor that can be invoked directly. Example for calling the `max` function from `Base`:
