@@ -422,4 +422,6 @@ safe_cfunction(f::Function, rt::Type, args::Tuple) = SafeCFunction(cfunction(f, 
 wstring_to_julia(p::Ptr{Cwchar_t}, L::Int) = transcode(String, unsafe_wrap(Array, p, L))
 wstring_to_cpp(s::String) = transcode(Cwchar_t, s)
 
+Base.isnull(x::CppAny) = (x.cpp_object == C_NULL)
+
 end # module

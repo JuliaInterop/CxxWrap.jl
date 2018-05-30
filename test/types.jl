@@ -121,3 +121,6 @@ foovec = Any[CppTypes.Foo("a", [1.0, 2.0, 3.0]), CppTypes.Foo("b", [11.0, 12.0, 
 @show CppTypes.name(foovec[1])
 @show CppTypes.data(foovec[1])
 CppTypes.print_foo_array(foovec)
+
+@test !isnull(CppTypes.return_ptr())
+@test isnull(CppTypes.return_null())

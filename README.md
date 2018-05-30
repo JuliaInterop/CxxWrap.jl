@@ -180,6 +180,10 @@ Here, the `cconvert` from `WorldAllocated` to `WorldRef` is defined automaticall
 
 The full code for this example and more info on immutables and bits types can be found in [`deps/src/jlcxx/examples/types.cpp`](deps/src/jlcxx/examples/types.cpp) and [`test/types.jl`](test/types.jl).
 
+### Checking for null
+
+Values returned from C++ can be checked for being null using the `isnull` function.
+
 ## Inheritance
 To encapsulate inheritance, types must first inherit from each other in C++, so a `static_cast` to the base type can work:
 
