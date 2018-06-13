@@ -1,16 +1,13 @@
-# Hello world example, similar to the Boost.Python hello world
-
-using CxxWrap
-using Base.Test
+include(joinpath(@__DIR__, "testcommon.jl"))
 
 # Wrap the functions defined in C++
-wrap_modules(CxxWrap._l_inheritance)
+wrap_modules(libinheritance)
 
-using CppInheritance
+using .CppInheritance
 
 b = B()
 c = C()
-d = D()
+global d = D()
 
 @test message(b) == "B"
 @test message(c) == "C"
@@ -46,5 +43,5 @@ d_ptr = shared_d()
 a = VirtualSolver.E()
 VirtualSolver.solve(a)
 
-b = VirtualSolver.F(safe_cfunction(x -> 2x, Float64, (Float64,)))
+b = VirtualSolver.F(@safe_cfunction(x -> 2x, Float64, (Float64,)))
 VirtualSolver.solve(b)

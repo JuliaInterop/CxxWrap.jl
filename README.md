@@ -154,7 +154,7 @@ The second is an immutable type (the "reference type") with the following struct
 
 ```julia
 struct WorldRef <: World
-  cpp_object::Ptr{Void}
+  cpp_object::Ptr{Nothing}
 end
 ```
 
@@ -162,7 +162,7 @@ It is an immutable type to be able to refer to C++ values without needing to all
 
 ```julia
 mutable struct WorldAllocated <: World
-  cpp_object::Ptr{Void}
+  cpp_object::Ptr{Nothing}
 end
 ```
 
@@ -171,7 +171,7 @@ This means that the variable `w` in the above example is of concrete type `World
 The above types are used in method generation as follows, considering for example the greet method taking a `World` argument:
 
 ```julia
-greet(w::World) = ccall($fpointer, Any, (Ptr{Void}, WorldRef), $thunk, cconvert(WorldRef, w))
+greet(w::World) = ccall($fpointer, Any, (Ptr{Nothing}, WorldRef), $thunk, cconvert(WorldRef, w))
 ```
 
 Here, the `cconvert` from `WorldAllocated` to `WorldRef` is defined automatically when creating the type.
@@ -464,7 +464,7 @@ Use in Julia:
 using CxxWrap
 using Base.Test
 
-wrap_modules(CxxWrap._l_containers)
+wrap_modules(libcontainers)
 using Containers
 
 @test test_tuple() == (1,2.0,3.0f0)
@@ -617,3 +617,8 @@ target_link_libraries(your_own_lib CxxWrap::jlcxx)
 ```
 
 A complete `CMakeLists.txt` is at [`deps/src/examples/CMakeLists.txt`](deps/src/examples/CMakeLists.txt).
+
+## Breaking changes
+
+* `wrap_modules`
+* `@safe_cfunction`

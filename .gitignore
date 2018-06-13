@@ -7,5 +7,6 @@
 /deps/src
 /deps/downloads
 CMakeLists.txt.user
+/test/deps.jl
 
 deps/downloads/CxxWrap.zip

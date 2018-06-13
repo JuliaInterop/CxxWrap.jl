@@ -1,17 +1,11 @@
-# Hello world example, similar to the Boost.Python hello world
-
-using Base.Test
-using Compat
-using CxxWrap
+include(joinpath(@__DIR__, "testcommon.jl"))
 
 # Wrap the functions defined in C++
-wrap_modules(CxxWrap._l_types)
-
-#using CppTypes
+wrap_modules(libtypes)
 
 # Stress test
 for i in 1:1000000
-  d = CppTypes.DoubleData()
+  global d = CppTypes.DoubleData()
 end
 
 # Default constructor
@@ -71,7 +65,7 @@ w_deep = deepcopy(w)
 # Destroy w: w and w_assigned should be dead, w_deep alive
 finalize(w)
 println("finalized w")
-if !(is_windows() && Sys.WORD_SIZE == 32)
+if !(Sys.iswindows() && Sys.WORD_SIZE == 32)
   @test_throws ErrorException CppTypes.greet(w)
   println("throw test 1 passed")
   @test_throws ErrorException CppTypes.greet(w_assigned)
@@ -98,7 +92,7 @@ call_op = CppTypes.CallOperator()
 @test call_op() == 43
 @test call_op(42) == 42
 
-type JuliaTestType
+mutable struct JuliaTestType
     a::Float64
     b::Float64
 end

@@ -1,16 +1,7 @@
-# Tests for the functions library in deps/examples
+include(joinpath(@__DIR__, "testcommon.jl"))
+cxx_available = false
 
-using CxxWrap
-using Base.Test
-using Compat
-cxx_available = true
-try
-  using Cxx
-catch
-  cxx_available = false
-end
-
-const functions_lib_path = CxxWrap._l_functions
+const functions_lib_path = libfunctions
 
 # Wrap the functions defined in C++
 wrap_modules(functions_lib_path)
@@ -28,13 +19,13 @@ end
 
 # Test functions from the CppTestFunctions module
 @test CppTestFunctions.concatenate_numbers(4, 2.) == "42"
-@test method_exists(CppTestFunctions.concatenate_numbers, (Union{Cint,CxxWrap.argument_overloads(Cint)...},Union{Cdouble,CxxWrap.argument_overloads(Cdouble)...}))
+@test hasmethod(CppTestFunctions.concatenate_numbers, (Union{Cint,CxxWrap.argument_overloads(Cint)...},Union{Cdouble,CxxWrap.argument_overloads(Cdouble)...}))
 @test CppTestFunctions.concatenate_strings(2, "ho", "la") == "holahola"
 @test CppTestFunctions.test_int32_array(Int32[1,2])
 @test CppTestFunctions.test_int64_array(Int64[1,2])
 @test CppTestFunctions.test_float_array(Float32[1.,2.])
 @test CppTestFunctions.test_double_array([1.,2.])
-if !(is_windows() && Sys.WORD_SIZE == 32)
+if !(Sys.iswindows() && Sys.WORD_SIZE == 32)
   @test_throws ErrorException CppTestFunctions.test_exception()
 end
 ta = [1.,2.]
@@ -76,17 +67,17 @@ CppTestFunctions.test_append_array!(darr)
 @test darr == [1.,2.,3.]
 
 testf(x,y) = x+y
-@show c_func = safe_cfunction(testf, Float64, (Float64,Float64))
+@show c_func = @safe_cfunction(testf, Float64, (Float64,Float64))
 CppTestFunctions.test_safe_cfunction(c_func)
 CppTestFunctions.test_safe_cfunction2(c_func)
 
 function testf_arf(v::Vector{Float64}, s::String)
   r = sum(v)
-  print_with_color(:green, "callback in Julia: $(s) = $(r)\n")
+  printstyled("callback in Julia: $(s) = $(r)\n", color=:green)
   return r
 end
 
-c_func_arf = safe_cfunction(testf_arf, Float64, (Any,Any))
+c_func_arf = @safe_cfunction(testf_arf, Float64, (Any,Any))
 
 CppTestFunctions.fn_clb(c_func_arf)
 CppTestFunctions.fn_clb2(testf_arf)
@@ -97,7 +88,7 @@ function testf2(p::ConstPtr{Float64}, n_elems::Int)
   @test arr[2] == 2.0
   return
 end
-c_func2 = safe_cfunction(testf2, Void, (ConstPtr{Float64},Int))
+c_func2 = @safe_cfunction(testf2, Nothing, (ConstPtr{Float64},Int))
 CppTestFunctions.test_safe_cfunction3(c_func2)
 
 dref = Ref(0.0)
@@ -128,7 +119,7 @@ unsafe_store!(cppdref, 1.0)
 @test CppTestFunctions.make_complex(Float32(3.0), Float32(4.0)) == 3.0 + 4.0*im
 @test typeof(CppTestFunctions.make_complex(Float32(3.0), Float32(4.0))) == Complex{Float32}
 
-@test CppTestFunctions.process_irrational(φ, 2) == 2*φ
+@test CppTestFunctions.process_irrational(π, 2) == 2*π
 
 # Performance tests
 const test_size = Sys.ARCH == :armv7l ? 1000000 : 50000000
@@ -156,7 +147,7 @@ half_julia(d::Float64) = d*0.5
 half_c(d::Float64) = ccall((:half_c, functions_lib_path), Cdouble, (Cdouble,), d)
 
 # Bring C++ versions into scope
-using CppHalfFunctions.half_d, CppHalfFunctions.half_lambda, CppHalfFunctions.half_loop_cpp!, CppHalfFunctions.half_loop_jlcall!, CppHalfFunctions.half_loop_cfunc!
+using .CppHalfFunctions: half_d, half_lambda, half_loop_cpp!, half_loop_jlcall!, half_loop_cfunc!
 
 @static if cxx_available
   # Cxx.jl version
@@ -229,7 +220,7 @@ println("C++ test, loop in the C++ code:")
 @time half_loop_cpp!(numbers, output)
 
 println("cfunction in C++ loop")
-half_cfunc = safe_cfunction(half_julia, Float64, (Float64,))
+half_cfunc = @safe_cfunction(half_julia, Float64, (Float64,))
 @time half_loop_cfunc!(numbers, output, half_cfunc)
 @time half_loop_cfunc!(numbers, output, half_cfunc)
 @time half_loop_cfunc!(numbers, output, half_cfunc)

@@ -1,7 +1,4 @@
-using Base.Test
-import CxxWrap
-
-const libexcept = CxxWrap._l_except
+include(joinpath(@__DIR__, "testcommon.jl"))
 
 @test ccall((:internalthrow, libexcept), Cint, (Cint,), -1) == 1
 @test ccall((:internalthrow, libexcept), Cint, (Cint,), -2) == 2

@@ -1,5 +1,4 @@
-using CxxWrap
-using Base.Test
+include(joinpath(@__DIR__, "testcommon.jl"))
 
 function func1(arr)
   @test arr[1] == 1.0
@@ -7,15 +6,13 @@ function func1(arr)
   @test arr[3] == 3.0
 end
 
-wrap_modules(CxxWrap._l_containers)
-using Containers
-
-#println(Base.uncompressed_ast(first(methods(test_tuple))))
+wrap_modules(libjlcxx_containers)
+using Main.Containers
 
 @test test_tuple() == (1,2.0,3.0f0)
 
 cptr = const_ptr()
-@test isbits(typeof(cptr))
+@test isbitstype(typeof(cptr))
 @test const_ptr_arg(cptr) == (1., 2., 3.)
 
 cv = const_vector()
@@ -33,6 +30,6 @@ mm = Containers.mutable_array()
 println("Displaying mutable matrix")
 display(mm)
 println()
-mm[:,:] = 1.0
+mm .= 1.0
 @test Containers.check_mutable_array(mm)
 Containers.do_embedding_test()

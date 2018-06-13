@@ -1,8 +1,8 @@
-using Base.Test
+using Test
 
-excluded = ["runtests.jl"]
+excluded = ["build.jl", "runtests.jl", "testcommon.jl"]
 
-if is_windows() && Sys.WORD_SIZE == 32
+if Sys.iswindows() && Sys.WORD_SIZE == 32
   push!(excluded, "except.jl")
 end
 

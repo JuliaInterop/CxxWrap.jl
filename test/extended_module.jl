@@ -1,17 +1,16 @@
 # Example on how to load types and methods from C++ into an existing module
-using Base.Test
-
 module ExtendedTypes
 
-using CxxWrap
+include(joinpath(@__DIR__, "testcommon.jl"))
 
-wrap_module(CxxWrap._l_extended, ExtendedTypes)
+wrap_module(libextended, ExtendedTypes)
 
 export ExtendedWorld, greet
 
 end
 
-using ExtendedTypes
+using .ExtendedTypes
+using Test
 
 w = ExtendedWorld()
 @test greet(w) == "default hello"

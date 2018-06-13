@@ -1,13 +1,9 @@
-# Hello world example, similar to the Boost.Python hello world
-
-using CxxWrap
-using Base.Test
-using Compat
+include(joinpath(@__DIR__, "testcommon.jl"))
 
 # Wrap the functions defined in C++
-wrap_modules(CxxWrap._l_parametric)
+wrap_modules(libparametric)
 
-import ParametricTypes.TemplateType, ParametricTypes.NonTypeParam
+import .ParametricTypes.TemplateType, .ParametricTypes.NonTypeParam
 
 p1 = TemplateType{ParametricTypes.P1, ParametricTypes.P2}()
 p2 = TemplateType{ParametricTypes.P2, ParametricTypes.P1}()
