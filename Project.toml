@@ -1,0 +1,8 @@
+name = "CxxWrap"
+uuid = "d6fb6aec-6fa4-11e8-0e77-af5d660a6b49"
+authors = ["Bart Janssens <bart@bartjanssens.org>"]
+version = "0.7.0"
+
+[deps]
+BinaryProvider = "b99e7846-7c00-51b0-8f62-c81ae34c0232"
+Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"

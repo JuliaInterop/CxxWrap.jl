@@ -2,8 +2,8 @@ __precompile__()
 
 module CxxWrap
 
-using Compat
-import Compat.Libdl
+import BinaryProvider
+import Libdl
 
 export wrap_modules, wrap_module, wrap_module_types, wrap_module_functions, @safe_cfunction, load_module, ptrunion, CppEnum, ConstPtr, ConstArray, gcprotect, gcunprotect
 
@@ -26,6 +26,8 @@ if !isfile(depsfile)
 end
 include(depsfile)
 const jlcxx_path = libcxxwrap_julia
+
+prefix() =  BinaryProvider.Prefix(dirname(dirname(jlcxx_path)))
 
 # Base type for wrapped C++ types
 abstract type CppAny end
@@ -111,7 +113,7 @@ end
 
 ConstArray(ptr::ConstPtr{T}, args::Vararg{Int,N}) where {T,N} = ConstArray{T,N}(ptr, (args...,))
 
-@compat Base.IndexStyle(::ConstArray) = IndexLinear()
+Base.IndexStyle(::ConstArray) = IndexLinear()
 Base.size(arr::ConstArray) = arr.size
 Base.getindex(arr::ConstArray, i::Integer) = unsafe_load(arr.ptr.ptr, i)
 

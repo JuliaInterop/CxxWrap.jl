@@ -6,6 +6,8 @@ if Sys.iswindows() && Sys.WORD_SIZE == 32
   push!(excluded, "except.jl")
 end
 
+include(joinpath(@__DIR__, "build.jl"))
+
 @testset "CxxWrap tests" begin
   @testset "$f" for f in filter(fname -> fname ∉ excluded, readdir())
     include(f)

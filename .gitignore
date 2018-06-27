@@ -2,6 +2,7 @@
 *.jl.*.cov
 *.jl.mem
 /deps/builds
+/deps/build.log
 /deps/deps.jl
 /deps/usr
 /deps/src
