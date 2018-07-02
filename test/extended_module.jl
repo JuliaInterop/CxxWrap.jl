@@ -3,7 +3,9 @@ module ExtendedTypes
 
 include(joinpath(@__DIR__, "testcommon.jl"))
 
-wrap_module(libextended, ExtendedTypes)
+@readmodule libextended
+@wraptypes
+@wrapfunctions
 
 export ExtendedWorld, greet
 

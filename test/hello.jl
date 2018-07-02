@@ -1,8 +1,10 @@
-# Hello world example, similar to the Boost.Python hello world
-include(joinpath(@__DIR__, "testcommon.jl"))
-
 # Wrap the functions defined in C++
-wrap_modules(libhello)
+module CppHello
+  include(joinpath(@__DIR__, "testcommon.jl"))
+  @wrapmodule libhello
+end
+
+using Test
 
 # Output:
 @show CppHello.greet()

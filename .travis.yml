@@ -16,10 +16,10 @@ matrix:
       env:
         - CC=gcc-4.9
         - CXX=g++-4.9
-      julia: 0.6
+      julia: 0.7
     - os: osx
       compiler: "clang"
-      julia: 0.6
+      julia: nightly
       
 notifications:
   email: true

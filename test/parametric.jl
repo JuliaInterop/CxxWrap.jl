@@ -1,7 +1,7 @@
 include(joinpath(@__DIR__, "testcommon.jl"))
 
 # Wrap the functions defined in C++
-wrap_modules(libparametric)
+module ParametricTypes Main.@wrapmodule(Main.libparametric) end
 
 import .ParametricTypes.TemplateType, .ParametricTypes.NonTypeParam
 

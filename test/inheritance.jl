@@ -1,7 +1,14 @@
 include(joinpath(@__DIR__, "testcommon.jl"))
 
 # Wrap the functions defined in C++
-wrap_modules(libinheritance)
+module CppInheritance
+  Main.@wrapmodule(Main.libinheritance, :define_types_module)
+  export A, B, C, D, message, create_abstract, shared_ptr_message, shared_b, shared_c, shared_d, weak_ptr_message_a, weak_ptr_message_b, dynamic_message_c, take_ref
+end
+
+module VirtualSolver
+  Main.@wrapmodule(Main.libinheritance, :define_vsolver_module)
+end
 
 using .CppInheritance
 
