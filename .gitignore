@@ -9,5 +9,6 @@
 /deps/downloads
 CMakeLists.txt.user
 /test/deps.jl
+Manifest.toml
 
 deps/downloads/CxxWrap.zip

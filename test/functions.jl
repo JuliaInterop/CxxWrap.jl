@@ -4,7 +4,8 @@ cxx_available = false
 const functions_lib_path = libfunctions
 
 # Wrap the functions defined in C++
-wrap_modules(functions_lib_path)
+module CppHalfFunctions Main.@wrapmodule(Main.functions_lib_path, :init_half_module) end
+module CppTestFunctions Main.@wrapmodule(Main.functions_lib_path, :init_test_module) end
 
 # Test functions from the CppHalfFunctions module
 @test CppHalfFunctions.half_d(3) == 1.5

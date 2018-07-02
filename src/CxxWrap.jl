@@ -5,7 +5,7 @@ module CxxWrap
 import BinaryProvider
 import Libdl
 
-export wrap_modules, wrap_module, wrap_module_types, wrap_module_functions, @safe_cfunction, load_module, ptrunion, CppEnum, ConstPtr, ConstArray, gcprotect, gcunprotect
+export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, load_module, ptrunion, CppEnum, ConstPtr, ConstArray, gcprotect, gcunprotect
 
 # Convert path if it contains lib prefix on windows
 function lib_path(so_path::AbstractString)
@@ -123,75 +123,55 @@ mutable struct CppFunctionInfo
   argument_types::Array{Type,1}
   reference_argument_types::Array{Type,1}
   return_type::Type
-  function_pointer::Ptr{Nothing}
-  thunk_pointer::Ptr{Nothing}
+  function_pointer::Ptr{Cvoid}
+  thunk_pointer::Ptr{Cvoid}
 end
 
 function __init__()
   @static if Sys.iswindows()
     Libdl.dlopen(jlcxx_path, Libdl.RTLD_GLOBAL)
   end
-  ccall((:initialize, jlcxx_path), Nothing, (Any, Any, Any), CxxWrap, CppAny, CppFunctionInfo)
+
+  jlcxxversion = VersionNumber(unsafe_string(ccall((:version_string, jlcxx_path), Cstring, ())))
+  if jlcxxversion < v"0.3.0"
+    error("This version of CxxWrap requires at least libcxxwrap-julia v0.3.0, but version $jlcxxversion was found")
+  end
+
+  ccall((:initialize, jlcxx_path), Cvoid, (Any, Any, Any), CxxWrap, CppAny, CppFunctionInfo)
 end
 
-# Load the modules in the shared library located at the given path
-function load_modules(path::AbstractString, parent_module)
-  fptr = Libdl.dlsym(Libdl.dlopen(path, Libdl.RTLD_GLOBAL), "register_julia_modules")
-  registry = ccall((:create_registry, jlcxx_path), Ptr{Nothing}, (Any,Any), parent_module, nothing)
-  ccall(fptr, Nothing, (Ptr{Nothing},), registry)
-  return registry
+function register_julia_module(mod::Module, fptr::Ptr{Cvoid})
+  ccall((:register_julia_module, jlcxx_path), Cvoid, (Any,Ptr{Cvoid}), mod, fptr)
 end
 
-"""
-Load a single module, to be wrapped in wrapped_module
-"""
-function load_module(path::AbstractString, wrapped_module)
-  fptr = Libdl.dlsym(Libdl.dlopen(path, Libdl.RTLD_GLOBAL), "register_julia_modules")
-  registry = ccall((:create_registry, jlcxx_path), Ptr{Nothing}, (Any,Any), parentmodule(wrapped_module), wrapped_module)
-  ccall(fptr, Nothing, (Ptr{Nothing},), registry)
-  return registry
+function get_module_functions(mod::Module)
+  ccall((:get_module_functions, jlcxx_path), Any, (Any,), mod)
 end
 
-function get_modules(registry::Ptr{Nothing})
-  ccall((:get_modules, jlcxx_path), Any, (Ptr{Nothing},), registry)
+function bind_constants(m::Module)
+  ccall((:bind_module_constants, jlcxx_path), Cvoid, (Any,), m)
 end
 
-function get_wrapped_module(registry::Ptr{Nothing})
-  ccall((:get_wrapped_module, jlcxx_path), Any, (Ptr{Nothing},), registry)
+function reference_types(mod::Module)
+  ccall((:get_reference_types, jlcxx_path), Any, (Any,), mod)
 end
 
-function get_module_functions(registry::Ptr{Nothing})
-  ccall((:get_module_functions, jlcxx_path), Any, (Ptr{Nothing},), registry)
-end
-
-function bind_constants(registry::Ptr{Nothing}, m::Module)
-  ccall((:bind_module_constants, jlcxx_path), Nothing, (Ptr{Nothing},Any), registry, m)
-end
-
-function exported_symbols(registry::Ptr{Nothing}, modname::AbstractString)
-  ccall((:get_exported_symbols, jlcxx_path), Any, (Ptr{Nothing},AbstractString), registry, modname)
-end
-
-function reference_types(registry::Ptr{Nothing}, modname::AbstractString)
-  ccall((:get_reference_types, jlcxx_path), Any, (Ptr{Nothing},AbstractString), registry, modname)
-end
-
-function allocated_types(registry::Ptr{Nothing}, modname::AbstractString)
-  ccall((:get_allocated_types, jlcxx_path), Any, (Ptr{Nothing},AbstractString), registry, modname)
+function allocated_types(mod::Module)
+  ccall((:get_allocated_types, jlcxx_path), Any, (Any,), mod)
 end
 
 """
 Protect a variable from garbage collection by adding it to the global array kept by CxxWrap
 """
 function gcprotect(x)
-  ccall((:gcprotect, jlcxx_path), Nothing, (Any,), x)
+  ccall((:gcprotect, jlcxx_path), Cvoid, (Any,), x)
 end
 
 """
 Unprotect a variable from garbage collection by removing it from the global array kept by CxxWrap
 """
 function gcunprotect(x)
-  ccall((:gcunprotect, jlcxx_path), Nothing, (Any,), x)
+  ccall((:gcunprotect, jlcxx_path), Cvoid, (Any,), x)
 end
 
 # Interpreted as a constructor for Julia  > 0.5
@@ -303,10 +283,9 @@ function build_function_expression(func::CppFunctionInfo)
   return function_expression
 end
 
-function wrap_reference_converters(registry, julia_mod)
-  mod_name = string(nameof(julia_mod))
-  reftypes = reference_types(registry, mod_name)
-  alloctypes = allocated_types(registry, mod_name)
+function wrap_reference_converters(julia_mod)
+  reftypes = reference_types(julia_mod)
+  alloctypes = allocated_types(julia_mod)
   for (rt, at) in zip(reftypes, alloctypes)
     st = supertype(at)
     Core.eval(Base, :(cconvert(::Type{$rt}, x::$rt) = x))
@@ -345,68 +324,66 @@ function wrap_functions(functions, julia_mod)
   end
 end
 
-# Create modules defined in the given library, wrapping all their functions and types
-function wrap_modules(registry::Ptr{Nothing})
-  jl_modules = get_modules(registry)
-  for jl_mod in jl_modules
-    bind_constants(registry, jl_mod)
-  end
-
-  module_functions = get_module_functions(registry)
-  for (jl_mod, mod_functions) in zip(jl_modules, module_functions)
-    wrap_reference_converters(registry, jl_mod)
-    wrap_functions(mod_functions, jl_mod)
-  end
-
-  for jl_mod in jl_modules
-    exps = [Symbol(s) for s in exported_symbols(registry, string(nameof(jl_mod)))]
-    Core.eval(jl_mod, :(export $(exps...)))
-  end
-end
-
-# Wrap modules in the given path
-function wrap_modules(so_path::AbstractString, parent_mod=Main)#(VERSION > v"0.7-" ? Base.__toplevel__ : Main))
-  registry = CxxWrap.load_modules(lib_path(so_path), parent_mod)
-  wrap_modules(registry)
-end
-
 # Place the types for the module with the name corresponding to the current module name in the current module
-function wrap_module_types(registry)
-  jlmod = get_wrapped_module(registry)
-  wanted_name = string(nameof(jlmod))
-  bind_constants(registry, jlmod)
-  
-  exps = [Symbol(s) for s in exported_symbols(registry, wanted_name)]
-  Core.eval(jlmod, :(export $(exps...)))
+function wraptypes(jlmod)
+  bind_constants(jlmod)
 end
 
-function wrap_module_functions(registry)
-  modules = get_modules(registry)
-  @assert length(modules) == 1
-  mod_idx = 1
-
-  if mod_idx == 0
-    error("Module $wanted_name not found in C++")
-  end
-
-  jlmod = get_wrapped_module(registry)
-  module_functions = get_module_functions(registry)
-  wrap_reference_converters(registry, jlmod)
-  wrap_functions(module_functions[mod_idx], jlmod)
+function wrapfunctions(jlmod)
+  module_functions = get_module_functions(jlmod)
+  wrap_reference_converters(jlmod)
+  wrap_functions(module_functions, jlmod)
 end
 
-# Place the functions and types into the current module
-function wrap_module(registry::Ptr{Nothing})
-  wrap_module_types(registry)
-  wrap_module_functions(registry)
+function readmodule(so_path::AbstractString, funcname, m::Module)
+  fptr = Libdl.dlsym(Libdl.dlopen(so_path), funcname)
+  register_julia_module(m, fptr)
+end
+
+function wrapmodule(so_path::AbstractString, funcname, m::Module)
+  readmodule(so_path, funcname, m)
+  wraptypes(m)
+  wrapfunctions(m)
 end
 
 """
-Wrap C++ types into module m. Assumes the library adds only a single module with the same name as m.
+  @wrapmodule libraryfile [functionname]
+
+Place the functions and types from the C++ lib into the module enclosing this macro call
+Calls an entry point named `define_julia_module`, unless another name is specified as
+the second argument.
 """
-function wrap_module(so_path::AbstractString, m::Module)
-  registry = CxxWrap.load_module(lib_path(so_path), m)
-  wrap_module(registry)
+macro wrapmodule(libraryfile, register_func=:(:define_julia_module))
+  return :(wrapmodule($(esc(libraryfile)), $(esc(register_func)), $__module__))
+end
+
+"""
+  @readmodule libraryfile [functionname]
+
+Read a C++ module and associate it with the Julia module enclosing the macro call.
+"""
+macro readmodule(libraryfile, register_func=:(:define_julia_module))
+  return :(readmodule($(esc(libraryfile)), $(esc(register_func)), $__module__))
+end
+
+"""
+  @wraptypes
+
+Wrap the types defined in the C++ side of the enclosing module. Requires that
+`@readmodule` was called first.
+"""
+macro wraptypes()
+  return :(wraptypes($__module__))
+end
+
+"""
+  @wrapfunctions
+
+Wrap the functions defined in the C++ side of the enclosing module. Requires that
+`@readmodule` and `@wraptypes` was called first.
+"""
+macro wrapfunctions()
+  return :(wrapfunctions($__module__))
 end
 
 struct SafeCFunction

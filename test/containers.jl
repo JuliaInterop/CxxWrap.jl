@@ -1,12 +1,15 @@
-include(joinpath(@__DIR__, "testcommon.jl"))
-
 function func1(arr)
   @test arr[1] == 1.0
   @test arr[2] == 2.0
   @test arr[3] == 3.0
 end
 
-wrap_modules(libjlcxx_containers)
+module Containers
+  include(joinpath(@__DIR__, "testcommon.jl"))
+  @wrapmodule libjlcxx_containers
+
+  export test_tuple, const_ptr, const_ptr_arg, const_vector, const_matrix
+end
 using Main.Containers
 
 @test test_tuple() == (1,2.0,3.0f0)

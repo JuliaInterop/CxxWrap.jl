@@ -1,7 +1,7 @@
 using BinaryProvider
 
-const JLCXX_LIBDIR = get(ENV, "JLCXX_LIBDIR", "")
-const prefix = Prefix(JLCXX_LIBDIR == "" ? !isempty(ARGS) ? ARGS[1] : joinpath(@__DIR__,"usr") : JLCXX_LIBDIR)
+const JLCXX_DIR = get(ENV, "JLCXX_DIR", "")
+const prefix = Prefix(JLCXX_DIR == "" ? !isempty(ARGS) ? ARGS[1] : joinpath(@__DIR__,"usr") : JLCXX_DIR)
 
 products = Product[
     LibraryProduct(prefix, "libcxxwrap_julia", :libcxxwrap_julia)

@@ -1,7 +1,13 @@
 include(joinpath(@__DIR__, "testcommon.jl"))
 
 # Wrap the functions defined in C++
-wrap_modules(libtypes)
+module CppTypes
+Main.@wrapmodule(Main.libtypes)
+
+export enum_to_int, get_enum_b, World
+export AConstRef, ReturnConstRef, value, CallOperator, ConstPtrConstruct
+
+end
 
 # Stress test
 for i in 1:1000000

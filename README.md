@@ -25,12 +25,12 @@ Boost.Python also uses the latter (C++-only) approach, so translating existing P
 * Facilitate calling Julia functions from C++
 
 ## Installation
-Just like any registered package:
+Just like any registered package, in pkg mode (`]` at the REPL)
 ```julia
-Pkg.add("CxxWrap")
+add CxxWrap
 ```
 
-This will also install the [JlCxx](https://github.com/JuliaInterop/libcxxwrap-julia) library (in `deps/usr` relative to the package dir), which is the C++ component of this package. If you want to use existing binaries for this libraries, set the environment variable `JLCXX_LIBDIR` to the directory containing the cxxwrap-julia library and then add the package or run `Pkg.build("CxxWrap")`.
+This will also install the [JlCxx](https://github.com/JuliaInterop/libcxxwrap-julia) library (in `deps/usr` relative to the package dir), which is the C++ component of this package. If you want to use existing binaries for this library, set the environment variable `JLCXX_DIR` to the prefix where libcxxwrap-julia is installed and then add the package or run `Pkg.build("CxxWrap")`.
 
 ### Building on Windows
 To install on Windows, you need to do the following before running ```Pkg.add("CxxWrap")```:
@@ -52,23 +52,25 @@ Using the C++ side of `CxxWrap`, this can be exposed as follows:
 ```c++
 #include "jlcxx/jlcxx.hpp"
 
-JULIA_CPP_MODULE_BEGIN(registry)
-  jlcxx::Module& hello = registry.create_module("CppHello");
-  hello.method("greet", &greet);
-JULIA_CPP_MODULE_END
+JLCXX_MODULE define_julia_module(jlcxx::Module& mod)
+{
+  mod.method("greet", &greet);
+}
 ```
 
 Once this code is compiled into a shared library (say `libhello.so`) it can be used in Julia as follows:
 
 ```julia
-using CxxWrap
-
 # Load the module and generate the functions
-wrap_modules(joinpath("path/to/built/lib","libhello"))
+module CppHello
+  using CxxWrap
+  @wrapmodule(joinpath("path/to/built/lib","libhello"))
+end
+
 # Call greet and show the result
 @show CppHello.greet()
 ```
-The code for this example can be found in [`deps/src/jlcxx/examples/hello.cpp`](deps/src/jlcxx/examples/hello.cpp) and [`test/hello.jl`](test/hello.jl).
+The code for this example can be found in [`hello.cpp`] in the [examples](https://github.com/JuliaInterop/libcxxwrap-julia/tree/master/examples) directory of the libcxx-julia project and [`test/hello.jl`](test/hello.jl).
 
 ## Hello World example on Windows
 On Windows, it is not necessary to create the Visual Studio project by hand: CMake creates a .sln file in the deps/build directory of the package, and that can be opened using Visual Studio to edit the source files and so on. The drawback is that this file gets overwritten if you add a new C++ source file for example.
@@ -92,18 +94,42 @@ std::string greet()
   return "hello, world";
 }
 
-JULIA_CPP_MODULE_BEGIN(registry)
-  jlcxx::Module& hello = registry.create_module("CppHello");
-  hello.method("greet", &greet);
-JULIA_CPP_MODULE_END
+JLCXX_MODULE define_julia_module(jlcxx::Module& mod)
+{
+  mod.method("greet", &greet);
+}
 ```
 * Build the CppHello project.
 * Locate the resulted CppHello.dll file under the Release folder. For a 64-bit build, the path is the project folder\x64\Release\CppHello.dll.
 
-### Exporting symbols
-Julia symbols can be exported from the module using the `export_symbols` function on the C++ side. It takes any number of symbols as string. To export `greet` from the `CppHello` module:
+## Module entry point
+
+Above, we defined the module entry point as a function `JLCXX_MODULE define_julia_module(jlcxx::Module& mod)`. In the general case, there may be multiple modules defined in a single library, and each should have its own entry
+point, called within the appropriate module:
+
 ```c++
-hello.export_symbols("greet");
+JLCXX_MODULE define_module_a(jlcxx::Module& mod)
+{
+  // add stuff for A
+}
+
+JLCXX_MODULE define_module_b(jlcxx::Module& mod)
+{
+  // add stuff for B
+}
+```
+
+In Julia, the name of the entry point must now be specified explicitly:
+```julia
+module A
+  using CxxWrap
+  @wrapmodule("mylib.so",:define_module_a)
+end
+
+module B
+  using CxxWrap
+  @wrapmodule("mylib.so",:define_module_b)
+end
 ```
 
 ## More extensive example and function call performance
@@ -122,7 +148,7 @@ struct World
 };
 ```
 
-Wrapped in the `JULIA_CPP_MODULE_BEGIN/END` block as before and defining a module `CppTypes`, the code for exposing the type and some methods to Julia is:
+Wrapped in the an entry point function as before and defining a module `CppTypes`, the code for exposing the type and some methods to Julia is:
 ```c++
 types.add_type<World>("World")
   .constructor<const std::string&>()
@@ -253,12 +279,12 @@ namespace jlcxx
   template<> struct IsBits<CppEnum> : std::true_type {};
 }
 
-JULIA_CPP_MODULE_BEGIN(registry)
-  jlcxx::Module& types = registry.create_module("CppTypes");
+JLCXX_MODULE define_types_module(jlcxx::Module& types)
+{
   types.add_bits<CppEnum>("CppEnum");
   types.set_const("EnumValA", EnumValA);
   types.set_const("EnumValB", EnumValB);
-JULIA_CPP_MODULE_END
+}
 ```
 
 The enum constants will be available on the Julia side as `CppTypes.EnumValA` and `CppTypes.EnumValB`, both of type `CppTypes.CppEnum`. Wrapped C++ functions taking a `CppEnum` will only accept a value of type `CppTypes.CppEnum` in Julia.
@@ -449,13 +475,10 @@ C++11 tuples can be converted to Julia tuples by including the `containers/tuple
 #include "jlcxx/jlcxx.hpp"
 #include "jlcxx/tuple.hpp"
 
-JULIA_CPP_MODULE_BEGIN(registry)
-  jlcxx::Module& containers = registry.create_module("Containers");
-
+JLCXX_MODULE define_types_module(jlcxx::Module& containers)
+{
   containers.method("test_tuple", []() { return std::make_tuple(1, 2., 3.f); });
-
-  containers.export_symbols("test_tuple");
-JULIA_CPP_MODULE_END
+}
 ```
 
 Use in Julia:
@@ -464,7 +487,10 @@ Use in Julia:
 using CxxWrap
 using Base.Test
 
-wrap_modules(libcontainers)
+module Containers
+  @wrapmodule(libcontainers)
+  export test_tuple
+end
 using Containers
 
 @test test_tuple() == (1,2.0,3.0f0)
@@ -591,19 +617,19 @@ mymodule.method("call_safe_function", [](jlcxx::SafeCFunction f_data)
 This method of calling a Julia function is less convenient, but the call overhead should be no larger than calling a regular C function through its pointer.
 
 ## Adding Julia code to the module
-Sometimes, you may want to write additional Julia code in the module that is built from C++. To do this, call the `wrap_module` method inside an appropriately named Julia module:
+Sometimes, you may want to write additional Julia code in the module that is built from C++. To do this, call the `wrapmodule` method inside an appropriately named Julia module:
 ```julia
 module ExtendedTypes
 
 using CxxWrap
-wrap_module("libextended")
+@wrapmodule("libextended")
 export ExtendedWorld, greet
 
 end
 ```
-Here, `ExtendedTypes` is a name that matches the module name passed to `create_module` on the C++ side. The `wrap_module` call works as before, but now the functions and types are defined in the existing `ExtendedTypes` module, and additional Julia code such as exports and macros can be defined.
+Here, `ExtendedTypes` is a name that matches the module name passed to `create_module` on the C++ side. The `@wrapmodule` call works as before, but now the functions and types are defined in the existing `ExtendedTypes` module, and additional Julia code such as exports and macros can be defined.
 
-It is also possible to split the `wrap_module` into the steps `wrap_module_types` and `wrap_module_functions`. This allows using the types before the functions get called, which is useful for overloading the `argument_overloads` with types defined on the C++ side.
+It is also possible to replace the `@wrapmodule` call with a call to `@readmodule` and then separately call `@wraptypes` and `@wrapfunctions`. This allows using the types before the functions get called, which is useful for overloading the `argument_overloads` with types defined on the C++ side.
 
 ## Linking with the C++ library
 The library (in [`deps/src/jlcxx`](deps/src/jlcxx)) is built using CMake, so it can be found from another CMake project using the following line in a `CMakeLists.txt`:
@@ -618,7 +644,18 @@ target_link_libraries(your_own_lib CxxWrap::jlcxx)
 
 A complete `CMakeLists.txt` is at [`deps/src/examples/CMakeLists.txt`](deps/src/examples/CMakeLists.txt).
 
-## Breaking changes
+## Breaking changes for 0.7
 
-* `wrap_modules`
-* `@safe_cfunction`
+* `JULIA_CPP_MODULE_BEGIN` and `JULIA_CPP_MODULE_END` no longer exists, define a function with return type `JLCXX_MODULE` instead.
+
+* `wrap_modules` is removed, replace `wrap_modules(lib_file_path)` with
+  ```julia
+  module Foo
+     @wrapmodule(lib_file_path)
+  end
+  ```
+
+* `export_symbols` is removed, since all C++ modules are now wrapped in a corresponding module declared on the Julia side, so the regular Julia export
+statement can be used.
+
+* `safe_cfunction` is now a macro, just like cfunction became a macro in Julia
