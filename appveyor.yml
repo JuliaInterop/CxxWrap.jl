@@ -1,14 +1,7 @@
 environment:
   matrix:
-  - JULIA_URL: "https://julialang-s3.julialang.org/bin/winnt/x64/0.6/julia-0.6-latest-win64.exe"
-    BUILD_ON_WINDOWS: 1
-  - JULIA_URL: "https://julialang-s3.julialang.org/bin/winnt/x64/0.6/julia-0.6-latest-win64.exe"
-    BUILD_ON_WINDOWS: 0
-  - JULIA_URL: "https://julialang-s3.julialang.org/bin/winnt/x86/0.6/julia-0.6-latest-win32.exe"
-    BUILD_ON_WINDOWS: 1
-  - JULIA_URL: "https://julialang-s3.julialang.org/bin/winnt/x64/0.6/julia-0.6-latest-win64.exe"
-    BUILD_ON_WINDOWS: 1 # Test Mingw on 0.6 64bit only
-    MSYSTEM: MINGW64
+  - JULIA_URL: "https://julialangnightlies-s3.julialang.org/bin/winnt/x64/julia-latest-win64.exe"
+  - JULIA_URL: "https://julialangnightlies-s3.julialang.org/bin/winnt/x86/julia-latest-win32.exe"
 
 branches:
   only:
@@ -32,10 +25,7 @@ install:
   - IF DEFINED MSYSTEM C:\msys64\usr\bin\bash.exe -l -c "pacman --needed --noconfirm -S mingw-w64-x86_64-cmake mingw-w64-x86_64-gcc mingw-w64-i686-cmake mingw-w64-i686-gcc make"
 
 build_script:
-# Need to convert from shallow to complete for Pkg.clone to work
-  - IF EXIST .git\shallow (git fetch --unshallow)
-  - IF DEFINED MSYSTEM C:\msys64\usr\bin\bash.exe -l -c "HOME=C:/Users/appveyor C:/projects/julia/bin/julia -e \"cd(ENV[\\\"OLDPWD\\\"]); versioninfo(); Pkg.clone(pwd(), \\\"CxxWrap\\\"); Pkg.build(\\\"CxxWrap\\\")\""
-  - IF NOT DEFINED MSYSTEM C:\projects\julia\bin\julia -e "versioninfo(); Pkg.clone(pwd(), \"CxxWrap\"); Pkg.build(\"CxxWrap\")"
+  - C:\projects\julia\bin\julia -e "using Pkg; pkg\"activate .\"; pkg\"build\""
 
 test_script:
-  - C:\projects\julia\bin\julia --check-bounds=yes -e "Pkg.test(\"CxxWrap\")"
+  - C:\projects\julia\bin\julia --check-bounds=yes -e "using Pkg; pkg\"activate .\"; pkg\"test\""

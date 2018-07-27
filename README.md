@@ -32,14 +32,6 @@ add CxxWrap
 
 This will also install the [JlCxx](https://github.com/JuliaInterop/libcxxwrap-julia) library (in `deps/usr` relative to the package dir), which is the C++ component of this package. If you want to use existing binaries for this library, set the environment variable `JLCXX_DIR` to the prefix where libcxxwrap-julia is installed and then add the package or run `Pkg.build("CxxWrap")`.
 
-### Building on Windows
-To install on Windows, you need to do the following before running ```Pkg.add("CxxWrap")```:
-* Make sure the system has Visual Studio 2015 (aka Visual Studio 14) with Visual C++ installed (community edition ISO download link can be found at https://gist.github.com/CHEF-KOCH/8078b39e1aad71ef6c317a3c0edb6ec9).
-Note 1: Visual Studio default installation only gives you C# and VB. User must select custom installation and choose Visual C++ to be installed.
-Note 2: Visual Studio 2015 (Update 2 RC with MSVC 19.0.23824.1 or newer) is required; older versions won't work due to internal compiler errors; Visual Studio 2017 won't work for now but should work in the future.
-* Make sure CMake has been installed (download at https://cmake.org/download/), and its bin folder is included in the environmental variable PATH. For example, if the installation path is C:\CMake, then C:\CMake\bin should be included in PATH - normally the installer would add it automatically.
-* Create an environmental variable BUILD_ON_WINDOWS with the value 1. This tells the installer to build the binary on the local machine using CMake and Visual Stuido compiler instead of downloading the binary from server.
-
 ## Boost Python Hello World example
 Let's try to reproduce the example from the [Boost.Python tutorial](http://www.boost.org/doc/libs/1_59_0/libs/python/doc/tutorial/doc/html/index.html). Suppose we want to expose the following C++ function to Julia in a module called `CppHello`:
 ```c++
@@ -646,7 +638,7 @@ A complete `CMakeLists.txt` is at [`deps/src/examples/CMakeLists.txt`](deps/src/
 
 ## Breaking changes for 0.7
 
-* `JULIA_CPP_MODULE_BEGIN` and `JULIA_CPP_MODULE_END` no longer exists, define a function with return type `JLCXX_MODULE` instead.
+* `JULIA_CPP_MODULE_BEGIN` and `JULIA_CPP_MODULE_END` no longer exists, define a function with return type `JLCXX_MODULE` in the global namespace instead. By default, the Julia side expects this function to be named `define_julia_module`, but another name can be chosen and passed as a second argument to `@wrapmodule`.
 
 * `wrap_modules` is removed, replace `wrap_modules(lib_file_path)` with
   ```julia
