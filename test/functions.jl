@@ -13,7 +13,7 @@ module CppTestFunctions Main.@wrapmodule(Main.functions_lib_path, :init_test_mod
 @test CppHalfFunctions.half_i(-2) == -1
 @test CppHalfFunctions.half_u(3) == 1
 @test CppHalfFunctions.half_lambda(2.) == 1.
-if get(ENV, "MSYSTEM", "") == "" || get(ENV, "APPVEYOR", "") == "" # Disabled on MINGW CI due to https://discourse.julialang.org/t/c-and-bits-types-confusion/1168/8
+if get(ENV, "APPVEYOR", "") == "" # Disabled on Windows CI due to https://github.com/JuliaLang/julia/issues/28325
   @test CppHalfFunctions.strict_half(3.) == 1.5
 end
 @test_throws MethodError CppHalfFunctions.strict_half(3)
