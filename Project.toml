@@ -1,5 +1,5 @@
 name = "CxxWrap"
-uuid = "d6fb6aec-6fa4-11e8-0e77-af5d660a6b49"
+uuid = "1f15a43c-97ca-5a2a-ae31-89f07a497df4"
 authors = ["Bart Janssens <bart@bartjanssens.org>"]
 version = "0.7.0"
 
