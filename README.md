@@ -172,7 +172,7 @@ The second is an immutable type (the "reference type") with the following struct
 
 ```julia
 struct WorldRef <: World
-  cpp_object::Ptr{Nothing}
+  cpp_object::Ptr{Cvoid}
 end
 ```
 
@@ -180,7 +180,7 @@ It is an immutable type to be able to refer to C++ values without needing to all
 
 ```julia
 mutable struct WorldAllocated <: World
-  cpp_object::Ptr{Nothing}
+  cpp_object::Ptr{Cvoid}
 end
 ```
 
@@ -189,7 +189,7 @@ This means that the variable `w` in the above example is of concrete type `World
 The above types are used in method generation as follows, considering for example the greet method taking a `World` argument:
 
 ```julia
-greet(w::World) = ccall($fpointer, Any, (Ptr{Nothing}, WorldRef), $thunk, cconvert(WorldRef, w))
+greet(w::World) = ccall($fpointer, Any, (Ptr{Cvoid}, WorldRef), $thunk, cconvert(WorldRef, w))
 ```
 
 Here, the `cconvert` from `WorldAllocated` to `WorldRef` is defined automatically when creating the type.

@@ -56,14 +56,14 @@ ConstructPtr a function pointer to construct from a compatible smart pointer typ
 CastPtr is a function pointer to cast to the direct base class
 """
 mutable struct SmartPointerWithDeref{T,PT,DerefPtr,ConstructPtr,CastPtr} <: SmartPointer{T}
-  ptr::Ptr{Nothing}
+  ptr::Ptr{Cvoid}
 end
 
 reference_type(t::Type) = Any
 
 @generated function dereference_smart_pointer(p::SmartPointerWithDeref{T,PT,DerefPtr,ConstructPtr,CastPtr}, ::Type{DereferencedT}) where {T,PT,DerefPtr,ConstructPtr,CastPtr,DereferencedT}
   quote
-    ccall(DerefPtr, $DereferencedT, (Ptr{Nothing},), p.ptr)
+    ccall(DerefPtr, $DereferencedT, (Ptr{Cvoid},), p.ptr)
   end
 end
 
@@ -85,7 +85,7 @@ function Base.convert(t::Type{SmartPointerWithDeref{BaseT,PT1,B1,B2,B3}}, p::Sma
     error("$DerivedT does not inherit from $BaseT in smart pointer convert")
   end
   # First convert to base type
-  base_p = ccall(D3, Any, (Ptr{Nothing},), p.ptr)
+  base_p = ccall(D3, Any, (Ptr{Cvoid},), p.ptr)
   return convert(t, base_p)
 end
 
@@ -94,7 +94,7 @@ function Base.convert(::Type{SmartPointerWithDeref{BaseT,PT,B1,B2,B3}}, p::Smart
   if !(DerivedT <: BaseT)
     error("$DerivedT does not inherit from $BaseT in smart pointer convert")
   end
-  return convert(SmartPointerWithDeref{BaseT,PT,B1,B2,B3}, ccall(D3, Any, (Ptr{Nothing},), p.ptr))
+  return convert(SmartPointerWithDeref{BaseT,PT,B1,B2,B3}, ccall(D3, Any, (Ptr{Cvoid},), p.ptr))
 end
 
 struct StrictlyTypedNumber{NumberT}
@@ -266,7 +266,7 @@ function build_function_expression(func::CppFunctionInfo)
   if thunk == C_NULL
     call_exp = :(ccall($fpointer, $return_type, ($(c_arg_types...),), $(converted_args...))) # Direct pointer call
   else
-    call_exp = :(ccall($fpointer, $return_type, (Ptr{Nothing}, $(c_arg_types...)), $thunk, $(converted_args...))) # use thunk (= std::function)
+    call_exp = :(ccall($fpointer, $return_type, (Ptr{Cvoid}, $(c_arg_types...)), $thunk, $(converted_args...))) # use thunk (= std::function)
   end
   @assert call_exp != nothing
 
