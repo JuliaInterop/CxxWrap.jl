@@ -1,7 +1,11 @@
 environment:
   matrix:
-  - JULIA_URL: "https://julialangnightlies-s3.julialang.org/bin/winnt/x64/julia-latest-win64.exe"
-  - JULIA_URL: "https://julialangnightlies-s3.julialang.org/bin/winnt/x86/julia-latest-win32.exe"
+  - julia_version: 0.7
+  - julia_version: 1
+
+platform:
+  - x86 # 32-bit
+  - x64 # 64-bit
 
 branches:
   only:
@@ -15,17 +19,13 @@ notifications:
     on_build_status_changed: true
 
 install:
-  - ps: "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12"
-# Download most recent Julia Windows binary
-  - ps: (new-object net.webclient).DownloadFile(
-        $env:JULIA_URL,
-        "C:\projects\julia-binary.exe")
-# Run installer silently, output to C:\projects\julia
-  - C:\projects\julia-binary.exe /S /D=C:\projects\julia
-  - IF DEFINED MSYSTEM C:\msys64\usr\bin\bash.exe -l -c "pacman --needed --noconfirm -S mingw-w64-x86_64-cmake mingw-w64-x86_64-gcc mingw-w64-i686-cmake mingw-w64-i686-gcc make"
+  - ps: iex ((new-object net.webclient).DownloadString("https://raw.githubusercontent.com/JuliaCI/Appveyor.jl/version-1/bin/install.ps1"))
 
 build_script:
-  - C:\projects\julia\bin\julia -e "using Pkg; pkg\"activate .\"; pkg\"build\""
+  - echo "%JL_BUILD_SCRIPT%"
+  - C:\julia\bin\julia -e "%JL_BUILD_SCRIPT%"
 
 test_script:
-  - C:\projects\julia\bin\julia --check-bounds=yes -e "using Pkg; pkg\"activate .\"; pkg\"test\""
+  - echo "%JL_TEST_SCRIPT%"
+  - C:\julia\bin\julia -e "%JL_TEST_SCRIPT%"
+  

@@ -5,7 +5,7 @@ module CxxWrap
 import BinaryProvider
 import Libdl
 
-export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, load_module, ptrunion, CppEnum, ConstPtr, ConstArray, gcprotect, gcunprotect
+export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, load_module, ptrunion, CppEnum, ConstPtr, ConstArray, gcprotect, gcunprotect, isnull
 
 # Convert path if it contains lib prefix on windows
 function lib_path(so_path::AbstractString)
@@ -399,6 +399,6 @@ end
 wstring_to_julia(p::Ptr{Cwchar_t}, L::Int) = transcode(String, unsafe_wrap(Array, p, L))
 wstring_to_cpp(s::String) = transcode(Cwchar_t, s)
 
-Base.isnull(x::CppAny) = (x.cpp_object == C_NULL)
+isnull(x::CppAny) = (x.cpp_object == C_NULL)
 
 end # module
