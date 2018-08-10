@@ -1,11 +1,11 @@
 # Documentation: http://docs.travis-ci.com/user/languages/julia/
 language: julia
-matrix:
-  include:
-    - os: linux
-      julia: 0.7
-    - os: osx
-      julia: nightly
+os:
+  - linux
+  - osx
+julia:
+  - 0.7
+  - 1.0
       
 notifications:
   email: true
