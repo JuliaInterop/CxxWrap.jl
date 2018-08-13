@@ -8,6 +8,8 @@ products = Product[
     LibraryProduct(prefix, "libcxxwrap_julia", :libcxxwrap_julia)
 ]
 
+supported = true
+
 # Download binaries from hosted location
 bin_prefix = "https://github.com/JuliaInterop/libcxxwrap-julia/releases/download/v0.3.2"
 
@@ -27,22 +29,31 @@ elseif VERSION == v"1.0"
         Windows(:x86_64) => ("$bin_prefix/libcxxwrap-julia-1.0.v0.3.2.x86_64-w64-mingw32.tar.gz", "25d64bed0013ddcbce004b5a8dfca8c7c31da8a6a57014332d1a10affc6cd590"),
     )
 else
-    error("Unsupported Julia version $VERSION")
+    supported = false
 end
 
 # Install unsatisfied or updated dependencies:
 unsatisfied = any(!satisfied(p; verbose=verbose) for p in products)
-if haskey(download_info, platform_key())
-    url, tarball_hash = download_info[platform_key()]
-    if unsatisfied || !isinstalled(url, tarball_hash; prefix=prefix)
-        # Download and install binaries
-        install(url, tarball_hash; prefix=prefix, force=true, verbose=verbose)
+if JLCXX_DIR == ""
+    if haskey(download_info, platform_key())
+        if !supported
+            error("Julia version $VERSION is not supported for binary download. Please build libcxxwrap-julia from source and set the JLCXX_DIR environment variable to the build dir or installation prefix.")
+        end
+        url, tarball_hash = download_info[platform_key()]
+        if unsatisfied || !isinstalled(url, tarball_hash; prefix=prefix)
+            # Download and install binaries
+            install(url, tarball_hash; prefix=prefix, force=true, verbose=verbose)
+        end
+    elseif unsatisfied
+        # If we don't have a BinaryProvider-compatible .tar.gz to download, complain.
+        # Alternatively, you could attempt to install from a separate provider,
+        # build from source or something even more ambitious here.
+        error("Your platform $(triplet(platform_key())) is not supported by this package!")
     end
-elseif unsatisfied
-    # If we don't have a BinaryProvider-compatible .tar.gz to download, complain.
-    # Alternatively, you could attempt to install from a separate provider,
-    # build from source or something even more ambitious here.
-    error("Your platform $(triplet(platform_key())) is not supported by this package!")
+else
+    if unsatisfied
+        error("The libcxxwrap-julia library was not found in the provided JLCXX_DIR directory $JLCXX_DIR")
+    end
 end
 
 write_deps_file(joinpath(@__DIR__, "deps.jl"), products)
