@@ -57,12 +57,17 @@ Once this code is compiled into a shared library (say `libhello.so`) it can be u
 module CppHello
   using CxxWrap
   @wrapmodule(joinpath("path/to/built/lib","libhello"))
+
+  function __init__()
+    @initcxx
+  end
 end
 
 # Call greet and show the result
 @show CppHello.greet()
 ```
 The code for this example can be found in [`hello.cpp`] in the [examples](https://github.com/JuliaInterop/libcxxwrap-julia/tree/master/examples) directory of the libcxx-julia project and [`test/hello.jl`](test/hello.jl).
+Note that the `__init__` function is necessary to support precompilation, which is on by default in Julia 1.0.
 
 ## Hello World example on Windows
 On Windows, it is not necessary to create the Visual Studio project by hand: CMake creates a .sln file in the deps/build directory of the package, and that can be opened using Visual Studio to edit the source files and so on. The drawback is that this file gets overwritten if you add a new C++ source file for example.
@@ -643,7 +648,8 @@ A complete `CMakeLists.txt` is at [`deps/src/examples/CMakeLists.txt`](deps/src/
 * `wrap_modules` is removed, replace `wrap_modules(lib_file_path)` with
   ```julia
   module Foo
-     @wrapmodule(lib_file_path)
+    using CxxWrap
+    @wrapmodule(lib_file_path)
   end
   ```
 
@@ -651,3 +657,11 @@ A complete `CMakeLists.txt` is at [`deps/src/examples/CMakeLists.txt`](deps/src/
 statement can be used.
 
 * `safe_cfunction` is now a macro, just like cfunction became a macro in Julia
+
+* Precompilation: add this function after the `@wrapmodule` macro:
+  ```julia
+  function __init__()
+    @initcxx
+  end
+  ```
+  
