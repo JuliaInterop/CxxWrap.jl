@@ -10,6 +10,7 @@ include(joinpath(@__DIR__, "build.jl"))
 
 @testset "CxxWrap tests" begin
   @testset "$f" for f in filter(fname -> fname ∉ excluded, readdir())
+    println("Running tests from $f...")
     include(f)
   end
   # second include for types.jl, to test reloading

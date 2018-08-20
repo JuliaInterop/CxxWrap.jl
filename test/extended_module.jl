@@ -7,6 +7,10 @@ include(joinpath(@__DIR__, "testcommon.jl"))
 @wraptypes
 @wrapfunctions
 
+function __init__()
+  @initcxx
+end
+
 export ExtendedWorld, greet
 
 end

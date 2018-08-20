@@ -2,6 +2,10 @@
 module CppHello
   include(joinpath(@__DIR__, "testcommon.jl"))
   @wrapmodule libhello
+
+  function __init__()
+    @initcxx
+  end
 end
 
 using Test
