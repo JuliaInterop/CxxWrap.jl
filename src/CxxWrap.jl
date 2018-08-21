@@ -135,8 +135,8 @@ function __init__()
   end
 
   jlcxxversion = VersionNumber(unsafe_string(ccall((:version_string, jlcxx_path), Cstring, ())))
-  if jlcxxversion < v"0.3.0"
-    error("This version of CxxWrap requires at least libcxxwrap-julia v0.3.0, but version $jlcxxversion was found")
+  if jlcxxversion < v"0.4.0"
+    error("This version of CxxWrap requires at least libcxxwrap-julia v0.4.0, but version $jlcxxversion was found")
   end
 
   ccall((:initialize, jlcxx_path), Cvoid, (Any, Any, Any), CxxWrap, CppAny, CppFunctionInfo)
