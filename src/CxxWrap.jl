@@ -27,12 +27,11 @@ const jlcxx_path = libcxxwrap_julia
 
 prefix() =  BinaryProvider.Prefix(dirname(dirname(jlcxx_path)))
 
-# Base type for wrapped C++ types
-abstract type CppAny end
-abstract type CppBits <: CppAny end
-abstract type CppDisplay <: AbstractDisplay end
-abstract type CppArray{T,N} <: AbstractArray{T,N} end
-abstract type CppAssociative{K,V} <: AbstractDict{K,V} end
+# Trait type to indicate a type is a C++-wrapped type
+struct IsCxxType end
+struct IsNormalType end
+
+@inline cpp_trait_type(::Type) = IsNormalType
 
 # Enum type interface
 abstract type CppEnum end
@@ -46,7 +45,8 @@ cxxdowncast(x) = error("No downcast for type $(supertype(typeof(x))). Did you sp
 """
 Base class for smart pointers
 """
-abstract type SmartPointer{T} <: CppAny end
+abstract type SmartPointer{T} end
+@inline cpp_trait_type(::Type{SmartPointer{T}}) where {T} = IsCxxType
 
 """
 Concrete smart pointer implementation. PT is a hash for the pointer type.
@@ -104,11 +104,11 @@ struct StrictlyTypedNumber{NumberT}
 end
 Base.convert(::Type{StrictlyTypedNumber{NumberT}}, n::NumberT) where {NumberT} = StrictlyTypedNumber{NumberT}(n)
 
-struct ConstPtr{T} <: CppBits
+struct ConstPtr{T}
   ptr::Ptr{T}
 end
 
-struct ConstArray{T,N} <: CppArray{T,N}
+struct ConstArray{T,N} <: AbstractArray{T,N}
   ptr::ConstPtr{T}
   size::NTuple{N,Int}
 end
@@ -135,11 +135,11 @@ function __init__()
   end
 
   jlcxxversion = VersionNumber(unsafe_string(ccall((:version_string, jlcxx_path), Cstring, ())))
-  if jlcxxversion < v"0.4.0"
+  if jlcxxversion < v"0.5.0"
     error("This version of CxxWrap requires at least libcxxwrap-julia v0.4.0, but version $jlcxxversion was found")
   end
 
-  ccall((:initialize, jlcxx_path), Cvoid, (Any, Any, Any), CxxWrap, CppAny, CppFunctionInfo)
+  ccall((:initialize, jlcxx_path), Cvoid, (Any, Any), CxxWrap, CppFunctionInfo)
 end
 
 function has_cxx_module(mod::Module)
@@ -238,17 +238,16 @@ function ptrunion(::Type{T}) where {T}
   return result
 end
 
-smart_pointer_type(t::Type) = t
-smart_pointer_type(x::Type{T}) where {T <: CppAny} = ptrunion(x)
-smart_pointer_type(x::Type{T}) where {T <: CppArray} = ptrunion(x)
-smart_pointer_type(x::Type{T}) where {T <: CppAssociative} = ptrunion(x)
+smart_pointer_type(t::Type) = smart_pointer_type(cpp_trait_type(t), t)
+smart_pointer_type(::Type{IsNormalType}, t::Type) = t
+smart_pointer_type(::Type{IsCxxType}, x::Type{T}) where {T} = ptrunion(x)
 
 function smart_pointer_type(::Type{SmartPointerWithDeref{T,PT}}) where {T,PT}
   result{T2 <: T} = SmartPointer{T2}
   return result
 end
 
-map_julia_arg_type(t::Type) = Union{smart_pointer_type(t),argument_overloads(t)...}
+map_julia_arg_type(t::Type) = Union{Base.invokelatest(smart_pointer_type,t),argument_overloads(t)...}
 map_julia_arg_type(a::Type{StrictlyTypedNumber{T}}) where {T} = T
 
 # names excluded from julia type mapping
@@ -320,6 +319,7 @@ function wrap_reference_converters(julia_mod)
   alloctypes = allocated_types(julia_mod)
   for (rt, at) in zip(reftypes, alloctypes)
     st = supertype(at)
+    Core.eval(julia_mod, :(@inline CxxWrap.cpp_trait_type(::Type{<:$st}) = CxxWrap.IsCxxType))
     Core.eval(julia_mod, :(Base.cconvert(::Type{$rt}, x::$rt) = x))
     Core.eval(julia_mod, :(Base.cconvert(::Type{$rt}, x::$at) = unsafe_load(reinterpret(Ptr{$rt}, pointer_from_objref(x)))))
     Core.eval(julia_mod, :(Base.cconvert(t::Type{$rt}, x::T) where {T <: $st} = Base.cconvert(t, $(cxxdowncast)(x))))
@@ -449,6 +449,7 @@ end
 wstring_to_julia(p::Ptr{Cwchar_t}, L::Int) = transcode(String, unsafe_wrap(Array, p, L))
 wstring_to_cpp(s::String) = transcode(Cwchar_t, s)
 
-isnull(x::CppAny) = (x.cpp_object == C_NULL)
+isnull(x::T) where{T} = isnull(cpp_trait_type(T), x)
+isnull(::Type{IsCxxType}, x) = (x.cpp_object == C_NULL)
 
 end # module
