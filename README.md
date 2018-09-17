@@ -167,10 +167,10 @@ types.add_type<World>("World")
   .constructor<const std::string&>(false);
 ```
 
-The `add_type` function actually builds 3 Julia types related to World. The first is an abstract type that by default inherits from the `CppAny` base type:
+The `add_type` function actually builds 3 Julia types related to World. The first is an abstract type:
 
 ```julia
-abstract type World <: CxxWrap.CppAny end
+abstract type World end
 ```
 
 The second is an immutable type (the "reference type") with the following structure:
@@ -235,7 +235,7 @@ types.add_type<B>("B", jlcxx::julia_type<A>());
 The supertype is of type `jl_datatype_t*` and using the template variant of `jlcxx::julia_type` looks up the corresponding type here. There is also a variant taking a string for the type name and an optional Julia module name as second argument, which is useful for inheriting from a type defined in Julia, e.g:
 
 ```c++
-mod.add_type<Teuchos::ParameterList>("ParameterList", jlcxx::julia_type("PLAssociative", "Trilinos"))
+mod.add_type<Teuchos::ParameterList>("ParameterList", jlcxx::julia_type("AbstractDict", "Base"))
 ```
 
 The value returned by `add_type` also had a `dt()` method, useful in the case of template types:
