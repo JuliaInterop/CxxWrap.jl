@@ -5,6 +5,11 @@ module CppTypes
 
 using CxxWrap
 
+struct ImmutableBits
+  a::Float64
+  b::Float64
+end
+
 @wrapmodule(Main.libtypes)
 
 export enum_to_int, get_enum_b, World
@@ -18,8 +23,6 @@ for i in 1:1000000
 end
 
 # Default constructor
-@test CppTypes.World <: CxxWrap.CppAny
-@test supertype(CppTypes.World) == CxxWrap.CppAny
 w = CppTypes.World()
 println("Dumping type w...")
 dump(w)
@@ -127,3 +130,6 @@ CppTypes.print_foo_array(foovec)
 
 @test !isnull(CppTypes.return_ptr())
 @test isnull(CppTypes.return_null())
+
+imm = CppTypes.ImmutableBits(1.0, 2.0)
+@show CppTypes.increment_immutable(imm)
