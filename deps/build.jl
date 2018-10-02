@@ -29,6 +29,7 @@ elseif VERSION == v"1.0"
         Windows(:x86_64) => ("$bin_prefix/libcxxwrap-julia-1.0.v0.4.0.x86_64-w64-mingw32.tar.gz", "4973c3a406be02d0f76b6a9bcdd1680693683831ebab271d70be7e7ed3128b40"),
     )
 else
+    download_info = Dict()
     supported = false
 end
 
