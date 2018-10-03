@@ -21,7 +21,7 @@ if VERSION == v"0.7"
         Linux(:x86_64, :glibc) => ("$bin_prefix/libcxxwrap-julia-0.7.v0.4.0.x86_64-linux-gnu.tar.gz", "7dafd9db3dd898151ce54bf52ff5b6d7dc417a70fc88ac2594d73c53f284c461"),
         Windows(:x86_64) => ("$bin_prefix/libcxxwrap-julia-0.7.v0.4.0.x86_64-w64-mingw32.tar.gz", "e634a847567de9b3335281dad9d452f1dd6a1b4dc885740ea79463bde16de9e1"),
     )
-elseif VERSION == v"1.0"
+elseif VERSION >= v"1.0" && VERSION < v"1.1"
     download_info = Dict(
         Windows(:i686) => ("$bin_prefix/libcxxwrap-julia-1.0.v0.4.0.i686-w64-mingw32.tar.gz", "6c55c7ca0bc70c23a72b22eccbf8b1ff7edf222251ccbc1542ce07f7956f4b33"),
         MacOS(:x86_64) => ("$bin_prefix/libcxxwrap-julia-1.0.v0.4.0.x86_64-apple-darwin14.tar.gz", "39adc979fe8a5daaa11beabe55d93696bae9d143a68a68f4c115543640666bd9"),
