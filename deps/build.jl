@@ -26,9 +26,10 @@ download_info = Dict(
 
 # Install unsatisfied or updated dependencies:
 unsatisfied = any(!satisfied(p; verbose=verbose) for p in products)
+transform_platform(platform) = typeof(platform)(platform.arch;libc=platform.libc,call_abi=platform.call_abi,compiler_abi=CompilerABI(max(platform.compiler_abi.gcc_version,:gcc7),:cxx11))
+transform_platform(platform::MacOS) = MacOS(:x86_64)
 if JLCXX_DIR == ""
-    platform = platform_key_abi()
-    platform = typeof(platform)(platform.arch;libc=platform.libc,call_abi=platform.call_abi,compiler_abi=CompilerABI(max(platform.compiler_abi.gcc_version,:gcc7),:cxx11))
+    platform = transform_platform(platform_key_abi())
     if haskey(download_info, platform)
         if !supported
             error("Julia version $VERSION is not supported for binary download. Please build libcxxwrap-julia from source and set the JLCXX_DIR environment variable to the build dir or installation prefix.")
