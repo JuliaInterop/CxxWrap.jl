@@ -628,19 +628,6 @@ Here, `ExtendedTypes` is a name that matches the module name passed to `create_m
 
 It is also possible to replace the `@wrapmodule` call with a call to `@readmodule` and then separately call `@wraptypes` and `@wrapfunctions`. This allows using the types before the functions get called, which is useful for overloading the `argument_overloads` with types defined on the C++ side.
 
-## Linking with the C++ library
-The library (in [`deps/src/jlcxx`](deps/src/jlcxx)) is built using CMake, so it can be found from another CMake project using the following line in a `CMakeLists.txt`:
-
-```cmake
-find_package(CxxWrap)
-```
-The CMake variable `CxxWrap_DIR` should be set to the directory containing the `CxxWrapConfig.cmake`, typically `~/.julia/<Julia version>/CxxWrap/deps/usr/lib/cmake`. One can then link using:
-```cmake
-target_link_libraries(your_own_lib CxxWrap::jlcxx)
-```
-
-A complete `CMakeLists.txt` is at [`deps/src/examples/CMakeLists.txt`](deps/src/examples/CMakeLists.txt).
-
 ## Breaking changes for 0.7
 
 * `JULIA_CPP_MODULE_BEGIN` and `JULIA_CPP_MODULE_END` no longer exists, define a function with return type `JLCXX_MODULE` in the global namespace instead. By default, the Julia side expects this function to be named `define_julia_module`, but another name can be chosen and passed as a second argument to `@wrapmodule`.
