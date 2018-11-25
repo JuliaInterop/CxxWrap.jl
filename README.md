@@ -232,7 +232,7 @@ types.add_type<A>("A").method("message", &A::message);
 types.add_type<B>("B", jlcxx::julia_type<A>());
 ```
 
-The supertype is of type `jl_datatype_t*` and using the template variant of `jlcxx::julia_type` looks up the corresponding type here. There is also a variant taking a string for the type name and an optional Julia module name as second argument, which is useful for inheriting from a type defined in Julia, e.g:
+The supertype is of type `jl_datatype_t*` and using the template variant of `jlcxx::julia_type` looks up the corresponding type here. There is also a variant taking a string for the type name and an optional Julia module name as second argument, which is useful for inheriting from a type defined in Julia, e.g.:
 
 ```c++
 mod.add_type<Teuchos::ParameterList>("ParameterList", jlcxx::julia_type("AbstractDict", "Base"))
@@ -628,11 +628,11 @@ Here, `ExtendedTypes` is a name that matches the module name passed to `create_m
 
 It is also possible to replace the `@wrapmodule` call with a call to `@readmodule` and then separately call `@wraptypes` and `@wrapfunctions`. This allows using the types before the functions get called, which is useful for overloading the `argument_overloads` with types defined on the C++ side.
 
-## Breaking changes for 0.7
+## Breaking changes for CxxWrap 0.7
 
 * `JULIA_CPP_MODULE_BEGIN` and `JULIA_CPP_MODULE_END` no longer exists, define a function with return type `JLCXX_MODULE` in the global namespace instead. By default, the Julia side expects this function to be named `define_julia_module`, but another name can be chosen and passed as a second argument to `@wrapmodule`.
 
-* `wrap_modules` is removed, replace `wrap_modules(lib_file_path)` with
+* `wrap_modules` is removed, replace `wrap_modules(lib_file_path)` with:
   ```julia
   module Foo
     using CxxWrap
@@ -640,10 +640,9 @@ It is also possible to replace the `@wrapmodule` call with a call to `@readmodul
   end
   ```
 
-* `export_symbols` is removed, since all C++ modules are now wrapped in a corresponding module declared on the Julia side, so the regular Julia export
-statement can be used.
+* `export_symbols` is removed, since all C++ modules are now wrapped in a corresponding module declared on the Julia side, so the regular Julia export statement can be used.
 
-* `safe_cfunction` is now a macro, just like cfunction became a macro in Julia
+* `safe_cfunction` is now a macro, just like cfunction became a macro in Julia.
 
 * Precompilation: add this function after the `@wrapmodule` macro:
   ```julia
