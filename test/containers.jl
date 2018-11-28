@@ -36,3 +36,5 @@ println()
 mm .= 1.0
 @test Containers.check_mutable_array(mm)
 Containers.do_embedding_test()
+
+@test Containers.array_return() == ["hello", "world"]

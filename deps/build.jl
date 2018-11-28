@@ -5,7 +5,8 @@ const verbose = "--verbose" in ARGS
 const prefix = Prefix(JLCXX_DIR == "" ? get([a for a in ARGS if a != "--verbose"], 1, joinpath(@__DIR__, "usr")) : JLCXX_DIR)
 
 products = Product[
-    LibraryProduct(prefix, "libcxxwrap_julia", :libcxxwrap_julia)
+    LibraryProduct(prefix, "libcxxwrap_julia", :libcxxwrap_julia),
+    LibraryProduct(prefix, "libcxxwrap_julia_stl", :libcxxwrap_julia_stl)
 ]
 
 supported = true
