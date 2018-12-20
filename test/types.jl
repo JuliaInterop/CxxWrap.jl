@@ -133,3 +133,6 @@ CppTypes.print_foo_array(foovec)
 
 imm = CppTypes.ImmutableBits(1.0, 2.0)
 @show CppTypes.increment_immutable(imm)
+
+wvec = StdVector(CppTypes.World[w,byval])
+@show wvec

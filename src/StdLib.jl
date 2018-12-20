@@ -1,6 +1,6 @@
 module StdLib
 
-using CxxWrap
+using ..CxxWrap
 
 @wrapmodule(CxxWrap.libcxxwrap_julia_stl)
 
@@ -10,6 +10,12 @@ end
 
 function StdVector(v::Vector{T}) where {T}
   result = StdVector{T}()
+  append(result, v)
+  return result
+end
+
+function StdVector(v::Vector{T}) where {T<:AbstractString}
+  result = StdVector{AbstractString}()
   append(result, v)
   return result
 end
@@ -26,6 +32,8 @@ function Base.resize!(v::StdVector, n::Integer)
   resize(v, n)
   return v
 end
+
+Base.empty!(v::StdVector) = Base.resize!(v, 0)
 
 function Base.append!(v::StdVector, a::Vector)
   append(v, a)

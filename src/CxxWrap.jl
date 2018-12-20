@@ -129,7 +129,6 @@ mutable struct CppFunctionInfo
 end
 
 function __init__()
-  println("Initializing...")
   @static if Sys.iswindows()
     Libdl.dlopen(jlcxx_path, Libdl.RTLD_GLOBAL)
   end
