@@ -2,7 +2,7 @@ using BinaryProvider
 using CxxWrap
 
 products = Product[]
-for basename in ["jlcxx_containers", "except", "extended", "functions", "hello", "inheritance", "parametric", "types"]
+for basename in ["jlcxx_containers", "except", "extended", "functions", "hello", "inheritance", "parametric", "pointer_modification", "types"]
   fullname = "lib"*basename
   push!(products, LibraryProduct(CxxWrap.prefix(), fullname, Symbol(fullname)))
 end

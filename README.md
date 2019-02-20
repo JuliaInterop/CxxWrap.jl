@@ -167,6 +167,12 @@ types.add_type<World>("World")
   .constructor<const std::string&>(false);
 ```
 
+By default, a null "constructor" is also provided, allowing directly constructing an empty pointer:
+
+```julia
+w = nullptr(World)
+```
+
 The `add_type` function actually builds 3 Julia types related to World. The first is an abstract type:
 
 ```julia
@@ -400,8 +406,30 @@ The automatic overloading can be customized. For example, to allow passing an `I
 ```julia
 CxxWrap.argument_overloads(t::Type{UInt64}) = [Int64]
 ```
+## Pointers and references
 
-## Smart pointers
+Simple pointers and references are treated the same way, and wrapped in a struct with as a single member the pointer to the C++ object.
+
+### References to pointers
+A reference to a pointer allows changing the referred object, e.g.:
+
+```c++
+void writepointerref(MyData*& ptrref)
+{
+  delete ptrref;
+  ptrref = new MyData(30);
+}
+```
+
+is called from Julia as:
+```julia
+d = PtrModif.MyData()
+writepointerref(Ref(d))
+```
+
+Note that this modifies `d` itself, so `d` must be a `MyDataAllocated`. More details are in the `pointer_modification` example.
+
+### Smart pointers
 Currently, `std::shared_ptr`, `std::unique_ptr` and `std::weak_ptr` are supported transparently. Returning one of these pointer types will return an object inheriting from `SmartPointer{T}`:
 
 ```c++
@@ -423,7 +451,7 @@ Explicit dereferencing is also supported, using the `[]` operator:
 CppTypes.greet(swf[])
 ```
 
-### Adding a custom smart pointer
+#### Adding a custom smart pointer
 Suppose we have a "smart" pointer type defined as follows:
 ```c++
 template<typename T>

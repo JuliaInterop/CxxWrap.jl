@@ -3,7 +3,7 @@ module CxxWrap
 import BinaryProvider
 import Libdl
 
-export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx, load_module, ptrunion, CppEnum, ConstPtr, ConstArray, gcprotect, gcunprotect, isnull
+export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx, load_module, ptrunion, CppEnum, ConstPtr, ConstArray, gcprotect, gcunprotect, isnull, nullptr
 
 # Convert path if it contains lib prefix on windows
 function lib_path(so_path::AbstractString)
@@ -56,6 +56,8 @@ mutable struct SmartPointerWithDeref{T,PT} <: SmartPointer{T}
 end
 
 reference_type(t::Type) = Any
+__nullptr(t::Type) = error("Can't make a nullptr of type $t")
+nullptr(t::Type) = __nullptr(t)
 
 function __cxxwrap_smartptr_dereference(p::SmartPointerWithDeref{T,PT}) where {T,PT}
   error("Unimplemented smartptr_dereference function for $(typeof(p))")
@@ -345,7 +347,8 @@ function wrap_functions(functions, julia_mod)
     :cxxdowncast,
     :__cxxwrap_smartptr_dereference,
     :__cxxwrap_smartptr_construct_from_other,
-    :__cxxwrap_smartptr_cast_to_base
+    :__cxxwrap_smartptr_cast_to_base,
+    :__nullptr
   ])
 
   for func in functions
