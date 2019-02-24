@@ -41,5 +41,10 @@ let a = PtrModif.MyData(9), b = PtrModif.MyData(2)
   @test isnull(r)
 end
 
+let a = PtrModif.MyData(9), b = PtrModif.MyData(2)
+  (q,r) = PtrModif.prettydivrem(a,b)
+  @test PtrModif.value.((q,r)) == (4,1)
+end
+
 GC.gc()
 @test PtrModif.alive_count() == 0
