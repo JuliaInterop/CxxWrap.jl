@@ -4,7 +4,7 @@ using CxxWrap
 prefix() =  BinaryProvider.Prefix(dirname(dirname(CxxWrap.jlcxx_path)))
 
 products = Product[]
-for basename in ["jlcxx_containers", "except", "extended", "functions", "hello", "inheritance", "parametric", "pointer_modification", "types"]
+for basename in ["jlcxx_containers", "except", "extended", "functions", "hello", "immutable_types", "inheritance", "parametric", "pointer_modification", "types"]
   fullname = "lib"*basename
   push!(products, LibraryProduct(prefix(), fullname, Symbol(fullname)))
 end

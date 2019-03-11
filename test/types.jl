@@ -5,11 +5,6 @@ module CppTypes
 
 using CxxWrap
 
-struct ImmutableBits
-  a::Float64
-  b::Float64
-end
-
 @wrapmodule(Main.libtypes)
 
 export enum_to_int, get_enum_b, World

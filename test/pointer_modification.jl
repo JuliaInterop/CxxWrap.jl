@@ -48,3 +48,14 @@ end
 
 GC.gc()
 @test PtrModif.alive_count() == 0
+
+# Must be after the GC test, because BenchmarkTools keeps a reference to the value
+
+using BenchmarkTools
+
+let a = PtrModif.MyData(11)
+  println("value timing:")
+  @btime PtrModif.value($a)
+  println("return_arg timing:")
+  @btime PtrModif.return_arg($a)
+end
