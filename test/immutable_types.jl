@@ -43,20 +43,25 @@ using Test
 #   #@show ImmutableTypes.h(a)
 # end
 
-# let f = Float32(5.0)
-#   @show ImmutableTypes.twice_val(f) # == 10.0
-#   @show ImmutableTypes.twice_cref(f) # == 10.0
-#   @show ImmutableTypes.twice_ref(Ref(f)) # == 10.0
-#   @show ImmutableTypes.twice_cptr(f) # == 10.0
-#   @show ImmutableTypes.twice_ptr(f) # == 10.0
-# end
+let f = Float32(5.0)
+  @show ImmutableTypes.twice_val(f) # == 10.0
+  @show ImmutableTypes.twice_cref(f) # == 10.0
+  @show ImmutableTypes.twice_ref(Ref(f)) # == 10.0
+  # @show ImmutableTypes.twice_cptr(f) # == 10.0
+  # @show ImmutableTypes.twice_ptr(f) # == 10.0
+end
 
-println("start test")
-a = Vector{Int}()
-b = Vector{Int}()
-println("end test")
+let f = Ref(Float32(4.0))
+  ImmutableTypes.twice_ref_mut(f)
+  @show f[]
+end
 
-@show ImmutableTypes.arrtest()
-@show typeof(ImmutableTypes.arrtest())
+# println("start test")
+# a = Vector{Int}()
+# b = Vector{Int}()
+# println("end test")
 
-@show ImmutableTypes.make_immutable()
+# @show ImmutableTypes.arrtest()
+# @show typeof(ImmutableTypes.arrtest())
+
+# @show ImmutableTypes.make_immutable()

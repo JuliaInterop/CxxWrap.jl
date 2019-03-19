@@ -107,6 +107,10 @@ struct ConstPtr{T}
   ptr::Ptr{T}
 end
 
+struct ConstRef{T}
+  val::Ref{T}
+end
+
 struct ConstArray{T,N} <: AbstractArray{T,N}
   ptr::ConstPtr{T}
   size::NTuple{N,Int}
@@ -277,6 +281,7 @@ end
 
 map_julia_arg_type(t::Type) = Union{Base.invokelatest(smart_pointer_type,t),argument_overloads(t)...}
 map_julia_arg_type(a::Type{StrictlyTypedNumber{T}}) where {T} = T
+map_julia_arg_type(t::Type{ConstRef{T}}) where {T} = Union{map_julia_arg_type(T), t}
 
 # names excluded from julia type mapping
 const __excluded_names = Set([
@@ -285,6 +290,10 @@ const __excluded_names = Set([
       :__cxxwrap_smartptr_construct_from_other,
       :__cxxwrap_smartptr_cast_to_base
 ])
+
+# Convert value to the type in the first argument, taking into account the C++ type given in the last argument
+cxxconvert(::Type{T}, value, ::Type{T}) where{T} = Base.cconvert(T, value)
+cxxconvert(::Type{Ref{T}}, value, ::Type{ConstRef{T}}) where{T} = Ref(convert(T, value))
 
 # Build the expression to wrap the given function
 function build_function_expression(func::CppFunctionInfo, mod=nothing)
@@ -302,6 +311,7 @@ function build_function_expression(func::CppFunctionInfo, mod=nothing)
   map_c_arg_type(::Type{T}) where {T <: Tuple} = Any
   map_c_arg_type(::Type{ConstArray{T,N}}) where {T,N} = Any
   map_c_arg_type(::Type{T}) where {T <: SmartPointer} = Any
+  map_c_arg_type(::Type{ConstRef{T}}) where {T} = Ref{T}
 
   map_return_type(t) = map_c_arg_type(t)
   map_return_type(t::Type{Ref{T}}) where {T} = Ptr{T}
@@ -310,7 +320,7 @@ function build_function_expression(func::CppFunctionInfo, mod=nothing)
   c_arg_types = [map_c_arg_type(t) for t in func.reference_argument_types]
   return_type = map_return_type(func.return_type)
 
-  converted_args = ([:(Base.cconvert($t,$a)) for (t,a) in zip(func.reference_argument_types,argsymbols)]...,)
+  converted_args = ([:(CxxWrap.cxxconvert($ct,$a,$jt)) for (ct,a,jt) in zip(c_arg_types,argsymbols,argtypes)]...,)
 
   # Build the final call expression
   call_exp = nothing
@@ -339,6 +349,7 @@ function build_function_expression(func::CppFunctionInfo, mod=nothing)
 
   fname = mod === nothing ? func.name : (func.name,mod)
   function_expression = :($(make_func_declaration(fname, argmap(argtypes)))::$(func.return_type) = $call_exp)
+  @show function_expression
   return function_expression
 end
 
