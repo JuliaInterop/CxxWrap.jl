@@ -281,7 +281,8 @@ end
 
 map_julia_arg_type(t::Type) = Union{Base.invokelatest(smart_pointer_type,t),argument_overloads(t)...}
 map_julia_arg_type(a::Type{StrictlyTypedNumber{T}}) where {T} = T
-map_julia_arg_type(t::Type{ConstRef{T}}) where {T} = Union{map_julia_arg_type(T), t}
+map_julia_arg_type(t::Type{ConstRef{T}}) where {T} = Union{map_julia_arg_type(T), t, Array{T}, Ptr{T}, Ptr{Cvoid}}
+map_julia_arg_type(t::Type{Ref{T}}) where {T} = Union{t, Array{T}}
 
 # names excluded from julia type mapping
 const __excluded_names = Set([
@@ -294,6 +295,7 @@ const __excluded_names = Set([
 # Convert value to the type in the first argument, taking into account the C++ type given in the last argument
 cxxconvert(::Type{T}, value, ::Type{T}) where{T} = Base.cconvert(T, value)
 cxxconvert(::Type{Ref{T}}, value, ::Type{ConstRef{T}}) where{T} = Ref(convert(T, value))
+cxxconvert(::Type{Ref{T}}, value::Ptr, ::Type{ConstRef{T}}) where{T} = convert(Ptr{T}, value)
 
 # Build the expression to wrap the given function
 function build_function_expression(func::CppFunctionInfo, mod=nothing)

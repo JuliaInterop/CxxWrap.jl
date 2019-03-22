@@ -7,8 +7,8 @@ module ImmutableTypes
   end
 
   struct A
-    x :: Float64
-    y :: Float64
+    x :: Float32
+    y :: Float32
   end
 
   @wrapmodule libimmutable_types
@@ -37,23 +37,28 @@ using Test
 #   @test ImmutableTypes.increment_immutable(imm) == ImmutableTypes.ImmutableBits(2.0, 3.0)
 # end
 
-# let a = ImmutableTypes.A(2,3)
-#   @show ImmutableTypes.f(a)
-#   @show ImmutableTypes.g(a)
-#   #@show ImmutableTypes.h(a)
-# end
-
-let f = Float32(5.0)
-  @show ImmutableTypes.twice_val(f) # == 10.0
-  @show ImmutableTypes.twice_cref(f) # == 10.0
-  @show ImmutableTypes.twice_ref(Ref(f)) # == 10.0
-  # @show ImmutableTypes.twice_cptr(f) # == 10.0
-  # @show ImmutableTypes.twice_ptr(f) # == 10.0
+let a = ImmutableTypes.A(2,3)
+  @test ImmutableTypes.f(a) == 5.0
+  @test ImmutableTypes.g(a) == 5.0
+  @test ImmutableTypes.h(a) == 5.0
+  @test ImmutableTypes.h(C_NULL) == 0.0
 end
 
-let f = Ref(Float32(4.0))
+let f = Float32(5.0), a = [f]
+  @test ImmutableTypes.twice_val(f) == 10.0
+  @test ImmutableTypes.twice_cref(f) == 10.0
+  @test ImmutableTypes.twice_ref(Ref(f)) == 10.0
+  @test ImmutableTypes.twice_cptr(f) == 10.0
+  @test ImmutableTypes.twice_ptr(Ref(f)) == 10.0
+  @test ImmutableTypes.twice_ptr(pointer(a)) == 10.0
+  @test ImmutableTypes.twice_ptr(a) == 10.0
+  ImmutableTypes.twice_ptr_mut(a)
+  @test a[1] == 10.0
+end
+
+let f = Ref(Float32(2.0))
   ImmutableTypes.twice_ref_mut(f)
-  @show f[]
+  @test f[] == 4.0
 end
 
 # println("start test")
