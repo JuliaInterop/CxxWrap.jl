@@ -33,9 +33,9 @@ end
 using CxxWrap
 using Test
 
-# let imm = ImmutableTypes.ImmutableBits(1.0, 2.0)
-#   @test ImmutableTypes.increment_immutable(imm) == ImmutableTypes.ImmutableBits(2.0, 3.0)
-# end
+let imm = ImmutableTypes.ImmutableBits(1.0, 2.0)
+  @test ImmutableTypes.increment_immutable(imm) == ImmutableTypes.ImmutableBits(2.0, 3.0)
+end
 
 let a = ImmutableTypes.A(2,3)
   @test ImmutableTypes.f(a) == 5.0
@@ -59,6 +59,28 @@ end
 let f = Ref(Float32(2.0))
   ImmutableTypes.twice_ref_mut(f)
   @test f[] == 4.0
+end
+
+let a = Ref(ImmutableTypes.A(1,2))
+  b = ImmutableTypes.return_a_ptr(a)
+  @test a[].x == 2
+  @test a[].y == 3
+  @test unsafe_load(b) == a[]
+
+  b = ImmutableTypes.return_a_cptr(a)
+  @test a[].x == 3
+  @test a[].y == 4
+  @test unsafe_load(b) == a[]
+
+  b = ImmutableTypes.return_a_ref(a)
+  @test a[].x == 4
+  @test a[].y == 5
+  @test b[] == a[]
+
+  b = ImmutableTypes.return_a_cref(a)
+  @test a[].x == 5
+  @test a[].y == 6
+  @test b[] == a[]
 end
 
 # println("start test")
