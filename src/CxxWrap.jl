@@ -384,6 +384,10 @@ function readmodule(so_path::AbstractString, funcname, m::Module)
 end
 
 function wrapmodule(so_path::AbstractString, funcname, m::Module)
+  # Initialize the jlcxxwrap library from top-level user code, so that it will still
+  # be initialized for static compilation. (See:
+  #   https://github.com/JuliaInterop/libcxxwrap-julia/issues/24)
+  ccall((:initialize, jlcxx_path), Cvoid, (Any, Any), CxxWrap, CppFunctionInfo)
   readmodule(so_path, funcname, m)
   wraptypes(m)
   wrapfunctions(m)
