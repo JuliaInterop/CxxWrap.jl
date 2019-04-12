@@ -83,6 +83,11 @@ let a = Ref(BasicTypes.A(1,2))
   @test b[] == a[]
 end
 
+let s = "abc"
+  @test BasicTypes.strlen_cchar(s) == length(s)
+  @test BasicTypes.strlen_char(s) == length(s)
+end
+
 # println("start test")
 # a = Vector{Int}()
 # b = Vector{Int}()

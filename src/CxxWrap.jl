@@ -286,9 +286,13 @@ end
 map_julia_arg_type(t::Type) = Union{Base.invokelatest(smart_pointer_type,t),argument_overloads(t)...}
 map_julia_arg_type(a::Type{StrictlyTypedNumber{T}}) where {T} = T
 map_julia_arg_type(t::Type{ConstRef{T}}) where {T} = Union{map_julia_arg_type(T), Ref{T}, Array{T}}
-map_julia_arg_type(t::Type{ConstPtr{T}}) where {T} = Union{map_julia_arg_type(T), Ref{T}, Array{T}, Ptr{Cvoid}}
 map_julia_arg_type(t::Type{Ref{T}}) where {T} = Union{t, Array{T}}
-map_julia_arg_type(t::Type{Ptr{T}}) where {T} = Union{t, Array{T}, Ref{T}}
+_ptr_union(t::Type{Ptr{T}}) where {T} = Union{t, Array{T}, Ref{T}}
+_cptr_union(t::Type{ConstPtr{T}}) where {T} = Union{t, map_julia_arg_type(T), Ref{T}, Array{T}, Ptr{T}, Ptr{Cvoid}}
+map_julia_arg_type(t::Type{Ptr{T}}) where {T} = _ptr_union(t)
+map_julia_arg_type(t::Type{ConstPtr{T}}) where {T} = _cptr_union(t)
+map_julia_arg_type(t::Type{Ptr{UInt8}}) = Union{_ptr_union(t), String}
+map_julia_arg_type(t::Type{ConstPtr{UInt8}}) = Union{_cptr_union(t), String}
 
 # names excluded from julia type mapping
 const __excluded_names = Set([
@@ -303,7 +307,9 @@ cxxconvert(::Type{T}, value, ::Type{T}) where{T} = Base.cconvert(T, value)
 cxxconvert(::Type{Ref{T}}, value, ::Type{ConstRef{T}}) where{T} = Ref(convert(T, value))
 cxxconvert(::Type{Ref{T}}, value::Ptr, ::Type{ConstRef{T}}) where{T} = convert(Ptr{T}, value)
 cxxconvert(::Type{Ref{T}}, value, ::Type{ConstPtr{T}}) where{T} = Ref(convert(T, value))
+cxxconvert(::Type{Ref{T}}, value::Ref{T}, ::Type{ConstPtr{T}}) where{T} = value
 cxxconvert(::Type{Ref{T}}, value::Ptr, ::Type{ConstPtr{T}}) where{T} = convert(Ptr{T}, value)
+cxxconvert(::Type{Ptr{UInt8}}, value::String, ::Type{ConstPtr{UInt8}}) = value
 
 # Build the expression to wrap the given function
 function build_function_expression(func::CppFunctionInfo, mod=nothing)
@@ -323,6 +329,7 @@ function build_function_expression(func::CppFunctionInfo, mod=nothing)
   map_c_arg_type(::Type{T}) where {T <: SmartPointer} = Any
   map_c_arg_type(::Type{ConstRef{T}}) where {T} = Ref{T}
   map_c_arg_type(::Type{ConstPtr{T}}) where {T} = Ref{T}
+  map_c_arg_type(::Type{ConstPtr{UInt8}}) = Ptr{UInt8}
 
   # Builds the return type passed to ccall
   map_c_return_type(t) = t
