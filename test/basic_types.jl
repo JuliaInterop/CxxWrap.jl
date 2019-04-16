@@ -88,6 +88,10 @@ let s = "abc"
   @test BasicTypes.strlen_char(s) == length(s)
 end
 
+let s = BasicTypes.CppString("hello")
+  BasicTypes.print_str(s)
+end
+
 # println("start test")
 # a = Vector{Int}()
 # b = Vector{Int}()

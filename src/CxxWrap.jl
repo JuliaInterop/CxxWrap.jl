@@ -52,9 +52,7 @@ mutable struct SmartPointerWithDeref{T,PT} <: SmartPointer{T}
   ptr::Ptr{Cvoid}
 end
 
-reference_type(t::Type) = Any
-__nullptr(t::Type) = error("Can't make a nullptr of type $t")
-nullptr(t::Type) = __nullptr(t)
+box_type(t::Type) = Any
 
 function __cxxwrap_smartptr_dereference(p::SmartPointerWithDeref{T,PT}) where {T,PT}
   error("Unimplemented smartptr_dereference function for $(typeof(p))")
@@ -68,7 +66,7 @@ function __cxxwrap_smartptr_cast_to_base(p::SmartPointerWithDeref{T,PT}) where {
   error("Unimplemented smartptr_cast_to_base for type $(typeof(p))")
 end
 
-function Base.getindex(p::SmartPointerWithDeref{T,PT})::reference_type(T) where {T,PT}
+function Base.getindex(p::SmartPointerWithDeref{T,PT})::box_type(T) where {T,PT}
   return __cxxwrap_smartptr_dereference(p)
 end
 
@@ -206,12 +204,8 @@ function bind_constants(m::Module)
   ccall((:bind_module_constants, jlcxx_path), Cvoid, (Any,), m)
 end
 
-function reference_types(mod::Module)
-  ccall((:get_reference_types, jlcxx_path), Any, (Any,), mod)
-end
-
-function allocated_types(mod::Module)
-  ccall((:get_allocated_types, jlcxx_path), Any, (Any,), mod)
+function box_types(mod::Module)
+  ccall((:get_box_types, jlcxx_path), Any, (Any,), mod)
 end
 
 """
@@ -375,17 +369,16 @@ function build_function_expression(func::CppFunctionInfo, mod=nothing)
 end
 
 function wrap_reference_converters(julia_mod)
-  reftypes = reference_types(julia_mod)
-  alloctypes = allocated_types(julia_mod)
-  for (rt, at) in zip(reftypes, alloctypes)
-    st = supertype(at)
+  boxtypes = box_types(julia_mod)
+  for bt in boxtypes
+    st = supertype(bt)
     Core.eval(julia_mod, :(@inline CxxWrap.cpp_trait_type(::Type{<:$st}) = CxxWrap.IsCxxType))
-    Core.eval(julia_mod, :(Base.cconvert(::Type{$rt}, x::$rt) = x))
-    Core.eval(julia_mod, :(Base.cconvert(::Type{$rt}, x::$at) = unsafe_load(reinterpret(Ptr{$rt}, pointer_from_objref(x)))))
-    Core.eval(julia_mod, :(Base.cconvert(t::Type{$rt}, x::T) where {T <: $st} = Base.cconvert(t, $(cxxdowncast)(x))))
-    Core.eval(julia_mod, :(Base.cconvert(::Type{$rt}, x::$(SmartPointer{st})) = x[]))
-    Core.eval(julia_mod, :(Base.cconvert(t::Type{$rt}, x::$(SmartPointer){T}) where {T <: $st} = Base.cconvert(t, $(cxxdowncast)(x[]))))
-    Core.eval(julia_mod, :(CxxWrap.reference_type(::Type{$st}) = $rt))
+    #Core.eval(julia_mod, :(Base.cconvert(::Type{$bt}, x::$bt) = x))
+    #Core.eval(julia_mod, :(Base.cconvert(::Type{$rt}, x::$at) = unsafe_load(reinterpret(Ptr{$rt}, pointer_from_objref(x)))))
+    #Core.eval(julia_mod, :(Base.cconvert(t::Type{$rt}, x::T) where {T <: $st} = Base.cconvert(t, $(cxxdowncast)(x))))
+    #Core.eval(julia_mod, :(Base.cconvert(::Type{$rt}, x::$(SmartPointer{st})) = x[]))
+    #Core.eval(julia_mod, :(Base.cconvert(t::Type{$rt}, x::$(SmartPointer){T}) where {T <: $st} = Base.cconvert(t, $(cxxdowncast)(x[]))))
+    Core.eval(julia_mod, :(CxxWrap.box_type(::Type{$st}) = $bt))
   end
 end
 
