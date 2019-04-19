@@ -137,11 +137,9 @@ function __init__()
   end
 
   jlcxxversion = VersionNumber(unsafe_string(ccall((:version_string, jlcxx_path), Cstring, ())))
-  if jlcxxversion < v"0.5.0"
-    error("This version of CxxWrap requires at least libcxxwrap-julia v0.5.0, but version $jlcxxversion was found")
+  if jlcxxversion < v"0.5.3"
+    error("This version of CxxWrap requires at least libcxxwrap-julia v0.5.3, but version $jlcxxversion was found")
   end
-
-  ccall((:initialize, jlcxx_path), Cvoid, (Any, Any), CxxWrap, CppFunctionInfo)
 end
 
 function has_cxx_module(mod::Module)
@@ -149,11 +147,42 @@ function has_cxx_module(mod::Module)
   return r != 0
 end
 
+const _gc_protected = Dict{UInt64,Tuple{Any, Int}}()
+
+function protect_from_gc(x)
+  id = objectid(x)
+  (_,n) = get(_gc_protected, id, (x,0))
+  _gc_protected[id] = (x,n+1)
+  return
+end
+
+function unprotect_from_gc(x)
+  id = objectid(x)
+  (_,n) = get(_gc_protected, id, (x,0))
+  if n == 0
+    println("warning: attempt to unprotect non-protected object $x")
+  end
+  if n == 1
+    delete!(_gc_protected, id)
+  else
+    _gc_protected[id] = (x,n-1)
+  end
+  return
+end
+
+function initialize_cxx_lib()
+  _c_protect_from_gc = @cfunction protect_from_gc Nothing (Any,)
+  _c_unprotect_from_gc = @cfunction unprotect_from_gc Nothing (Any,)
+  ccall((:initialize, jlcxx_path), Cvoid, (Any, Any, Ptr{Cvoid}, Ptr{Cvoid}), @__MODULE__, CppFunctionInfo, _c_protect_from_gc, _c_unprotect_from_gc)
+end
+
 function register_julia_module(mod::Module, fptr::Ptr{Cvoid})
+  initialize_cxx_lib()
   ccall((:register_julia_module, jlcxx_path), Cvoid, (Any,Ptr{Cvoid}), mod, fptr)
 end
 
 function register_julia_module(mod::Module)
+  initialize_cxx_lib()
   fptr = Libdl.dlsym(Libdl.dlopen(mod.__cxxwrap_sopath), mod.__cxxwrap_wrapfunc)
   if !has_cxx_module(mod)
     empty!(mod.__cxxwrap_pointers)
@@ -184,14 +213,14 @@ end
 Protect a variable from garbage collection by adding it to the global array kept by CxxWrap
 """
 function gcprotect(x)
-  ccall((:gcprotect, jlcxx_path), Cvoid, (Any,), x)
+  protect_from_gc(x)
 end
 
 """
 Unprotect a variable from garbage collection by removing it from the global array kept by CxxWrap
 """
 function gcunprotect(x)
-  ccall((:gcunprotect, jlcxx_path), Cvoid, (Any,), x)
+  unprotect_from_gc(x)
 end
 
 # Interpreted as a constructor for Julia  > 0.5
