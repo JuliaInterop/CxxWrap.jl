@@ -89,7 +89,11 @@ let s = "abc"
 end
 
 let s = BasicTypes.CppString("hello")
-  BasicTypes.print_str(s)
+  @test BasicTypes.strlen_str(s) == 5
+  @test BasicTypes.strlen_strcref(s) == 5
+  @test BasicTypes.strlen_strref(Ref(s)) == 5
+  @test BasicTypes.strlen_strptr(Ref(s)) == 5
+  @test BasicTypes.strlen_strcptr(s) == 5
 end
 
 # println("start test")
