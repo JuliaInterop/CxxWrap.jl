@@ -96,12 +96,9 @@ let s = BasicTypes.CppString("hello")
   @test BasicTypes.strlen_strcptr(s) == 5
 end
 
-# println("start test")
-# a = Vector{Int}()
-# b = Vector{Int}()
-# println("end test")
-
-# @show BasicTypes.arrtest()
-# @show typeof(BasicTypes.arrtest())
-
-# @show BasicTypes.make_immutable()
+let s = BasicTypes.StringHolder("hello")
+  get_result(s) = unsafe_string(BasicTypes.c_str(s))
+  #@show get_result(BasicTypes.str_return_val(s))
+  #@show get_result(BasicTypes.str_return_cref(s))
+  BasicTypes.print_str(BasicTypes.str_return_val(s))
+end
