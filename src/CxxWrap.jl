@@ -1,6 +1,5 @@
 module CxxWrap
 
-import BinaryProvider
 import Libdl
 
 export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx, load_module, ptrunion, CppEnum, ConstPtr, ConstArray, gcprotect, gcunprotect, isnull, nullptr
@@ -24,8 +23,6 @@ if !isfile(depsfile)
 end
 include(depsfile)
 const jlcxx_path = libcxxwrap_julia
-
-prefix() =  BinaryProvider.Prefix(dirname(dirname(jlcxx_path)))
 
 # Trait type to indicate a type is a C++-wrapped type
 struct IsCxxType end
