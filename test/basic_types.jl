@@ -98,7 +98,7 @@ end
 
 let s = BasicTypes.StringHolder("hello")
   get_result(s) = unsafe_string(BasicTypes.c_str(s))
-  #@show get_result(BasicTypes.str_return_val(s))
+  @show get_result(BasicTypes.str_return_val(s))
+  @test get_result(BasicTypes.str_return_val(s)) == "hello"
   #@show get_result(BasicTypes.str_return_cref(s))
-  BasicTypes.print_str(BasicTypes.str_return_val(s))
 end

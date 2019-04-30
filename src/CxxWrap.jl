@@ -106,7 +106,7 @@ struct ConstPtr{T}
 end
 
 Base.unsafe_load(p::ConstPtr) = unsafe_load(p.ptr)
-Base.unsafe_string(p::ConstPtr) = unsafe_load(p.ptr)
+Base.unsafe_string(p::ConstPtr) = unsafe_string(p.ptr)
 
 struct ConstRef{T} <: Ref{T}
   val::Ref{T}
