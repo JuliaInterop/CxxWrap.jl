@@ -77,13 +77,13 @@ c_func_arf = @safe_cfunction(testf_arf, Float64, (Any,Any))
 CppTestFunctions.fn_clb(c_func_arf)
 CppTestFunctions.fn_clb2(testf_arf)
 
-function testf2(p::ConstPtr{Float64}, n_elems::Int)
+function testf2(p::ConstCxxPtr{Float64}, n_elems::Int)
   arr = ConstArray(p, n_elems)
   @test arr[1] == 1.0
   @test arr[2] == 2.0
   return
 end
-c_func2 = @safe_cfunction(testf2, Nothing, (ConstPtr{Float64},Int))
+c_func2 = @safe_cfunction(testf2, Nothing, (ConstCxxPtr{Float64},Int))
 CppTestFunctions.test_safe_cfunction3(c_func2)
 
 dref = Ref(0.0)

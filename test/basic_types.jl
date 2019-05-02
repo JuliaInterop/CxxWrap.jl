@@ -34,21 +34,21 @@ using CxxWrap
 using Test
 
 let imm = BasicTypes.ImmutableBits(1.0, 2.0)
-  @test BasicTypes.increment_immutable(imm) == BasicTypes.ImmutableBits(2.0, 3.0)
+  @test BasicTypes.increment_immutable(Ref(imm)) == BasicTypes.ImmutableBits(2.0, 3.0)
 end
 
 let a = BasicTypes.A(2,3)
   @test BasicTypes.f(a) == 5.0
-  @test BasicTypes.g(a) == 5.0
-  @test BasicTypes.h(a) == 5.0
+  @test BasicTypes.g(Ref(a)) == 5.0
+  @test BasicTypes.h(Ref(a)) == 5.0
   @test BasicTypes.h(C_NULL) == 0.0
 end
 
 let f = Float32(5.0), a = [f]
   @test BasicTypes.twice_val(f) == 10.0
-  @test BasicTypes.twice_cref(f) == 10.0
+  @test BasicTypes.twice_cref(Ref(f)) == 10.0
   @test BasicTypes.twice_ref(Ref(f)) == 10.0
-  @test BasicTypes.twice_cptr(f) == 10.0
+  @test BasicTypes.twice_cptr(Ref(f)) == 10.0
   @test BasicTypes.twice_ptr(Ref(f)) == 10.0
   @test BasicTypes.twice_ptr(pointer(a)) == 10.0
   @test BasicTypes.twice_ptr(a) == 10.0
@@ -91,14 +91,43 @@ end
 let s = BasicTypes.CppString("hello")
   @test BasicTypes.strlen_str(s) == 5
   @test BasicTypes.strlen_strcref(s) == 5
-  @test BasicTypes.strlen_strref(Ref(s)) == 5
-  @test BasicTypes.strlen_strptr(Ref(s)) == 5
+  @test BasicTypes.strlen_strref(s) == 5
+  @test BasicTypes.strlen_strptr(s) == 5
   @test BasicTypes.strlen_strcptr(s) == 5
 end
 
 let s = BasicTypes.StringHolder("hello")
+  # Check reference return values
   get_result(s) = unsafe_string(BasicTypes.c_str(s))
-  @show get_result(BasicTypes.str_return_val(s))
   @test get_result(BasicTypes.str_return_val(s)) == "hello"
-  #@show get_result(BasicTypes.str_return_cref(s))
+  @test get_result(BasicTypes.str_return_cref(s)) == "hello"
+  strref = BasicTypes.str_return_ref(s)
+  @test get_result(strref) == "hello"
+  strptr = BasicTypes.str_return_ptr(s)
+  @test get_result(strptr) == "hello"
+  @test get_result(BasicTypes.str_return_cptr(s)) == "hello"
+
+  # Modification through reference
+  BasicTypes.replace_str_val!(strref, "world")
+  @test get_result(strref) == "world"
+  @test get_result(strptr) == "world"
+  @test get_result(BasicTypes.str_return_val(s)) == "world"
+
+  # Modification through pointer
+  BasicTypes.replace_str_val!(strptr, "bye!")
+  @test get_result(strref) == "bye!"
+  @test get_result(strptr) == "bye!"
+  @test get_result(BasicTypes.str_return_val(s)) == "bye!"
+
+  # Modification through value
+  strval = BasicTypes.str_return_val(s)
+  BasicTypes.replace_str_val!(strval, "no really, bye!")
+  @test get_result(strval) == "no really, bye!"
+  @test get_result(strptr) == "bye!"
+
+  # Check that const is respected
+  strcref = BasicTypes.str_return_cref(s)
+  strcptr = BasicTypes.str_return_cptr(s)
+  @test_throws MethodError BasicTypes.replace_str_val!(strcref, "can't work")
+  @test_throws MethodError BasicTypes.replace_str_val!(strcptr, "can't work")
 end

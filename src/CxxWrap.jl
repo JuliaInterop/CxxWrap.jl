@@ -2,7 +2,7 @@ module CxxWrap
 
 import Libdl
 
-export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx, load_module, ptrunion, CppEnum, ConstPtr, ConstArray, gcprotect, gcunprotect, isnull, nullptr
+export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx, load_module, ptrunion, CppEnum, ConstCxxPtr, ConstArray, gcprotect, gcunprotect, isnull, nullptr
 
 # Convert path if it contains lib prefix on windows
 function lib_path(so_path::AbstractString)
@@ -101,25 +101,36 @@ struct StrictlyTypedNumber{NumberT}
 end
 Base.convert(::Type{StrictlyTypedNumber{NumberT}}, n::NumberT) where {NumberT} = StrictlyTypedNumber{NumberT}(n)
 
-struct ConstPtr{T}
+abstract type CxxBaseRef{T} <: Ref{T} end
+
+_wrapped_type(::Type{<:CxxBaseRef{T}}) where {T} = T
+
+struct CxxPtr{T} <: CxxBaseRef{T}
   ptr::Ptr{T}
 end
 
-Base.unsafe_load(p::ConstPtr) = unsafe_load(p.ptr)
-Base.unsafe_string(p::ConstPtr) = unsafe_string(p.ptr)
-
-struct ConstRef{T} <: Ref{T}
-  val::Ref{T}
+struct ConstCxxPtr{T} <: CxxBaseRef{T}
+  ptr::Ptr{T}
 end
 
-Base.getindex(r::CxxWrap.ConstRef) = r.val[]
+struct CxxRef{T} <: CxxBaseRef{T}
+  ptr::Ptr{T}
+end
+
+struct ConstCxxRef{T} <: CxxBaseRef{T}
+  ptr::Ptr{T}
+end
+
+Base.unsafe_load(p::CxxBaseRef) = unsafe_load(p.ptr)
+Base.unsafe_string(p::CxxBaseRef) = unsafe_string(p.ptr)
+Base.getindex(r::CxxBaseRef) = unsafe_load(r)
 
 struct ConstArray{T,N} <: AbstractArray{T,N}
-  ptr::ConstPtr{T}
+  ptr::ConstCxxPtr{T}
   size::NTuple{N,Int}
 end
 
-ConstArray(ptr::ConstPtr{T}, args::Vararg{Int,N}) where {T,N} = ConstArray{T,N}(ptr, (args...,))
+ConstArray(ptr::ConstCxxPtr{T}, args::Vararg{Int,N}) where {T,N} = ConstArray{T,N}(ptr, (args...,))
 
 Base.IndexStyle(::ConstArray) = IndexLinear()
 Base.size(arr::ConstArray) = arr.size
@@ -129,7 +140,6 @@ Base.getindex(arr::ConstArray, i::Integer) = unsafe_load(arr.ptr.ptr, i)
 mutable struct CppFunctionInfo
   name::Any
   argument_types::Array{Type,1}
-  reference_argument_types::Array{Type,1}
   return_type::Type
   function_pointer::Int
   thunk_pointer::Int
@@ -280,14 +290,24 @@ end
 
 map_julia_arg_type(t::Type) = Union{Base.invokelatest(smart_pointer_type,t),argument_overloads(t)...}
 map_julia_arg_type(a::Type{StrictlyTypedNumber{T}}) where {T} = T
-map_julia_arg_type(t::Type{ConstRef{T}}) where {T} = Union{map_julia_arg_type(T), Ref{T}, Array{T}}
-map_julia_arg_type(t::Type{Ref{T}}) where {T} = Union{t, Array{T}}
-_ptr_union(t::Type{Ptr{T}}) where {T} = Union{t, Array{T}, Ref{T}}
-_cptr_union(t::Type{ConstPtr{T}}) where {T} = Union{t, map_julia_arg_type(T), Ref{T}, Array{T}, Ptr{T}, Ptr{Cvoid}}
-map_julia_arg_type(t::Type{Ptr{T}}) where {T} = _ptr_union(t)
-map_julia_arg_type(t::Type{ConstPtr{T}}) where {T} = _cptr_union(t)
-map_julia_arg_type(t::Type{Ptr{UInt8}}) = Union{_ptr_union(t), String}
-map_julia_arg_type(t::Type{ConstPtr{UInt8}}) = Union{_cptr_union(t), String}
+
+const PtrTypes{T} = Union{CxxPtr{T}, Array{T}, CxxRef{T}, Base.RefValue{T}, Ptr{T}}
+const ConstPtrTypes{T} = Union{Ref{T}, Array{T}}
+
+map_julia_arg_type(t::Type{<:CxxBaseRef{T}}) where {T} = map_julia_arg_type(t, Base.invokelatest(cpp_trait_type, T))
+
+map_julia_arg_type(t::Type{ConstCxxRef{T}}, ::Type{IsNormalType}) where {T} = ConstPtrTypes{T}
+map_julia_arg_type(t::Type{ConstCxxPtr{T}}, ::Type{IsNormalType}) where {T} = Union{ConstPtrTypes{T},Ptr{Cvoid}}
+map_julia_arg_type(t::Type{CxxRef{T}}, ::Type{IsNormalType}) where {T} = PtrTypes{T}
+map_julia_arg_type(t::Type{CxxPtr{T}}, ::Type{IsNormalType}) where {T} = Union{PtrTypes{T},Ptr{Cvoid}}
+
+map_julia_arg_type(t::Type{ConstCxxRef{T}}, ::Type{IsCxxType}) where {T} = Union{T,CxxBaseRef{T}}
+map_julia_arg_type(t::Type{ConstCxxPtr{T}}, ::Type{IsCxxType}) where {T} = Union{T,CxxBaseRef{T},Ptr{Cvoid}}
+map_julia_arg_type(t::Type{CxxRef{T}}, ::Type{IsCxxType}) where {T} = Union{T,CxxRef{T},CxxPtr{T}}
+map_julia_arg_type(t::Type{CxxPtr{T}}, ::Type{IsCxxType}) where {T} = Union{T,CxxRef{T},CxxPtr{T},Ptr{Cvoid}}
+
+map_julia_arg_type(t::Type{CxxPtr{UInt8}}) = Union{PtrTypes{UInt8}, String}
+map_julia_arg_type(t::Type{ConstCxxPtr{UInt8}}) = Union{ConstPtrTypes{UInt8}, String}
 
 # names excluded from julia type mapping
 const __excluded_names = Set([
@@ -298,13 +318,20 @@ const __excluded_names = Set([
 ])
 
 # Convert value to the type in the first argument, taking into account the C++ type given in the last argument
-cxxconvert(::Type{T}, value, ::Type{T}) where{T} = Base.cconvert(T, value)
-cxxconvert(::Type{Ref{T}}, value, ::Type{ConstRef{T}}) where{T} = Ref(convert(T, value))
-cxxconvert(::Type{Ref{T}}, value::Ptr, ::Type{ConstRef{T}}) where{T} = convert(Ptr{T}, value)
-cxxconvert(::Type{Ref{T}}, value, ::Type{ConstPtr{T}}) where{T} = Ref(convert(T, value))
-cxxconvert(::Type{Ref{T}}, value::Ref{T}, ::Type{ConstPtr{T}}) where{T} = value
-cxxconvert(::Type{Ref{T}}, value::Ptr, ::Type{ConstPtr{T}}) where{T} = convert(Ptr{T}, value)
-cxxconvert(::Type{Ptr{UInt8}}, value::String, ::Type{ConstPtr{UInt8}}) = value
+cxxconvert(t::Type{T}, value::T) where {T} = value
+cxxconvert(t::Type{T}, value) where {T} = cxxconvert(t, value, cpp_trait_type(typeof(value)))
+cxxconvert(::Type{T}, value, ::Type{IsNormalType}) where {T} = Base.cconvert(T, value)
+cxxconvert(::Type{T}, value::T, ::Type{IsCxxType}) where {T} = value
+cxxconvert(::Type{ConstCxxRef{T}}, v::CxxBaseRef) where {T} = ConstCxxRef{T}(v.ptr)
+cxxconvert(::Type{ConstCxxPtr{T}}, v::CxxBaseRef) where {T} = ConstCxxPtr{T}(v.ptr)
+cxxconvert(::Type{CxxPtr{T}}, v::CxxRef) where {T} = CxxPtr{T}(v.ptr)
+cxxconvert(::Type{CxxRef{T}}, v::CxxPtr) where {T} = CxxRef{T}(v.ptr)
+function cxxconvert(t::Type{T}, value::Ref, ::Type{IsNormalType}) where {T <: CxxBaseRef}
+  WrappedT = _wrapped_type(t)
+  return t(Base.unsafe_convert(Ptr{WrappedT}, Base.cconvert(Ptr{WrappedT}, value)))
+end
+cxxconvert(t::Type{T}, value::Union{Array,String}, ::Type{IsNormalType}) where {T <: CxxBaseRef} = cxxconvert(t, pointer(value))
+cxxconvert(::Type{T}, value, ::Type{IsCxxType}) where {T <: CxxBaseRef} = T(value.cpp_object)
 
 # Build the expression to wrap the given function
 function build_function_expression(func::CppFunctionInfo, mod=nothing)
@@ -322,21 +349,18 @@ function build_function_expression(func::CppFunctionInfo, mod=nothing)
   map_c_arg_type(::Type{T}) where {T <: Tuple} = Any
   map_c_arg_type(::Type{ConstArray{T,N}}) where {T,N} = Any
   map_c_arg_type(::Type{T}) where {T <: SmartPointer} = Any
-  map_c_arg_type(::Type{ConstRef{T}}) where {T} = Ref{T}
-  map_c_arg_type(::Type{ConstPtr{T}}) where {T} = Ref{T}
-  map_c_arg_type(::Type{ConstPtr{UInt8}}) = Ptr{UInt8}
 
   # Builds the return type passed to ccall
   map_c_return_type(t) = t
 
   # Build the types for the ccall argument list
-  c_arg_types = [map_c_arg_type(t) for t in func.reference_argument_types]
+  c_arg_types = map_c_arg_type.(func.argument_types)
   c_return_type = map_c_return_type(func.return_type)
 
   # Builds the return-type annotation for the Julia function
   map_julia_return_type(t) = t
   
-  converted_args = ([:(CxxWrap.cxxconvert($ct,$a,$jt)) for (ct,a,jt) in zip(c_arg_types,argsymbols,argtypes)]...,)
+  converted_args = ([:(CxxWrap.cxxconvert($ct,$a)) for (ct,a) in zip(c_arg_types,argsymbols)]...,)
 
   # Build the final call expression
   call_exp = nothing
