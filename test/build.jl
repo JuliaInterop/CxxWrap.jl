@@ -1,7 +1,7 @@
 using BinaryProvider
 using CxxWrap
 
-prefix() =  BinaryProvider.Prefix(dirname(dirname(jlcxx_path)))
+prefix() =  BinaryProvider.Prefix(dirname(dirname(CxxWrap.jlcxx_path)))
 
 products = Product[]
 for basename in ["jlcxx_containers", "except", "extended", "functions", "hello", "inheritance", "parametric", "pointer_modification", "types"]
