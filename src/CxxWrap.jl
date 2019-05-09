@@ -533,8 +533,8 @@ isnull(::Type{IsCxxType}, x) = (x.cpp_object == C_NULL)
 
 include("StdLib.jl")
 
-using .StdLib: StdVector
+using .StdLib: StdVector, StdString, StdWString
 
-export StdVector
+export StdVector, StdString, StdWString
 
 end # module

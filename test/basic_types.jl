@@ -88,7 +88,7 @@ let s = "abc"
   @test BasicTypes.strlen_char(s) == length(s)
 end
 
-let s = BasicTypes.CppString("hello")
+let s = StdString("hello")
   @test BasicTypes.strlen_str(s) == 5
   @test BasicTypes.strlen_strcref(s) == 5
   @test BasicTypes.strlen_strref(s) == 5
