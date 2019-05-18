@@ -14,9 +14,9 @@ function StdVector(v::Vector{T}) where {T}
   return result
 end
 
-function StdVector(v::Vector{T}) where {T<:AbstractString}
-  result = StdVector{AbstractString}()
-  append(result, v)
+function StdVector(v::Vector{Bool})
+  result = StdVector{Cuchar}()
+  append(result, convert(Vector{Cuchar}, v))
   return result
 end
 
@@ -37,6 +37,11 @@ Base.empty!(v::StdVector) = Base.resize!(v, 0)
 
 function Base.append!(v::StdVector, a::Vector)
   append(v, a)
+  return v
+end
+
+function Base.append!(v::StdVector{Cuchar}, a::Vector{Bool})
+  append(v, convert(Vector{Cuchar}, a))
   return v
 end
 

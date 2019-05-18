@@ -33,15 +33,15 @@ end
 using CxxWrap
 using Test
 
-let imm = BasicTypes.ImmutableBits(1.0, 2.0)
-  @test BasicTypes.increment_immutable(Ref(imm)) == BasicTypes.ImmutableBits(2.0, 3.0)
-end
-
 let a = BasicTypes.A(2,3)
   @test BasicTypes.f(a) == 5.0
   @test BasicTypes.g(Ref(a)) == 5.0
   @test BasicTypes.h(Ref(a)) == 5.0
   @test BasicTypes.h(C_NULL) == 0.0
+end
+
+let imm = BasicTypes.ImmutableBits(1.0, 2.0)
+  @test BasicTypes.increment_immutable(Ref(imm)) == BasicTypes.ImmutableBits(2.0, 3.0)
 end
 
 let f = Float32(5.0), a = [f]
