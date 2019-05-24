@@ -1,6 +1,18 @@
 using CxxWrap
 using Test
 
+let s = StdString("test")
+  println("This prints a test string: ", s)
+  @test s == "test"
+end
+
+let s = "šČô_φ_привет_일보"
+  @show StdWString(s)
+  @test StdWString(s) == s
+end
+
+exit()
+
 stvec = StdVector(Int32[1,2,3])
 @test all(stvec .== [1,2,3])
 push!(stvec,1)

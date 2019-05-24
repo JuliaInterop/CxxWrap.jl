@@ -98,32 +98,31 @@ end
 
 let s = BasicTypes.StringHolder("hello")
   # Check reference return values
-  get_result(s) = unsafe_string(BasicTypes.c_str(s))
-  @test get_result(BasicTypes.str_return_val(s)) == "hello"
-  @test get_result(BasicTypes.str_return_cref(s)) == "hello"
+  @test BasicTypes.str_return_val(s) == "hello"
+  @test BasicTypes.str_return_cref(s)[] == "hello"
   strref = BasicTypes.str_return_ref(s)
-  @test get_result(strref) == "hello"
+  @test strref[] == "hello"
   strptr = BasicTypes.str_return_ptr(s)
-  @test get_result(strptr) == "hello"
-  @test get_result(BasicTypes.str_return_cptr(s)) == "hello"
+  @test strptr[] == "hello"
+  @test BasicTypes.str_return_cptr(s)[] == "hello"
 
   # Modification through reference
   BasicTypes.replace_str_val!(strref, "world")
-  @test get_result(strref) == "world"
-  @test get_result(strptr) == "world"
-  @test get_result(BasicTypes.str_return_val(s)) == "world"
+  @test strref[] == "world"
+  @test strptr[] == "world"
+  @test BasicTypes.str_return_val(s) == "world"
 
   # Modification through pointer
   BasicTypes.replace_str_val!(strptr, "bye!")
-  @test get_result(strref) == "bye!"
-  @test get_result(strptr) == "bye!"
-  @test get_result(BasicTypes.str_return_val(s)) == "bye!"
+  @test strref[] == "bye!"
+  @test strptr[] == "bye!"
+  @test BasicTypes.str_return_val(s) == "bye!"
 
   # Modification through value
   strval = BasicTypes.str_return_val(s)
   BasicTypes.replace_str_val!(strval, "no really, bye!")
-  @test get_result(strval) == "no really, bye!"
-  @test get_result(strptr) == "bye!"
+  @test strval == "no really, bye!"
+  @test strptr[] == "bye!"
 
   # Check that const is respected
   strcref = BasicTypes.str_return_cref(s)

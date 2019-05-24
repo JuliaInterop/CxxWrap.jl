@@ -53,6 +53,7 @@ mutable struct SmartPointerWithDeref{T,PT} <: SmartPointer{T}
 end
 
 box_type(t::Type) = Any
+wrap_pointer(t::Type, ::Any) = error("Unimplemented wrap_pointer for type $t")
 
 function __cxxwrap_smartptr_dereference(p::SmartPointerWithDeref{T,PT}) where {T,PT}
   error("Unimplemented smartptr_dereference function for $(typeof(p))")
@@ -119,7 +120,10 @@ struct ConstCxxRef{T} <: CxxBaseRef{T}
   cpp_object::Ptr{T}
 end
 
-Base.unsafe_load(p::CxxBaseRef) = unsafe_load(p.cpp_object)
+_deref(p::CxxBaseRef, ::Type) = unsafe_load(p.cpp_object)
+_deref(p::CxxBaseRef{T}, ::Type{IsCxxType}) where {T} = wrap_pointer(T, p.cpp_object)
+
+Base.unsafe_load(p::CxxBaseRef{T}) where {T} = _deref(p, cpp_trait_type(T))
 Base.unsafe_string(p::CxxBaseRef) = unsafe_string(p.cpp_object)
 Base.getindex(r::CxxBaseRef) = unsafe_load(r)
 
@@ -288,6 +292,7 @@ end
 
 map_julia_arg_type(t::Type) = Union{Base.invokelatest(smart_pointer_type,t),argument_overloads(t)...}
 map_julia_arg_type(a::Type{StrictlyTypedNumber{T}}) where {T} = T
+map_julia_arg_type(x::Type{<:Integer}) = Integer
 
 const PtrTypes{T} = Union{CxxPtr{T}, Array{T}, CxxRef{T}, Base.RefValue{T}, Ptr{T},T}
 const ConstPtrTypes{T} = Union{Ref{T}, Array{T}}
@@ -316,7 +321,7 @@ const __excluded_names = Set([
 ])
 
 Base.cconvert(to_type::Type{<:CxxBaseRef{T}}, x) where {T} = cxxconvert(to_type, x, cpp_trait_type(T))
-Base.cconvert(to_type::Type{<:CxxBaseRef}, v::CxxBaseRef) = to_type(v.cpp_object)
+Base.cconvert(to_type::Type{<:CxxBaseRef{T}}, v::CxxBaseRef) where {T} = to_type(v.cpp_object)
 Base.unsafe_convert(to_type::Type{<:CxxBaseRef}, v::Base.RefValue) = to_type(pointer_from_objref(v))
 
 cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x, ::Type{IsNormalType}) where {T} = Ref{T}(convert(T,x))
@@ -378,7 +383,6 @@ function build_function_expression(func::CppFunctionInfo, mod=nothing)
 
   fname = mod === nothing ? func.name : (func.name,mod)
   function_expression = :($(make_func_declaration(fname, argmap(argtypes)))::$(map_julia_return_type(func.return_type)) = $call_exp)
-  @show function_expression
   return function_expression
 end
 
@@ -393,6 +397,7 @@ function wrap_reference_converters(julia_mod)
     #Core.eval(julia_mod, :(Base.cconvert(::Type{$rt}, x::$(SmartPointer{st})) = x[]))
     #Core.eval(julia_mod, :(Base.cconvert(t::Type{$rt}, x::$(SmartPointer){T}) where {T <: $st} = Base.cconvert(t, $(cxxdowncast)(x[]))))
     Core.eval(julia_mod, :(CxxWrap.box_type(::Type{$st}) = $bt))
+    Core.eval(julia_mod, :(CxxWrap.wrap_pointer(::Type{$st}, p::Ptr) = ccall((:wrap_pointer, $jlcxx_path), $bt, (Ptr{Cvoid},), p)))
   end
 end
 
