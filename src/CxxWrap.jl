@@ -52,8 +52,8 @@ mutable struct SmartPointerWithDeref{T,PT} <: SmartPointer{T}
   ptr::Ptr{Cvoid}
 end
 
-box_type(t::Type) = Any
-wrap_pointer(t::Type, ::Any) = error("Unimplemented wrap_pointer for type $t")
+allocated_type(t::Type) = Any
+ref_type(t::Type) = Any
 
 function __cxxwrap_smartptr_dereference(p::SmartPointerWithDeref{T,PT}) where {T,PT}
   error("Unimplemented smartptr_dereference function for $(typeof(p))")
@@ -67,7 +67,7 @@ function __cxxwrap_smartptr_cast_to_base(p::SmartPointerWithDeref{T,PT}) where {
   error("Unimplemented smartptr_cast_to_base for type $(typeof(p))")
 end
 
-function Base.getindex(p::SmartPointerWithDeref{T,PT})::box_type(T) where {T,PT}
+function Base.getindex(p::SmartPointerWithDeref{T,PT})::allocated_type(T) where {T,PT}
   return __cxxwrap_smartptr_dereference(p)
 end
 
@@ -121,7 +121,7 @@ struct ConstCxxRef{T} <: CxxBaseRef{T}
 end
 
 _deref(p::CxxBaseRef, ::Type) = unsafe_load(p.cpp_object)
-_deref(p::CxxBaseRef{T}, ::Type{IsCxxType}) where {T} = wrap_pointer(T, p.cpp_object)
+_deref(p::CxxBaseRef{T}, ::Type{IsCxxType}) where {T} = ref_type(T)(p.cpp_object)
 
 Base.unsafe_load(p::CxxBaseRef{T}) where {T} = _deref(p, cpp_trait_type(T))
 Base.unsafe_string(p::CxxBaseRef) = unsafe_string(p.cpp_object)
@@ -396,8 +396,10 @@ function wrap_reference_converters(julia_mod)
     #Core.eval(julia_mod, :(Base.cconvert(t::Type{$rt}, x::T) where {T <: $st} = Base.cconvert(t, $(cxxdowncast)(x))))
     #Core.eval(julia_mod, :(Base.cconvert(::Type{$rt}, x::$(SmartPointer{st})) = x[]))
     #Core.eval(julia_mod, :(Base.cconvert(t::Type{$rt}, x::$(SmartPointer){T}) where {T <: $st} = Base.cconvert(t, $(cxxdowncast)(x[]))))
-    Core.eval(julia_mod, :(CxxWrap.box_type(::Type{$st}) = $bt))
-    Core.eval(julia_mod, :(CxxWrap.wrap_pointer(::Type{$st}, p::Ptr) = ccall((:wrap_pointer, $jlcxx_path), $bt, (Ptr{Cvoid},), p)))
+    refname = Symbol(st,"Ref")
+    Core.eval(julia_mod, :(CxxWrap.allocated_type(::Type{$st}) = $bt))
+    Core.eval(julia_mod, :(struct $refname <: $st cpp_object::Ptr{Cvoid} end))
+    Core.eval(julia_mod, :(CxxWrap.ref_type(::Type{$st}) = $refname))
   end
 end
 
