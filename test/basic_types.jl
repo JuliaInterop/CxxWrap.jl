@@ -35,6 +35,7 @@ using Test
 
 let a = BasicTypes.A(2,3)
   @test BasicTypes.f(a) == 5.0
+  @test BasicTypes.g(a) == 5.0
   @test BasicTypes.g(Ref(a)) == 5.0
   @test BasicTypes.h(Ref(a)) == 5.0
   @test BasicTypes.h(C_NULL) == 0.0

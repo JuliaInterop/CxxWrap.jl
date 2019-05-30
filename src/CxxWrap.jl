@@ -24,6 +24,66 @@ end
 include(depsfile)
 const jlcxx_path = libcxxwrap_julia
 
+# Welcome to the C/C++ integer type mess
+
+abstract type CxxSigned <: Signed end
+abstract type CxxUnsigned <: Unsigned end
+
+# long is a special case, because depending on the platform it overlaps with int or long long. See https://en.cppreference.com/w/cpp/language/types
+primitive type CxxLong <: CxxSigned 8*sizeof(Clong) end
+primitive type CxxULong <: CxxUnsigned 8*sizeof(Culong) end
+primitive type CxxBool <: CxxUnsigned 8*sizeof(Cuchar) end
+const CharSigning = supertype(Cchar) == Signed ? CxxSigned : CxxUnsigned
+primitive type CxxChar <: CharSigning 8*sizeof(Cchar) end
+primitive type CxxUChar <: CxxUnsigned 8*sizeof(Cuchar) end
+const WCharSigning = supertype(Cwchar_t) == Signed ? CxxSigned : CxxUnsigned
+primitive type CxxWchar <: WCharSigning 8*sizeof(Cwchar_t) end
+
+# This macro adds the fixed integer types described on https://en.cppreference.com/w/cpp/types/integer
+# Names are e.g. CxxInt32 or CxxUInt64
+macro add_int_types()
+  result = quote end
+  for signed in (Symbol(), :U)
+    super = signed == :U ? CxxUnsigned : CxxSigned
+    for nbits in (8,16,32,64)
+      push!(result.args, :(primitive type $(Symbol(:Cxx, signed, :Int, nbits)) <: $super $nbits end))
+    end
+  end
+  return result
+end
+@add_int_types
+
+# Get the equivalen Julia type for a Cxx integer type
+@generated julia_int_type(::Type{T}) where {T<:CxxSigned} = Symbol(:Int, 8*sizeof(T))
+@generated julia_int_type(::Type{T}) where {T<:CxxUnsigned} = Symbol(:UInt, 8*sizeof(T))
+
+# Conversion to and from the equivalent Julia type
+Base.convert(::Type{T}, x::Number) where {T<:Union{CxxSigned,CxxUnsigned}} = reinterpret(T, convert(julia_int_type(T), x))
+Base.convert(::Type{JT}, x::CT) where {JT<:Number,CT<:Union{CxxSigned,CxxUnsigned}} = convert(JT,reinterpret(julia_int_type(CT), x))
+
+function integer_typename(basename::Symbol,signed::Symbol,nbits,prefix=Symbol())
+  us_elem = signed == :Signed ? Symbol() : :U
+  return :($(Symbol(prefix,us_elem, basename,nbits)))
+end
+
+macro definefixedint(typename, signed, nbits)
+  equiv_type = integer_typename(:Int, signed, nbits)
+  esc(quote
+    primitive type $typename <: $signed $nbits end
+    Base.$equiv_type(x::$typename) = reinterpret($equiv_type, x)
+    $typename(x::$equiv_type) = reinterpret($typename, x)
+    Base.convert(::Type{$equiv_type}, x) = reinterpret($equiv_type, x)
+    #Base.convert(::Type{$typename}, x) = $typename(convert($equiv_type,x))
+  end)
+end
+
+
+macro definefixedint(signed, nbits)
+  return esc(:(@definefixedint($(integer_typename(:Int,signed,nbits,:Cxx)), $signed, $nbits)))
+end
+
+#@definefixedint(:Foo, Signed, 24)
+
 # Trait type to indicate a type is a C++-wrapped type
 struct IsCxxType end
 struct IsNormalType end
@@ -304,13 +364,18 @@ map_julia_arg_type(t::Type{ConstCxxPtr{T}}, ::Type{IsNormalType}) where {T} = Un
 map_julia_arg_type(t::Type{CxxRef{T}}, ::Type{IsNormalType}) where {T} = PtrTypes{T}
 map_julia_arg_type(t::Type{CxxPtr{T}}, ::Type{IsNormalType}) where {T} = Union{PtrTypes{T},Ptr{Cvoid}}
 
+map_julia_arg_type(t::Type{ConstCxxRef{T}}, ::Type{IsNormalType}) where {T<:Union{CxxSigned,CxxUnsigned}} = Union{ConstPtrTypes{julia_int_type(T)},map_julia_arg_type(T)}
+map_julia_arg_type(t::Type{ConstCxxPtr{T}}, ::Type{IsNormalType}) where {T<:Union{CxxSigned,CxxUnsigned}} = Union{ConstPtrTypes{julia_int_type(T)},Ptr{Cvoid}}
+map_julia_arg_type(t::Type{CxxRef{T}}, ::Type{IsNormalType}) where {T<:Union{CxxSigned,CxxUnsigned}} = PtrTypes{julia_int_type(T)}
+map_julia_arg_type(t::Type{CxxPtr{T}}, ::Type{IsNormalType}) where {T<:Union{CxxSigned,CxxUnsigned}} = Union{PtrTypes{julia_int_type(T)},Ptr{Cvoid}}
+
 map_julia_arg_type(t::Type{ConstCxxRef{T}}, ::Type{IsCxxType}) where {T} = Union{T,CxxBaseRef{T}}
 map_julia_arg_type(t::Type{ConstCxxPtr{T}}, ::Type{IsCxxType}) where {T} = Union{T,CxxBaseRef{T},Ptr{Cvoid}}
 map_julia_arg_type(t::Type{CxxRef{T}}, ::Type{IsCxxType}) where {T} = Union{T,CxxRef{T},CxxPtr{T}}
 map_julia_arg_type(t::Type{CxxPtr{T}}, ::Type{IsCxxType}) where {T} = Union{T,CxxRef{T},CxxPtr{T},Ptr{Cvoid}}
 
-map_julia_arg_type(t::Type{CxxPtr{UInt8}}) = Union{PtrTypes{UInt8}, String}
-map_julia_arg_type(t::Type{ConstCxxPtr{UInt8}}) = Union{ConstPtrTypes{UInt8}, String}
+map_julia_arg_type(t::Type{CxxPtr{CxxChar}}) = Union{PtrTypes{Cchar}, String}
+map_julia_arg_type(t::Type{ConstCxxPtr{CxxChar}}) = Union{ConstPtrTypes{Cchar}, String}
 
 # names excluded from julia type mapping
 const __excluded_names = Set([
@@ -346,16 +411,18 @@ function build_function_expression(func::CppFunctionInfo, mod=nothing)
   map_c_arg_type(::Type{T}) where {T <: Tuple} = Any
   map_c_arg_type(::Type{ConstArray{T,N}}) where {T,N} = Any
   map_c_arg_type(::Type{T}) where {T <: SmartPointer} = Any
+  map_c_arg_type(::Type{T}) where {T<:Union{CxxSigned,CxxUnsigned}} = julia_int_type(T)
 
   # Builds the return type passed to ccall
   map_c_return_type(t) = t
+  map_c_return_type(::Type{T}) where {T<:Union{CxxSigned,CxxUnsigned}} = map_c_arg_type(T)
 
   # Build the types for the ccall argument list
   c_arg_types = map_c_arg_type.(func.argument_types)
   c_return_type = map_c_return_type(func.return_type)
 
   # Builds the return-type annotation for the Julia function
-  map_julia_return_type(t) = t
+  map_julia_return_type(t) = map_c_return_type(t)
 
   # Build the final call expression
   call_exp = quote end
