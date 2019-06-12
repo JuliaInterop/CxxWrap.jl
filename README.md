@@ -679,3 +679,8 @@ It is also possible to replace the `@wrapmodule` call with a call to `@readmodul
   end
   ```
   
+## Breaking changes
+
+* No automatic conversion to Julia String
+* No automatic dereference of const ref
+* `ArrayRef` no longer supports boxed values

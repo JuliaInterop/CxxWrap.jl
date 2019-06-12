@@ -7,6 +7,8 @@ using CxxWrap
 
 @wrapmodule(Main.libtypes)
 
+const greet = getindex ∘ greet_cref
+
 export enum_to_int, get_enum_b, World
 export AConstRef, ReturnConstRef, value, CallOperator, ConstPtrConstruct
 
@@ -24,33 +26,33 @@ dump(w)
 @test CppTypes.greet(w) == "default hello"
 
 @show fw = CppTypes.world_factory()
-@test CppTypes.greet(fw) == "factory hello"
+@test CppTypes.greet(fw[]) == "factory hello"
 
-swf = CppTypes.shared_world_factory()
-@test CppTypes.greet_shared(swf) == "shared factory hello"
-@test CppTypes.greet_shared_const(swf) == "shared factory hello"
-@test CppTypes.greet(swf[]) == "shared factory hello" # Explicit dereference
-@test CppTypes.greet(swf) == "shared factory hello" # Automatic conversion
-swf2 = CppTypes.smart_world_factory()
-@test CppTypes.greet_smart(swf2) == "smart factory hello"
-@test CppTypes.greet_smart(swf) == "shared factory hello" # auto-convert between pointers
-@test CppTypes.greet(swf2[]) == "smart factory hello" # Explicit dereference
-@test CppTypes.greet(swf2) == "smart factory hello" # Automatic conversion
-@test CppTypes.greet_weak(swf) == "shared factory hello"
-@test_throws ErrorException CppTypes.greet_weak(swf2) == "shared factory hello"
+# swf = CppTypes.shared_world_factory()
+# @test CppTypes.greet_shared(swf) == "shared factory hello"
+# @test CppTypes.greet_shared_const(swf) == "shared factory hello"
+# @test CppTypes.greet(swf[]) == "shared factory hello" # Explicit dereference
+# @test CppTypes.greet(swf) == "shared factory hello" # Automatic conversion
+# swf2 = CppTypes.smart_world_factory()
+# @test CppTypes.greet_smart(swf2) == "smart factory hello"
+# @test CppTypes.greet_smart(swf) == "shared factory hello" # auto-convert between pointers
+# @test CppTypes.greet(swf2[]) == "smart factory hello" # Explicit dereference
+# @test CppTypes.greet(swf2) == "smart factory hello" # Automatic conversion
+# @test CppTypes.greet_weak(swf) == "shared factory hello"
+# @test_throws ErrorException CppTypes.greet_weak(swf2) == "shared factory hello"
 
-swfr = CppTypes.shared_world_ref()
-@test CppTypes.greet(swfr) == "shared factory hello ref"
-CppTypes.reset_shared_world!(swfr, "reset shared pointer")
-@test CppTypes.greet(swfr) == "reset shared pointer"
-CppTypes.reset_shared_world!(swfr, "shared factory hello ref")
+# swfr = CppTypes.shared_world_ref()
+# @test CppTypes.greet(swfr) == "shared factory hello ref"
+# CppTypes.reset_shared_world!(swfr, "reset shared pointer")
+# @test CppTypes.greet(swfr) == "reset shared pointer"
+# CppTypes.reset_shared_world!(swfr, "shared factory hello ref")
 
 @test CppTypes.greet(CppTypes.boxed_world_factory()) == "boxed world"
-@test CppTypes.greet(CppTypes.boxed_world_pointer_factory()) == "boxed world pointer"
+@test CppTypes.greet(CppTypes.boxed_world_pointer_factory()[]) == "boxed world pointer"
 @test CppTypes.greet(CppTypes.world_ref_factory()) == "reffed world"
 
-@show uwf = CppTypes.unique_world_factory()
-@test CppTypes.greet(uwf) == "unique factory hello"
+# @show uwf = CppTypes.unique_world_factory()
+# @test CppTypes.greet(uwf) == "unique factory hello"
 
 byval = CppTypes.world_by_value()
 @test CppTypes.greet(byval) == "world by value hello"
@@ -93,7 +95,7 @@ other_noncopyable = deepcopy(noncopyable)
 @test CppTypes.value(CppTypes.value(CppTypes.ReturnConstRef())) == 42
 
 wptr = CppTypes.World()
-@test CppTypes.greet(CppTypes.ConstPtrConstruct(wptr)) == "default hello"
+@test CppTypes.greet(CppTypes.ConstPtrConstruct(CxxPtr(wptr))) == "default hello"
 
 call_op = CppTypes.CallOperator()
 @test call_op() == 43
@@ -118,7 +120,7 @@ CppTypes.call_testype_function()
 @test CppTypes.EnumValA + CppTypes.EnumValB == CppTypes.EnumValB
 @test CppTypes.EnumValA | CppTypes.EnumValB == CppTypes.EnumValB
 
-foovec = Any[CppTypes.Foo("a", [1.0, 2.0, 3.0]), CppTypes.Foo("b", [11.0, 12.0, 13.0])] # Must be Any because of the boxing
+foovec = Any[CppTypes.Foo(StdWString("a"), [1.0, 2.0, 3.0]), CppTypes.Foo(StdWString("b"), [11.0, 12.0, 13.0])] # Must be Any because of the boxing
 @show CppTypes.name(foovec[1])
 @show CppTypes.data(foovec[1])
 CppTypes.print_foo_array(foovec)
@@ -126,8 +128,12 @@ CppTypes.print_foo_array(foovec)
 @test !isnull(CppTypes.return_ptr())
 @test isnull(CppTypes.return_null())
 
-imm = CppTypes.ImmutableBits(1.0, 2.0)
-@show CppTypes.increment_immutable(imm)
+warr1 = CppTypes.World[CppTypes.World("world$i") for i in 1:5]
+warr2 = [CppTypes.World("worldalloc$i") for i in 1:5]
+wvec1 = StdVector(warr1)
+wvec2 = StdVector(warr2)
 
-wvec = StdVector(CppTypes.World[w,byval])
-@show wvec
+for (i,(w1,w2)) in enumerate(zip(wvec1,wvec2))
+  @test CppTypes.greet(w1) == "world$i"
+  @test CppTypes.greet(w2) == "worldalloc$i"
+end

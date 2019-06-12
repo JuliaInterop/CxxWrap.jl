@@ -2,7 +2,9 @@ module CxxWrap
 
 import Libdl
 
-export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx, load_module, ptrunion, CppEnum, ConstCxxPtr, ConstArray, gcprotect, gcunprotect, isnull, nullptr
+export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx,
+ptrunion, CppEnum, ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,
+ConstArray, gcprotect, gcunprotect, isnull
 
 # Convert path if it contains lib prefix on windows
 function lib_path(so_path::AbstractString)
@@ -61,29 +63,6 @@ end
 Base.convert(::Type{T}, x::Number) where {T<:Union{CxxSigned,CxxUnsigned}} = reinterpret(T, convert(julia_int_type(T), x))
 Base.convert(::Type{JT}, x::CT) where {JT<:Number,CT<:Union{CxxSigned,CxxUnsigned}} = convert(JT,reinterpret(julia_int_type(CT), x))
 
-function integer_typename(basename::Symbol,signed::Symbol,nbits,prefix=Symbol())
-  us_elem = signed == :Signed ? Symbol() : :U
-  return :($(Symbol(prefix,us_elem, basename,nbits)))
-end
-
-macro definefixedint(typename, signed, nbits)
-  equiv_type = integer_typename(:Int, signed, nbits)
-  esc(quote
-    primitive type $typename <: $signed $nbits end
-    Base.$equiv_type(x::$typename) = reinterpret($equiv_type, x)
-    $typename(x::$equiv_type) = reinterpret($typename, x)
-    Base.convert(::Type{$equiv_type}, x) = reinterpret($equiv_type, x)
-    #Base.convert(::Type{$typename}, x) = $typename(convert($equiv_type,x))
-  end)
-end
-
-
-macro definefixedint(signed, nbits)
-  return esc(:(@definefixedint($(integer_typename(:Int,signed,nbits,:Cxx)), $signed, $nbits)))
-end
-
-#@definefixedint(:Foo, Signed, 24)
-
 # Trait type to indicate a type is a C++-wrapped type
 struct IsCxxType end
 struct IsNormalType end
@@ -113,7 +92,7 @@ mutable struct SmartPointerWithDeref{T,PT} <: SmartPointer{T}
 end
 
 allocated_type(t::Type) = Any
-ref_type(t::Type) = Any
+dereferenced_type(t::Type) = Any
 
 function __cxxwrap_smartptr_dereference(p::SmartPointerWithDeref{T,PT}) where {T,PT}
   error("Unimplemented smartptr_dereference function for $(typeof(p))")
@@ -180,8 +159,24 @@ struct ConstCxxRef{T} <: CxxBaseRef{T}
   cpp_object::Ptr{T}
 end
 
+_ref_type(::Type{RefT}, ::Type{<:CxxBaseRef{T}}) where {RefT,T} = _ref_type(RefT,T)
+_ref_type(::Type{RefT}, ::Type{T}) where {RefT,T} = _ref_type(RefT, T, cpp_trait_type(T))
+_ref_type(::Type{RefT}, ::Type{T}, ::Type) where {RefT,T} = error("Manual Cxx Reference creation is only for C++ types")
+function _ref_type(::Type{RefT}, ::Type{T}, ::Type{IsCxxType}) where {RefT,T}
+  if isconcretetype(T)
+    return RefT{supertype(T)}
+  end
+  return RefT{T}
+end
+_make_ref(::Type{RefT}, x::T) where {RefT,T} = _ref_type(RefT,T)(x.cpp_object)
+
+CxxPtr(x) = _make_ref(CxxPtr,x)
+ConstCxxPtr(x) = _make_ref(ConstCxxPtr,x)
+CxxRef(x) = _make_ref(CxxRef,x)
+ConstCxxRef(x) = _make_ref(ConstCxxRef,x)
+
 _deref(p::CxxBaseRef, ::Type) = unsafe_load(p.cpp_object)
-_deref(p::CxxBaseRef{T}, ::Type{IsCxxType}) where {T} = ref_type(T)(p.cpp_object)
+_deref(p::CxxBaseRef{T}, ::Type{IsCxxType}) where {T} = dereferenced_type(T)(p.cpp_object)
 
 Base.unsafe_load(p::CxxBaseRef{T}) where {T} = _deref(p, cpp_trait_type(T))
 Base.unsafe_string(p::CxxBaseRef) = unsafe_string(p.cpp_object)
@@ -205,6 +200,7 @@ mutable struct CppFunctionInfo
   return_type::Type
   function_pointer::Int
   thunk_pointer::Int
+  override_module::Union{Nothing,Module}
 end
 
 function __init__()
@@ -306,7 +302,7 @@ mutable struct CallOpOverload
 end
 
 process_fname(fn::Symbol) = fn
-process_fname(fn::Tuple{Symbol,Module}) = :($(Symbol(fn[2])).$(fn[1]))
+process_fname(fn::Tuple{Symbol,Module}) = :($(fn[2]).$(fn[1]))
 process_fname(fn::ConstructorFname) = :(::$(Type{fn._type}))
 function process_fname(fn::CallOpOverload)
   return :(arg1::$(fn._type))
@@ -369,10 +365,10 @@ map_julia_arg_type(t::Type{ConstCxxPtr{T}}, ::Type{IsNormalType}) where {T<:Unio
 map_julia_arg_type(t::Type{CxxRef{T}}, ::Type{IsNormalType}) where {T<:Union{CxxSigned,CxxUnsigned}} = PtrTypes{julia_int_type(T)}
 map_julia_arg_type(t::Type{CxxPtr{T}}, ::Type{IsNormalType}) where {T<:Union{CxxSigned,CxxUnsigned}} = Union{PtrTypes{julia_int_type(T)},Ptr{Cvoid}}
 
-map_julia_arg_type(t::Type{ConstCxxRef{T}}, ::Type{IsCxxType}) where {T} = Union{T,CxxBaseRef{T}}
-map_julia_arg_type(t::Type{ConstCxxPtr{T}}, ::Type{IsCxxType}) where {T} = Union{T,CxxBaseRef{T},Ptr{Cvoid}}
-map_julia_arg_type(t::Type{CxxRef{T}}, ::Type{IsCxxType}) where {T} = Union{T,CxxRef{T},CxxPtr{T}}
-map_julia_arg_type(t::Type{CxxPtr{T}}, ::Type{IsCxxType}) where {T} = Union{T,CxxRef{T},CxxPtr{T},Ptr{Cvoid}}
+map_julia_arg_type(t::Type{ConstCxxRef{T}}, ::Type{IsCxxType}) where {T} = Union{map_julia_arg_type(T),ConstCxxRef{<:T},CxxRef{<:T}}
+map_julia_arg_type(t::Type{ConstCxxPtr{T}}, ::Type{IsCxxType}) where {T} = Union{CxxPtr{<:T},ConstCxxPtr{<:T}, Ptr{Cvoid}}
+map_julia_arg_type(t::Type{CxxRef{T}}, ::Type{IsCxxType}) where {T} = Union{map_julia_arg_type(T),CxxRef{<:T}}
+map_julia_arg_type(t::Type{CxxPtr{T}}, ::Type{IsCxxType}) where {T} = Union{CxxPtr{<:T},Ptr{Cvoid}}
 
 map_julia_arg_type(t::Type{CxxPtr{CxxChar}}) = Union{PtrTypes{Cchar}, String}
 map_julia_arg_type(t::Type{ConstCxxPtr{CxxChar}}) = Union{ConstPtrTypes{Cchar}, String}
@@ -393,7 +389,8 @@ cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x, ::Type{IsNormalType}) where {T} = 
 cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x::Base.RefValue, ::Type{IsNormalType}) where {T} = x
 cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x::Ptr, ::Type{IsNormalType}) where {T} = to_type(x)
 cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x::Union{Array,String}, ::Type{IsNormalType}) where {T} = to_type(pointer(x))
-cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x, ::Type{IsCxxType}) where {T} = to_type(x.cpp_object)
+cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x, ::Type{IsCxxType}) where {T} = to_type(convert(T,x).cpp_object)
+cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x::CxxBaseRef, ::Type{IsCxxType}) where {T} = to_type(x.cpp_object)
 
 # Build the expression to wrap the given function
 function build_function_expression(func::CppFunctionInfo, mod=nothing)
@@ -463,10 +460,10 @@ function wrap_reference_converters(julia_mod)
     #Core.eval(julia_mod, :(Base.cconvert(t::Type{$rt}, x::T) where {T <: $st} = Base.cconvert(t, $(cxxdowncast)(x))))
     #Core.eval(julia_mod, :(Base.cconvert(::Type{$rt}, x::$(SmartPointer{st})) = x[]))
     #Core.eval(julia_mod, :(Base.cconvert(t::Type{$rt}, x::$(SmartPointer){T}) where {T <: $st} = Base.cconvert(t, $(cxxdowncast)(x[]))))
-    refname = Symbol(st,"Ref")
+    refname = Symbol(st,"Dereferenced")
     Core.eval(julia_mod, :(CxxWrap.allocated_type(::Type{$st}) = $bt))
     Core.eval(julia_mod, :(struct $refname <: $st cpp_object::Ptr{Cvoid} end))
-    Core.eval(julia_mod, :(CxxWrap.ref_type(::Type{$st}) = $refname))
+    Core.eval(julia_mod, :(CxxWrap.dereferenced_type(::Type{$st}) = $refname))
   end
 end
 
@@ -491,7 +488,9 @@ function wrap_functions(functions, julia_mod)
   ])
 
   for func in functions
-    if func.name ∈ basenames
+    if func.override_module != nothing
+      Core.eval(julia_mod, build_function_expression(func, func.override_module))
+    elseif func.name ∈ basenames
       Core.eval(julia_mod, build_function_expression(func, Base))
     elseif func.name ∈ cxxnames
       Core.eval(julia_mod, build_function_expression(func, CxxWrap))
@@ -588,11 +587,7 @@ macro safe_cfunction(f, rt, args)
   return esc(:(CxxWrap.SafeCFunction(@cfunction($f, $rt, $args), $rt, [$(args.args...)])))
 end
 
-wstring_to_julia(p::Ptr{Cwchar_t}, L::Int) = transcode(String, unsafe_wrap(Array, p, L))
-wstring_to_cpp(s::String) = transcode(Cwchar_t, s)
-
-isnull(x::T) where{T} = isnull(cpp_trait_type(T), x)
-isnull(::Type{IsCxxType}, x) = (x.cpp_object == C_NULL)
+isnull(x::CxxBaseRef) = (x.cpp_object == C_NULL)
 
 include("StdLib.jl")
 

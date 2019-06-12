@@ -47,7 +47,7 @@ end
 
 let f = Float32(5.0), a = [f]
   @test BasicTypes.twice_val(f) == 10.0
-  @test BasicTypes.twice_cref(Ref(f)) == 10.0
+  @test BasicTypes.twice_cref(f) == 10.0
   @test BasicTypes.twice_ref(Ref(f)) == 10.0
   @test BasicTypes.twice_cptr(Ref(f)) == 10.0
   @test BasicTypes.twice_ptr(Ref(f)) == 10.0
@@ -93,8 +93,8 @@ let s = StdString("hello")
   @test BasicTypes.strlen_str(s) == 5
   @test BasicTypes.strlen_strcref(s) == 5
   @test BasicTypes.strlen_strref(s) == 5
-  @test BasicTypes.strlen_strptr(s) == 5
-  @test BasicTypes.strlen_strcptr(s) == 5
+  @test BasicTypes.strlen_strptr(CxxPtr(s)) == 5
+  @test BasicTypes.strlen_strcptr(ConstCxxPtr(s)) == 5
 end
 
 let s = BasicTypes.StringHolder("hello")
@@ -114,7 +114,7 @@ let s = BasicTypes.StringHolder("hello")
   @test BasicTypes.str_return_val(s) == "world"
 
   # Modification through pointer
-  BasicTypes.replace_str_val!(strptr, "bye!")
+  BasicTypes.replace_str_val!(CxxRef(strptr), "bye!")
   @test strref[] == "bye!"
   @test strptr[] == "bye!"
   @test BasicTypes.str_return_val(s) == "bye!"
