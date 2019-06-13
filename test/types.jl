@@ -137,3 +137,5 @@ for (i,(w1,w2)) in enumerate(zip(wvec1,wvec2))
   @test CppTypes.greet(w1) == "world$i"
   @test CppTypes.greet(w2) == "worldalloc$i"
 end
+
+@test CppTypes.greet_vector(wvec1) == string(("world$i " for i in 1:5)...)[1:end-1]
