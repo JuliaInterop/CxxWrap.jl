@@ -84,56 +84,37 @@ Base class for smart pointers
 abstract type SmartPointer{T} end
 @inline cpp_trait_type(::Type{SmartPointer{T}}) where {T} = IsCxxType
 
-"""
-Concrete smart pointer implementation. PT is a hash for the pointer type.
-"""
-mutable struct SmartPointerWithDeref{T,PT} <: SmartPointer{T}
-  ptr::Ptr{Cvoid}
-end
-
 allocated_type(t::Type) = Any
 dereferenced_type(t::Type) = Any
 
-function __cxxwrap_smartptr_dereference(p::SmartPointerWithDeref{T,PT}) where {T,PT}
-  error("Unimplemented smartptr_dereference function for $(typeof(p))")
-end
+__cxxwrap_smartptr_dereference(p::SmartPointer{T}) where {T} = __cxxwrap_smartptr_dereference(CxxRef(p))
 
-function __cxxwrap_smartptr_construct_from_other(p::SmartPointerWithDeref{T,PT}) where {T,PT}
-  error("Unimplemented smartptr_construct_from_other for type $(typeof(p))")
-end
+__cxxwrap_smartptr_construct_from_other(t::Type{<:SmartPointer{T}}, p::SmartPointer{T}) where {T} = __cxxwrap_smartptr_construct_from_other(t,CxxRef(p))
 
-function __cxxwrap_smartptr_cast_to_base(p::SmartPointerWithDeref{T,PT}) where {T,PT}
+function __cxxwrap_smartptr_cast_to_base(p::SmartPointer{T}) where {T}
   error("Unimplemented smartptr_cast_to_base for type $(typeof(p))")
 end
 
-function Base.getindex(p::SmartPointerWithDeref{T,PT})::allocated_type(T) where {T,PT}
+function Base.getindex(p::SmartPointer{T}) where {T}
   return __cxxwrap_smartptr_dereference(p)
 end
 
 # No conversion if source and target type are identical
-Base.convert(::Type{SmartPointerWithDeref{T,PT}}, p::SmartPointerWithDeref{T,PT}) where {T,PT} = p
+Base.convert(::Type{T}, p::T) where {T <: SmartPointer} = p
 
 # Construct from a related pointer, e.g. a std::weak_ptr from std::shared_ptr
-function Base.convert(::Type{SmartPointerWithDeref{T,PT1}}, p::SmartPointerWithDeref{T,PT2}) where {T,PT1,PT2}
-  __cxxwrap_smartptr_construct_from_other(p)
+function Base.convert(::Type{T1}, p::T2) where {T, T1 <: SmartPointer{T}, T2 <: SmartPointer{T}}
+  __cxxwrap_smartptr_construct_from_other(T1, p)
 end
 
-# Construct from a related pointer, downcasting the type to base class
-function Base.convert(t::Type{SmartPointerWithDeref{BaseT,PT1}}, p::SmartPointerWithDeref{DerivedT,PT2}) where {BaseT,DerivedT,PT1,PT2}
+# Downcast to base class
+function Base.convert(::Type{T1}, p::T2) where {BaseT,DerivedT, T1 <: SmartPointer{BaseT}, T2 <: SmartPointer{DerivedT}}
   if !(DerivedT <: BaseT)
     error("$DerivedT does not inherit from $BaseT in smart pointer convert")
   end
   # First convert to base type
   base_p = __cxxwrap_smartptr_cast_to_base(p)
-  return convert(t, base_p)
-end
-
-# Cast to base type enclosed in same pointer type
-function Base.convert(::Type{SmartPointerWithDeref{BaseT,PT}}, p::SmartPointerWithDeref{DerivedT,PT}) where {BaseT,DerivedT,PT}
-  if !(DerivedT <: BaseT)
-    error("$DerivedT does not inherit from $BaseT in smart pointer convert")
-  end
-  return convert(SmartPointerWithDeref{BaseT,PT}, __cxxwrap_smartptr_cast_to_base(p))
+  return convert(T1, base_p)
 end
 
 struct StrictlyTypedNumber{NumberT}
@@ -181,6 +162,9 @@ _deref(p::CxxBaseRef{T}, ::Type{IsCxxType}) where {T} = dereferenced_type(T)(p.c
 Base.unsafe_load(p::CxxBaseRef{T}) where {T} = _deref(p, cpp_trait_type(T))
 Base.unsafe_string(p::CxxBaseRef) = unsafe_string(p.cpp_object)
 Base.getindex(r::CxxBaseRef) = unsafe_load(r)
+
+Base.convert(::Type{RT}, p::SmartPointer{T}) where {T, RT <: CxxBaseRef{T}} = p[]
+Base.cconvert(::Type{RT}, p::SmartPointer{T}) where {T, RT <: CxxBaseRef{T}} = p[]
 
 struct ConstArray{T,N} <: AbstractArray{T,N}
   ptr::ConstCxxPtr{T}
@@ -341,7 +325,7 @@ smart_pointer_type(t::Type) = smart_pointer_type(cpp_trait_type(t), t)
 smart_pointer_type(::Type{IsNormalType}, t::Type) = t
 smart_pointer_type(::Type{IsCxxType}, x::Type{T}) where {T} = ptrunion(x)
 
-function smart_pointer_type(::Type{SmartPointerWithDeref{T,PT}}) where {T,PT}
+function smart_pointer_type(::Type{<:SmartPointer{T}}) where {T}
   result{T2 <: T} = SmartPointer{T2}
   return result
 end
@@ -383,6 +367,7 @@ const __excluded_names = Set([
 
 Base.cconvert(to_type::Type{<:CxxBaseRef{T}}, x) where {T} = cxxconvert(to_type, x, cpp_trait_type(T))
 Base.cconvert(to_type::Type{<:CxxBaseRef{T}}, v::CxxBaseRef) where {T} = to_type(v.cpp_object)
+Base.unsafe_convert(to_type::Type{<:CxxBaseRef{T}}, v::CxxBaseRef) where {T} = to_type(v.cpp_object)
 Base.unsafe_convert(to_type::Type{<:CxxBaseRef}, v::Base.RefValue) = to_type(pointer_from_objref(v))
 
 cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x, ::Type{IsNormalType}) where {T} = Ref{T}(convert(T,x))
@@ -479,21 +464,11 @@ function wrap_functions(functions, julia_mod)
     :(==)
   ])
 
-  cxxnames = Set([
-    :cxxdowncast,
-    :__cxxwrap_smartptr_dereference,
-    :__cxxwrap_smartptr_construct_from_other,
-    :__cxxwrap_smartptr_cast_to_base,
-    :__nullptr
-  ])
-
   for func in functions
     if func.override_module != nothing
       Core.eval(julia_mod, build_function_expression(func, func.override_module))
     elseif func.name ∈ basenames
       Core.eval(julia_mod, build_function_expression(func, Base))
-    elseif func.name ∈ cxxnames
-      Core.eval(julia_mod, build_function_expression(func, CxxWrap))
     else
       Core.eval(julia_mod, build_function_expression(func))
     end

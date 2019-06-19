@@ -684,6 +684,7 @@ It is also possible to replace the `@wrapmodule` call with a call to `@readmodul
 * No automatic conversion to Julia String
 * No automatic dereference of const ref
 * `ArrayRef` no longer supports boxed values
+* Custom smart pointer: use `jlcxx::add_smart_pointer<MySmartPointer>(module, "MySmartPointer")`
 
 ### New features
 * STL support: std::vector, use `jlcxx::stl::apply_stl<World>(mod);` for manually adding types to module `mod`.

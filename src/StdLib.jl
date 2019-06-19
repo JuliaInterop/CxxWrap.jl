@@ -87,5 +87,6 @@ end
 
 # Make sure functions taking a C++ string as argument can also take a Julia string
 CxxWrap.map_julia_arg_type(x::Type{<:StdString}) = AbstractString
+Base.convert(::Type{T}, x::String) where {T<:StdString} = StdString(x)
 
 end
