@@ -9,6 +9,7 @@ end
 let s = "šČô_φ_привет_일보"
   @show StdWString(s)
   @test StdWString(s) == s
+  @test String(StdWString(s)) == s
 end
 
 exit()

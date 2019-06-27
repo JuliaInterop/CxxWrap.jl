@@ -5,7 +5,12 @@ const functions_lib_path = libfunctions
 
 # Wrap the functions defined in C++
 module CppHalfFunctions Main.@wrapmodule(Main.functions_lib_path, :init_half_module) end
-module CppTestFunctions Main.@wrapmodule(Main.functions_lib_path, :init_test_module) end
+module CppTestFunctions
+
+using CxxWrap
+@wrapmodule(Main.functions_lib_path, :init_test_module)
+
+end
 
 # Test functions from the CppHalfFunctions module
 @test CppHalfFunctions.half_d(3) == 1.5
@@ -56,19 +61,51 @@ gcunprotect(a)
 @test length(protect_container) == start_len + 1
 
 @test CppTestFunctions.test_julia_call(1.,2.) == 2
-@test CppTestFunctions.test_string_array(["first", "second"])
+str_arr = StdString["first", "second"]
+@test CppTestFunctions.test_string_array(CxxRef.(str_arr))
 darr = [1.,2.]
 CppTestFunctions.test_append_array!(darr)
 @test darr == [1.,2.,3.]
 
 testf(x,y) = x+y
-@show c_func = @safe_cfunction(testf, Float64, (Float64,Float64))
+c_func = @safe_cfunction(testf, Float64, (Float64,Float64))
 CppTestFunctions.test_safe_cfunction(c_func)
 CppTestFunctions.test_safe_cfunction2(c_func)
 
-function testf_arf(v::Vector{Float64}, s::String)
+function byval_cb(n::CppTestFunctions.BoxedNumber, result::Ref{Int32})
+  result[] = CppTestFunctions.getnumber(n)
+end
+
+function byref_cb(n::CxxRef{CppTestFunctions.BoxedNumber}, result::Ref{Int32})
+  result[] = CppTestFunctions.getnumber(n)
+end
+
+function byptr_cb(n::CxxPtr{CppTestFunctions.BoxedNumber}, result::Ref{Int32})
+  result[] = CppTestFunctions.getnumber(n[])
+end
+
+let boxed_num_val = Ref{Int32}(0)
+  CppTestFunctions.callback_byval(byval_cb, boxed_num_val)
+  GC.gc()
+  @test boxed_num_val[] == 1
+  @test CppTestFunctions.boxednumber_nb_created() == 3
+  @test CppTestFunctions.boxednumber_nb_deleted() == 3
+
+  CppTestFunctions.callback_byref(byref_cb, boxed_num_val)
+  @test boxed_num_val[] == 2
+  @test CppTestFunctions.boxednumber_nb_created() == 4
+  @test CppTestFunctions.boxednumber_nb_deleted() == 4
+
+  CppTestFunctions.callback_byptr(byptr_cb, boxed_num_val)
+  @test boxed_num_val[] == 3
+  @test CppTestFunctions.boxednumber_nb_created() == 5
+  @test CppTestFunctions.boxednumber_nb_deleted() == 5
+end
+
+function testf_arf(v::Vector{Float64}, s::AbstractString)
   r = sum(v)
-  printstyled("callback in Julia: $(s) = $(r)\n", color=:green)
+  GC.gc()
+  printstyled("callback in Julia: $s = $r\n", color=:green)
   return r
 end
 
@@ -92,22 +129,19 @@ CppTestFunctions.test_double_ref(dref)
 
 @test CppTestFunctions.get_test_double() == 0.0
 cppdref = CppTestFunctions.get_test_double_ref()
-@test unsafe_load(cppdref) == 0.0
-unsafe_store!(cppdref, 1.0)
+@test cppdref[] == 0.0
+cppdref[] = 1.0
 @test CppTestFunctions.get_test_double() == 1.0
 
 @test CppTestFunctions.test_const_string_return() == "test"
 @test CppTestFunctions.test_datatype_conversion(Float64) == Float64
 
-@test typeof(CppTestFunctions.test_double_pointer()) == Ptr{Float64}
+@test typeof(CppTestFunctions.test_double_pointer()) == CxxPtr{Float64}
 @test CppTestFunctions.test_double_pointer() == C_NULL
-@test typeof(CppTestFunctions.test_double2_pointer()) == Ptr{Ptr{Float64}}
+@test typeof(CppTestFunctions.test_double2_pointer()) == CxxPtr{CxxPtr{Float64}}
 @test CppTestFunctions.test_double2_pointer() == C_NULL
-@test typeof(CppTestFunctions.test_double3_pointer()) == Ptr{Ptr{Ptr{Float64}}}
+@test typeof(CppTestFunctions.test_double3_pointer()) == CxxPtr{CxxPtr{CxxPtr{Float64}}}
 @test CppTestFunctions.test_double3_pointer() == C_NULL
-
-@test CppTestFunctions.test_wstring_to_julia() == "šČô_φ_привет_일보"
-@test CppTestFunctions.test_wstring_to_cpp("šČô_φ_привет_일보")
 
 @test CppTestFunctions.real_part(2.0 + 1.0*im) == 2.0
 @test CppTestFunctions.imag_part(2.0 + 1.0*im) == 1.0

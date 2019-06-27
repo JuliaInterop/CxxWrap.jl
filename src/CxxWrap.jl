@@ -156,12 +156,21 @@ ConstCxxPtr(x) = _make_ref(ConstCxxPtr,x)
 CxxRef(x) = _make_ref(CxxRef,x)
 ConstCxxRef(x) = _make_ref(ConstCxxRef,x)
 
+Base.:(==)(a::CxxBaseRef, b::CxxBaseRef) = (a.cpp_object == b.cpp_object)
+Base.:(==)(a::CxxBaseRef, b::Ptr) = (a.cpp_object == b)
+Base.:(==)(a::Ptr, b::CxxBaseRef) = (b == a)
+
 _deref(p::CxxBaseRef, ::Type) = unsafe_load(p.cpp_object)
 _deref(p::CxxBaseRef{T}, ::Type{IsCxxType}) where {T} = dereferenced_type(T)(p.cpp_object)
+
+_store_to_cxxptr(::Any,::Any,::Type) = error("Resetting the value to a C++ pointer or reference is only supported for non-wrapped types")
+_store_to_cxxptr(r::Union{ConstCxxPtr{T},ConstCxxRef{T}}, x::T, ::Type{IsNormalType}) where {T} = error("Setting the value of a const reference or pointer is not allowed")
+_store_to_cxxptr(r::Union{CxxPtr{T},CxxRef{T}}, x::T, ::Type{IsNormalType}) where {T} = unsafe_store!(r.cpp_object, x)
 
 Base.unsafe_load(p::CxxBaseRef{T}) where {T} = _deref(p, cpp_trait_type(T))
 Base.unsafe_string(p::CxxBaseRef) = unsafe_string(p.cpp_object)
 Base.getindex(r::CxxBaseRef) = unsafe_load(r)
+Base.setindex!(r::CxxBaseRef{T}, x::T) where {T}  = _store_to_cxxptr(r, x, cpp_trait_type(T))
 
 Base.convert(::Type{RT}, p::SmartPointer{T}) where {T, RT <: CxxBaseRef{T}} = p[]
 Base.cconvert(::Type{RT}, p::SmartPointer{T}) where {T, RT <: CxxBaseRef{T}} = p[]
@@ -175,7 +184,7 @@ ConstArray(ptr::ConstCxxPtr{T}, args::Vararg{Int,N}) where {T,N} = ConstArray{T,
 
 Base.IndexStyle(::ConstArray) = IndexLinear()
 Base.size(arr::ConstArray) = arr.size
-Base.getindex(arr::ConstArray, i::Integer) = unsafe_load(arr.ptr.ptr, i)
+Base.getindex(arr::ConstArray, i::Integer) = unsafe_load(arr.ptr.cpp_object, i)
 
 # Encapsulate information about a function
 mutable struct CppFunctionInfo
@@ -405,6 +414,7 @@ function build_function_expression(func::CppFunctionInfo, mod=nothing)
 
   # Builds the return-type annotation for the Julia function
   map_julia_return_type(t) = map_c_return_type(t)
+  map_julia_return_type(::Type{CxxBool}) = Bool
 
   # Build the final call expression
   call_exp = quote end

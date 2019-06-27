@@ -685,6 +685,8 @@ It is also possible to replace the `@wrapmodule` call with a call to `@readmodul
 * No automatic dereference of const ref
 * `ArrayRef` no longer supports boxed values
 * Custom smart pointer: use `jlcxx::add_smart_pointer<MySmartPointer>(module, "MySmartPointer")`
+* `IsMirroredType` instead of `IsImmutable` and `IsBits`, added using map_type
+* `box` C++ function takes an explicit template argument
 
 ### New features
 * STL support: std::vector, use `jlcxx::stl::apply_stl<World>(mod);` for manually adding types to module `mod`.
