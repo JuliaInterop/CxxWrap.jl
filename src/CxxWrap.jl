@@ -401,11 +401,12 @@ function build_function_expression(func::CppFunctionInfo, mod=nothing)
   map_c_arg_type(::Type{Type}) = Any
   map_c_arg_type(::Type{T}) where {T <: Tuple} = Any
   map_c_arg_type(::Type{ConstArray{T,N}}) where {T,N} = Any
-  map_c_arg_type(::Type{T}) where {T <: SmartPointer} = Any
   map_c_arg_type(::Type{T}) where {T<:Union{CxxSigned,CxxUnsigned}} = julia_int_type(T)
 
   # Builds the return type passed to ccall
   map_c_return_type(t) = t
+  map_c_return_type(::Type{T}) where {T <: Tuple} = Any
+  map_c_return_type(::Type{ConstArray{T,N}}) where {T,N} = Any
   map_c_return_type(::Type{T}) where {T<:Union{CxxSigned,CxxUnsigned}} = map_c_arg_type(T)
 
   # Build the types for the ccall argument list
