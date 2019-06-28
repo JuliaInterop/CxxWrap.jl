@@ -3,8 +3,9 @@ module CxxWrap
 import Libdl
 
 export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx,
-ptrunion, CppEnum, ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,
-ConstArray, gcprotect, gcunprotect, isnull
+ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,
+CppEnum, ConstArray, CxxBool,
+ptrunion, gcprotect, gcunprotect, isnull
 
 # Convert path if it contains lib prefix on windows
 function lib_path(so_path::AbstractString)

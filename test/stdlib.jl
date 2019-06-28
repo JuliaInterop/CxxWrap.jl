@@ -12,8 +12,6 @@ let s = "šČô_φ_привет_일보"
   @test String(StdWString(s)) == s
 end
 
-exit()
-
 stvec = StdVector(Int32[1,2,3])
 @test all(stvec .== [1,2,3])
 push!(stvec,1)
@@ -32,11 +30,13 @@ bvec = StdVector([true, false, true])
 append!(bvec, [true])
 @test all(bvec .== [true, false, true, true])
 
-svec = StdVector(["one", "two", "three"])
+cxxstrings = StdString["one", "two", "three"]
+svec = StdVector(CxxRef.(cxxstrings))
 @test all(svec .== ["one", "two", "three"])
-push!(svec, "four")
+push!(svec, StdString("four"))
 @test all(svec .== ["one", "two", "three", "four"])
-append!(svec, ["five", "six"])
+cxxappstrings = StdString["five", "six"]
+append!(svec, CxxRef.(cxxappstrings))
 @test all(svec .== ["one", "two", "three", "four", "five", "six"])
 empty!(svec)
 @test isempty(svec)

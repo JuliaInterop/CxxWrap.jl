@@ -38,30 +38,28 @@ function StdWString(s::String)
   StdWString(char_arr, length(char_arr))
 end
 
-function _stdvector_ctor_dispatch(v::Vector{T}, ::Type) where {T}
+function StdVector(v::Vector{T}) where {T}
   result = StdVector{T}()
   append(result, v)
   return result
 end
 
-function _stdvector_ctor_dispatch(v::Vector{T}, ::Type{CxxWrap.IsCxxType}) where {T}
+function StdVector(v::Vector{CxxRef{T}}) where {T}
   result = isconcretetype(T) ? StdVector{supertype(T)}() : StdVector{T}()
   append(result, v)
   return result
 end
 
-function StdVector(v::Vector{T}) where {T}
-  return _stdvector_ctor_dispatch(v, CxxWrap.cpp_trait_type(T))
-end
-
 function StdVector(v::Vector{Bool})
-  result = StdVector{Cuchar}()
-  append(result, convert(Vector{Cuchar}, v))
+  result = StdVector{CxxBool}()
+  append(result, convert(Vector{CxxBool}, v))
   return result
 end
 
 Base.IndexStyle(::Type{<:StdVector}) = IndexLinear()
 Base.size(v::StdVector) = (Int(cppsize(v)),)
+Base.getindex(v::StdVector, i::Int) = cxxgetindex(v,i)[]
+Base.setindex!(v::StdVector{T}, val, i::Int) where {T} = cxxsetindex!(v, convert(T,val), i)
 
 function Base.push!(v::StdVector, x)
   push_back(v, x)
@@ -80,8 +78,8 @@ function Base.append!(v::StdVector, a::Vector)
   return v
 end
 
-function Base.append!(v::StdVector{Cuchar}, a::Vector{Bool})
-  append(v, convert(Vector{Cuchar}, a))
+function Base.append!(v::StdVector{CxxBool}, a::Vector{Bool})
+  append(v, convert(Vector{CxxBool}, a))
   return v
 end
 
