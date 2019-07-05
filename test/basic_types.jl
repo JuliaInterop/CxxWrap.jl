@@ -6,6 +6,11 @@ module BasicTypes
     b::Float64
   end
 
+  mutable struct MutableBits
+    a::Float64
+    b::Float64
+  end
+
   struct A
     x :: Float32
     y :: Float32
@@ -15,18 +20,6 @@ module BasicTypes
 
   function __init__()
     @initcxx
-  end
-
-  mutable struct MutableBits
-    a::Float64
-    b::Float64
-  end
-
-  function make_immutable()
-    result = ccall((:make_immutable,libbasic_types), MutableBits, ())
-    finalizer(result) do x
-      ccall((:print_final,libbasic_types), Cvoid, (MutableBits,), x)
-    end
   end
 end
 
@@ -130,4 +123,18 @@ let s = BasicTypes.StringHolder("hello")
   strcptr = BasicTypes.str_return_cptr(s)
   @test_throws MethodError BasicTypes.replace_str_val!(strcref, "can't work")
   @test_throws MethodError BasicTypes.replace_str_val!(strcptr, "can't work")
+end
+
+result = Ref(0.0)
+function test_boxed_struct(x)
+    result[] = x.a + x.b
+    return
+end
+
+let cfunc = @safe_cfunction(test_boxed_struct, Cvoid, (Any,))
+  BasicTypes.boxed_mirrored_type(cfunc)
+  @test result[] == 3.0
+
+  BasicTypes.boxed_mutable_mirrored_type(cfunc)
+  @test result[] == 5.0
 end

@@ -167,12 +167,6 @@ types.add_type<World>("World")
   .constructor<const std::string&>(false);
 ```
 
-By default, a null "constructor" is also provided, allowing directly constructing an empty pointer:
-
-```julia
-w = nullptr(World)
-```
-
 The `add_type` function actually builds 3 Julia types related to World. The first is an abstract type:
 
 ```julia
@@ -685,8 +679,16 @@ It is also possible to replace the `@wrapmodule` call with a call to `@readmodul
 * No automatic dereference of const ref
 * `ArrayRef` no longer supports boxed values
 * Custom smart pointer: use `jlcxx::add_smart_pointer<MySmartPointer>(module, "MySmartPointer")`
-* `IsMirroredType` instead of `IsImmutable` and `IsBits`, added using map_type
+* `IsMirroredType` instead of `IsImmutable` and `IsBits`, added using map_type. By default, `IsMirroredType` is true for trivial standard layout types, so if you want to wrap these normally
+(i.e. you get an unexpected error `Mirrored types (marked with IsMirroredType) can't be added using add_type, map them directly to a struct instead and use map_type`) then you have to explicitly disable the mirroring for that type:
+```c++
+template<> struct IsMirroredType<Foo> : std::false_type { };
+```
 * `box` C++ function takes an explicit template argument
+* Introduction of specific integer types, such as `CxxBool`, that map to the C++ equivalent (should be transparent except for template parameters)
+* Defining `SuperType` on the C++ side is now necessary for any kind of casting to base class, because the previous implementation was wrong in the case of multiple inheritance.
+* Use `Ref(CxxPtr(x))` for pointer or reference to pointer 
+* Use `CxxPtr{MyData}(C_NULL)` instead of `nullptr(MyData)`
 
 ### New features
 * STL support: std::vector, use `jlcxx::stl::apply_stl<World>(mod);` for manually adding types to module `mod`.

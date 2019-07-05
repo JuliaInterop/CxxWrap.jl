@@ -108,11 +108,11 @@ end
 
 function julia_test_func(data)
   println("a: ", data.a, ", b: ", data.b)
-  @test data.a == 2.
-  @test data.b == 3.
+  @test data.a == 2.0
+  @test data.b == 3.0
 end
 
-CppTypes.call_testype_function()
+CppTypes.call_testtype_function()
 
 @test CppTypes.enum_to_int(CppTypes.EnumValA) == 0
 @test CppTypes.enum_to_int(CppTypes.EnumValB) == 1

@@ -4,8 +4,12 @@ using ..CxxWrap
 
 abstract type CppBasicString <: AbstractString end
 
+# These are defined in C++, but the functions need to exist to add methods
 function append end
 function cppsize end
+function cxxgetindex end
+function cxxsetindex! end
+function push_back end
 function resize end
 
 @wrapmodule(CxxWrap.libcxxwrap_julia_stl)
@@ -39,6 +43,9 @@ function StdWString(s::String)
 end
 
 function StdVector(v::Vector{T}) where {T}
+  if (CxxWrap.cpp_trait_type(T) == CxxWrap.IsCxxType)
+    return StdVector(CxxRef.(v))
+  end
   result = StdVector{T}()
   append(result, v)
   return result
