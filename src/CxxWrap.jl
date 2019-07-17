@@ -4,7 +4,7 @@ import Libdl
 
 export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx,
 ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,
-CppEnum, ConstArray, CxxBool,
+CppEnum, ConstArray, CxxBool, CxxLong, CxxULong,
 ptrunion, gcprotect, gcunprotect, isnull
 
 # Convert path if it contains lib prefix on windows
@@ -65,6 +65,9 @@ to_julia_int(x::Union{CxxSigned,CxxUnsigned}) = reinterpret(julia_int_type(typeo
 # Conversion to and from the equivalent Julia type
 Base.convert(::Type{T}, x::Number) where {T<:Union{CxxSigned,CxxUnsigned}} = reinterpret(T, convert(julia_int_type(T), x))
 Base.convert(::Type{JT}, x::CT) where {JT<:Number,CT<:Union{CxxSigned,CxxUnsigned}} = convert(JT,reinterpret(julia_int_type(CT), x))
+
+# Convenience constructors
+(::Type{T})(x) where {T<:Union{CxxWrap.CxxSigned,CxxWrap.CxxUnsigned}} = convert(T,x)
 
 Base.flipsign(x::CxxLong, y::CxxLong) = reinterpret(CxxLong, flipsign(to_julia_int(x), to_julia_int(y)))
 
@@ -198,6 +201,12 @@ ConstArray(ptr::ConstCxxPtr{T}, args::Vararg{Int,N}) where {T,N} = ConstArray{T,
 Base.IndexStyle(::ConstArray) = IndexLinear()
 Base.size(arr::ConstArray) = arr.size
 Base.getindex(arr::ConstArray, i::Integer) = unsafe_load(arr.ptr.cpp_object, i)
+
+function __delete end
+function delete(x)
+  __delete(CxxPtr(x))
+  x.cpp_object = C_NULL
+end
 
 # Encapsulate information about a function
 mutable struct CppFunctionInfo

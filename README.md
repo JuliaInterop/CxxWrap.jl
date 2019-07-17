@@ -167,27 +167,23 @@ types.add_type<World>("World")
   .constructor<const std::string&>(false);
 ```
 
-The `add_type` function actually builds 3 Julia types related to World. The first is an abstract type:
+The `add_type` function actually builds two Julia types related to World. The first is an abstract type:
 
 ```julia
 abstract type World end
 ```
 
-The second is an immutable type (the "reference type") with the following structure:
+The second is a mutable type (the "allocated" or "boxed" type) with the following structure:
 
-```julia
-struct WorldRef <: World
-  cpp_object::Ptr{Cvoid}
-end
-```
-
-It is an immutable type to be able to refer to C++ values without needing to allocate. This also means there are no finalizers for this kind of type, which is why there is also an equivalent mutable type that is returned by constructors and has a finalize attached that calls `delete` in C++:
 
 ```julia
 mutable struct WorldAllocated <: World
   cpp_object::Ptr{Cvoid}
 end
 ```
+
+This type needs to be mutable, because it must have a finalizer attached to it that deletes the held
+C++ object.
 
 This means that the variable `w` in the above example is of concrete type `WorldAllocated` and letting it go out of scope may trigger the finalizer and delete the object. When calling a C++ constructor, it is the responsibility of the caller to manage the lifetime of the resulting variable.
 

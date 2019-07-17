@@ -138,3 +138,5 @@ let cfunc = @safe_cfunction(test_boxed_struct, Cvoid, (Any,))
   BasicTypes.boxed_mutable_mirrored_type(cfunc)
   @test result[] == 5.0
 end
+
+@test BasicTypes.test_for_each_type() == (sizeof(Float32) + sizeof(Float64))
