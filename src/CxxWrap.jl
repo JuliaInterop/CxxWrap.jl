@@ -128,18 +128,26 @@ abstract type CxxBaseRef{T} <: Ref{T} end
 
 struct CxxPtr{T} <: CxxBaseRef{T}
   cpp_object::Ptr{T}
+  CxxPtr{T}(x::Ptr) where {T} = new{T}(x)
+  CxxPtr{T}(x::CxxBaseRef) where {T} = new{T}(x.cpp_object)
 end
 
 struct ConstCxxPtr{T} <: CxxBaseRef{T}
   cpp_object::Ptr{T}
+  ConstCxxPtr{T}(x::Ptr) where {T} = new{T}(x)
+  ConstCxxPtr{T}(x::CxxBaseRef) where {T} = new{T}(x.cpp_object)
 end
 
 struct CxxRef{T} <: CxxBaseRef{T}
   cpp_object::Ptr{T}
+  CxxRef{T}(x::Ptr) where {T} = new{T}(x)
+  CxxRef{T}(x::CxxBaseRef) where {T} = new{T}(x.cpp_object)
 end
 
 struct ConstCxxRef{T} <: CxxBaseRef{T}
   cpp_object::Ptr{T}
+  ConstCxxRef{T}(x::Ptr) where {T} = new{T}(x)
+  ConstCxxRef{T}(x::CxxBaseRef) where {T} = new{T}(x.cpp_object)
 end
 
 _ref_type(::Type{RefT}, ::Type{<:CxxBaseRef{T}}) where {RefT,T} = _ref_type(RefT,T)

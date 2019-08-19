@@ -61,6 +61,9 @@ gcunprotect(a)
 @test length(protect_container) == start_len + 1
 
 @test CppTestFunctions.test_julia_call(1.,2.) == 2
+@test CppTestFunctions.test_julia_call_any(1) == 1
+@test CppTestFunctions.test_julia_call_any("Foo") == "Foo"
+@test CppTestFunctions.test_julia_call_any([1,2.0,"3"]) == [1,2.0,"3"]
 str_arr = StdString["first", "second"]
 @test CppTestFunctions.test_string_array(CxxRef.(str_arr))
 darr = [1.,2.]

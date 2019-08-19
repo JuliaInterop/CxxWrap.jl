@@ -28,13 +28,13 @@ append(v::StdVector{T}, a::Vector{<:T}) where {T} = _append_dispatch(v,a,CxxWrap
 Base.ncodeunits(s::CppBasicString)::Int = cppsize(s)
 Base.codeunit(s::StdString) = UInt8
 Base.codeunit(s::StdWString) = Cwchar_t == Int32 ? UInt32 : UInt16
-Base.codeunit(s::CppBasicString, i::Integer) = convert(Char, s[i])
+Base.codeunit(s::CppBasicString, i::Integer) = s[i]
 Base.isvalid(s::CppBasicString, i::Integer) = (0 < i <= ncodeunits(s))
 function Base.iterate(s::CppBasicString, i::Integer=1)
   if !isvalid(s,i)
     return nothing
   end
-  return(codeunit(s,i),i+1)
+  return(convert(Char,codeunit(s,i)),i+1)
 end
 
 function StdWString(s::String)
@@ -93,5 +93,7 @@ end
 # Make sure functions taking a C++ string as argument can also take a Julia string
 CxxWrap.map_julia_arg_type(x::Type{<:StdString}) = AbstractString
 Base.convert(::Type{T}, x::String) where {T<:StdString} = StdString(x)
+Base.cconvert(::Type{CxxWrap.ConstCxxRef{StdString}}, x::String) = StdString(x)
+Base.unsafe_convert(::Type{CxxWrap.ConstCxxRef{StdString}}, x::StdString) = ConstCxxRef(x)
 
 end
