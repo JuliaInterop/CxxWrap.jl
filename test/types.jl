@@ -139,3 +139,14 @@ for (i,(w1,w2)) in enumerate(zip(wvec1,wvec2))
 end
 
 @test CppTypes.greet_vector(wvec1) == string(("world$i " for i in 1:5)...)[1:end-1]
+
+a = [4.0]
+return_int() = Int32(3)
+return_ptr_double() = pointer(a)
+return_world() = CppTypes.World("returned_world")
+wptr = CppTypes.World("returned_world_ptr")
+wref = CppTypes.World("returned_world_ref")
+return_world_ptr() = CxxPtr(wptr)
+return_world_ref() = CxxRef(wref)
+
+@test CppTypes.test_unbox() == fill(true,7)
