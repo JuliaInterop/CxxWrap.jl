@@ -90,6 +90,8 @@ Base class for smart pointers
 abstract type SmartPointer{T} end
 @inline cpp_trait_type(::Type{SmartPointer{T}}) where {T} = IsCxxType
 
+Base.show(io::IO, x::SmartPointer) = print(io, "C++ smart pointer of type ", typeof(x))
+
 allocated_type(t::Type) = Any
 dereferenced_type(t::Type) = Any
 
