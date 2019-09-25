@@ -48,7 +48,7 @@ if JLCXX_DIR == ""
     end
 else
     if unsatisfied
-        error("The required libraries were found in the provided JLCXX_DIR directory $JLCXX_DIR")
+        error("The required libraries were not found in the provided JLCXX_DIR directory $JLCXX_DIR")
     end
 end
 

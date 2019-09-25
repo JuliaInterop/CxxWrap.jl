@@ -186,10 +186,11 @@ Base.setindex!(r::CxxBaseRef{T}, x::T) where {T}  = _store_to_cxxptr(r, x, cpp_t
 
 Base.convert(::Type{RT}, p::SmartPointer{T}) where {T, RT <: CxxBaseRef{T}} = p[]
 Base.cconvert(::Type{RT}, p::SmartPointer{T}) where {T, RT <: CxxBaseRef{T}} = p[]
-function Base.convert(::Type{T1}, p::T2) where {BaseT,DerivedT, T1 <: BaseT, T2 <: SmartPointer{DerivedT}}
+function Base.convert(::Type{T1}, p::SmartPointer{DerivedT}) where {BaseT,T1 <: BaseT, DerivedT <: BaseT}
   return cxxupcast(T1, p[])[]
 end
-function Base.convert(to_type::Type{<:CxxBaseRef{T1}}, p::T2) where {BaseT,DerivedT, T1 <: BaseT, T2 <: SmartPointer{DerivedT}}
+Base.convert(to_type::Type{Any}, x::CxxWrap.SmartPointer{DerivedT}) where {DerivedT} = x#error("Unexpected convert call from SmartPointer{$DerivedT} to $to_type")
+function Base.convert(to_type::Type{<:Ref{T1}}, p::T2) where {BaseT,DerivedT, T1 <: BaseT, T2 <: SmartPointer{DerivedT}}
   return to_type(convert(T1,p))
 end
 
@@ -234,8 +235,8 @@ function __init__()
   end
 
   jlcxxversion = VersionNumber(unsafe_string(ccall((:version_string, jlcxx_path), Cstring, ())))
-  if jlcxxversion < v"0.5.3"
-    error("This version of CxxWrap requires at least libcxxwrap-julia v0.5.3, but version $jlcxxversion was found")
+  if jlcxxversion < v"0.6"
+    error("This version of CxxWrap requires at least libcxxwrap-julia v0.6, but version $jlcxxversion was found")
   end
 end
 
