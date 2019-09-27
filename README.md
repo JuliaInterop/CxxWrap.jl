@@ -2,8 +2,6 @@
 
 [![Build Status](https://travis-ci.org/JuliaInterop/CxxWrap.jl.svg?branch=master)](https://travis-ci.org/JuliaInterop/CxxWrap.jl)
 [![Build status](https://ci.appveyor.com/api/projects/status/emjnb5afswn0lq6x?svg=true)](https://ci.appveyor.com/project/barche/cxxwrap-jl)
-[![CxxWrap](http://pkg.julialang.org/badges/CxxWrap_0.4.svg)](http://pkg.julialang.org/?pkg=CxxWrap)
-[![CxxWrap](http://pkg.julialang.org/badges/CxxWrap_0.5.svg)](http://pkg.julialang.org/?pkg=CxxWrap)
 
 This package aims to provide a Boost.Python-like wrapping for C++ types and functions to Julia. The idea is to write the code for the Julia wrapper in C++, and then use a one-liner on the Julia side to make the wrapped C++ library available there.
 
