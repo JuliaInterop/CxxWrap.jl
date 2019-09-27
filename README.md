@@ -2,8 +2,6 @@
 
 [![Build Status](https://travis-ci.org/JuliaInterop/CxxWrap.jl.svg?branch=master)](https://travis-ci.org/JuliaInterop/CxxWrap.jl)
 [![Build status](https://ci.appveyor.com/api/projects/status/emjnb5afswn0lq6x?svg=true)](https://ci.appveyor.com/project/barche/cxxwrap-jl)
-[![CxxWrap](http://pkg.julialang.org/badges/CxxWrap_0.4.svg)](http://pkg.julialang.org/?pkg=CxxWrap)
-[![CxxWrap](http://pkg.julialang.org/badges/CxxWrap_0.5.svg)](http://pkg.julialang.org/?pkg=CxxWrap)
 
 This package aims to provide a Boost.Python-like wrapping for C++ types and functions to Julia. The idea is to write the code for the Julia wrapper in C++, and then use a one-liner on the Julia side to make the wrapped C++ library available there.
 
@@ -167,33 +165,23 @@ types.add_type<World>("World")
   .constructor<const std::string&>(false);
 ```
 
-By default, a null "constructor" is also provided, allowing directly constructing an empty pointer:
-
-```julia
-w = nullptr(World)
-```
-
-The `add_type` function actually builds 3 Julia types related to World. The first is an abstract type:
+The `add_type` function actually builds two Julia types related to World. The first is an abstract type:
 
 ```julia
 abstract type World end
 ```
 
-The second is an immutable type (the "reference type") with the following structure:
+The second is a mutable type (the "allocated" or "boxed" type) with the following structure:
 
-```julia
-struct WorldRef <: World
-  cpp_object::Ptr{Cvoid}
-end
-```
-
-It is an immutable type to be able to refer to C++ values without needing to allocate. This also means there are no finalizers for this kind of type, which is why there is also an equivalent mutable type that is returned by constructors and has a finalize attached that calls `delete` in C++:
 
 ```julia
 mutable struct WorldAllocated <: World
   cpp_object::Ptr{Cvoid}
 end
 ```
+
+This type needs to be mutable, because it must have a finalizer attached to it that deletes the held
+C++ object.
 
 This means that the variable `w` in the above example is of concrete type `WorldAllocated` and letting it go out of scope may trigger the finalizer and delete the object. When calling a C++ constructor, it is the responsibility of the caller to manage the lifetime of the resulting variable.
 
@@ -679,3 +667,22 @@ It is also possible to replace the `@wrapmodule` call with a call to `@readmodul
   end
   ```
   
+## Breaking changes
+
+* No automatic conversion to Julia String
+* No automatic dereference of const ref
+* `ArrayRef` no longer supports boxed values
+* Custom smart pointer: use `jlcxx::add_smart_pointer<MySmartPointer>(module, "MySmartPointer")`
+* `IsMirroredType` instead of `IsImmutable` and `IsBits`, added using map_type. By default, `IsMirroredType` is true for trivial standard layout types, so if you want to wrap these normally
+(i.e. you get an unexpected error `Mirrored types (marked with IsMirroredType) can't be added using add_type, map them directly to a struct instead and use map_type`) then you have to explicitly disable the mirroring for that type:
+```c++
+template<> struct IsMirroredType<Foo> : std::false_type { };
+```
+* `box` C++ function takes an explicit template argument
+* Introduction of specific integer types, such as `CxxBool`, that map to the C++ equivalent (should be transparent except for template parameters)
+* Defining `SuperType` on the C++ side is now necessary for any kind of casting to base class, because the previous implementation was wrong in the case of multiple inheritance.
+* Use `Ref(CxxPtr(x))` for pointer or reference to pointer 
+* Use `CxxPtr{MyData}(C_NULL)` instead of `nullptr(MyData)`
+
+### New features
+* STL support: std::vector, use `jlcxx::stl::apply_stl<World>(mod);` for manually adding types to module `mod`.

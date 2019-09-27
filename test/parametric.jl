@@ -21,6 +21,10 @@ dump(p1)
 @test typeof(ParametricTypes.get_first(p1)) == Int32
 @test typeof(ParametricTypes.get_second(p2)) == Int32
 
+@test ParametricTypes.get_first(CxxRef(p1)) == 1
+@test ParametricTypes.get_first(CxxRef(p1)[]) == 1
+@test length(typeof(CxxRef(p1)[]).parameters) == 2
+
 @test ParametricTypes.get_first(p2) == 10.
 @test ParametricTypes.get_second(p1) == 10.
 @test typeof(ParametricTypes.get_first(p2)) == Float64
@@ -37,18 +41,18 @@ nontype2 = ParametricTypes.NonTypeParam{UInt32, UInt32(2)}()
 nontype3 = ParametricTypes.NonTypeParam{Int32, Int32(1)}(3)
 @test ParametricTypes.get_nontype(nontype3) == 3
 
-nontype4 = ParametricTypes.NonTypeParam{Int64, Int64(64)}()
-@test ParametricTypes.get_nontype(nontype4) == Int64(64)
+nontype4 = ParametricTypes.NonTypeParam{CxxLong, CxxLong(64)}()
+@test ParametricTypes.get_nontype(nontype4) == CxxLong(64)
 
 concr = ParametricTypes.ConcreteTemplate{Float64}()
 @test isa(concr, ParametricTypes.AbstractTemplate{Float64})
 @test isa(concr, ParametricTypes.AbstractTemplate)
 @test isa(concr, ParametricTypes.ConcreteTemplate)
-abst = ParametricTypes.to_base(concr)
-@test isa(abst, ParametricTypes.AbstractTemplate{Float64})
-@test isa(abst, ParametricTypes.AbstractTemplate)
+abst = ParametricTypes.to_base(CxxPtr(concr))
+@test isa(abst[], ParametricTypes.AbstractTemplate{Float64})
+@test isa(abst[], ParametricTypes.AbstractTemplate)
 
-f3 = ParametricTypes.Foo3{Int32, Bool, Float32}()
+f3 = ParametricTypes.Foo3{Int32, CxxWrap.CxxBool, Float32}()
 @test length(methods(ParametricTypes.foo3_method)) == 6
 f2 = ParametricTypes.Foo2{Float64}()
 @test length(methods(ParametricTypes.foo2_method)) == 2
@@ -66,8 +70,8 @@ vec3 = ParametricTypes.CppVector{Complex{Float32}}(pointer(carr), 2)
 @test isa(vec1, AbstractVector{Float64})
 @test isa(vec2, AbstractVector{Float64})
 @test isa(vec3, AbstractVector{Complex{Float32}})
-@test ParametricTypes.get(vec1,0) == 1.0
-@test ParametricTypes.get(vec1,1) == 2.0
-@test ParametricTypes.get(vec1,2) == 3.0
-@test ParametricTypes.get(vec3,0) == 1+2im
-@test ParametricTypes.get(vec3,1) == 3+4im
+@test ParametricTypes.get(vec1,0)[] == 1.0
+@test ParametricTypes.get(vec1,1)[] == 2.0
+@test ParametricTypes.get(vec1,2)[] == 3.0
+@test ParametricTypes.get(vec3,0)[] == 1+2im
+@test ParametricTypes.get(vec3,1)[] == 3+4im

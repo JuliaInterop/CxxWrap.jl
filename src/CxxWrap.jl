@@ -2,7 +2,10 @@ module CxxWrap
 
 import Libdl
 
-export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx, load_module, ptrunion, CppEnum, ConstPtr, ConstArray, gcprotect, gcunprotect, isnull, nullptr
+export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx,
+ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,
+CppEnum, ConstArray, CxxBool, CxxLong, CxxULong,
+ptrunion, gcprotect, gcunprotect, isnull
 
 # Convert path if it contains lib prefix on windows
 function lib_path(so_path::AbstractString)
@@ -24,6 +27,50 @@ end
 include(depsfile)
 const jlcxx_path = libcxxwrap_julia
 
+# Welcome to the C/C++ integer type mess
+
+abstract type CxxSigned <: Signed end
+abstract type CxxUnsigned <: Unsigned end
+
+# long is a special case, because depending on the platform it overlaps with int or long long. See https://en.cppreference.com/w/cpp/language/types
+primitive type CxxLong <: CxxSigned 8*sizeof(Clong) end
+primitive type CxxULong <: CxxUnsigned 8*sizeof(Culong) end
+primitive type CxxBool <: CxxUnsigned 8*sizeof(Cuchar) end
+const CharSigning = supertype(Cchar) == Signed ? CxxSigned : CxxUnsigned
+primitive type CxxChar <: CharSigning 8*sizeof(Cchar) end
+primitive type CxxUChar <: CxxUnsigned 8*sizeof(Cuchar) end
+const WCharSigning = supertype(Cwchar_t) == Signed ? CxxSigned : CxxUnsigned
+primitive type CxxWchar <: WCharSigning 8*sizeof(Cwchar_t) end
+
+# This macro adds the fixed integer types described on https://en.cppreference.com/w/cpp/types/integer
+# Names are e.g. CxxInt32 or CxxUInt64
+macro add_int_types()
+  result = quote end
+  for signed in (Symbol(), :U)
+    super = signed == :U ? CxxUnsigned : CxxSigned
+    for nbits in (8,16,32,64)
+      push!(result.args, :(primitive type $(Symbol(:Cxx, signed, :Int, nbits)) <: $super $nbits end))
+    end
+  end
+  return result
+end
+@add_int_types
+
+# Get the equivalen Julia type for a Cxx integer type
+@generated julia_int_type(::Type{T}) where {T<:CxxSigned} = Symbol(:Int, 8*sizeof(T))
+@generated julia_int_type(::Type{T}) where {T<:CxxUnsigned} = Symbol(:UInt, 8*sizeof(T))
+
+to_julia_int(x::Union{CxxSigned,CxxUnsigned}) = reinterpret(julia_int_type(typeof(x)),x)
+
+# Conversion to and from the equivalent Julia type
+Base.convert(::Type{T}, x::Number) where {T<:Union{CxxSigned,CxxUnsigned}} = reinterpret(T, convert(julia_int_type(T), x))
+Base.convert(::Type{JT}, x::CT) where {JT<:Number,CT<:Union{CxxSigned,CxxUnsigned}} = convert(JT,reinterpret(julia_int_type(CT), x))
+
+# Convenience constructors
+(::Type{T})(x) where {T<:Union{CxxWrap.CxxSigned,CxxWrap.CxxUnsigned}} = convert(T,x)
+
+Base.flipsign(x::CxxLong, y::CxxLong) = reinterpret(CxxLong, flipsign(to_julia_int(x), to_julia_int(y)))
+
 # Trait type to indicate a type is a C++-wrapped type
 struct IsCxxType end
 struct IsNormalType end
@@ -37,95 +84,152 @@ import Base: +, |
 +(a::T, b::T) where {T <: CppEnum} = reinterpret(T, convert(Int32,a) + convert(Int32,b))
 |(a::T, b::T) where {T <: CppEnum} = reinterpret(T, convert(Int32,a) | convert(Int32,b))
 
-cxxdowncast(x) = error("No downcast for type $(supertype(typeof(x))). Did you specialize SuperType to enable automatic downcasting?")
-
 """
 Base class for smart pointers
 """
 abstract type SmartPointer{T} end
 @inline cpp_trait_type(::Type{SmartPointer{T}}) where {T} = IsCxxType
 
-"""
-Concrete smart pointer implementation. PT is a hash for the pointer type.
-"""
-mutable struct SmartPointerWithDeref{T,PT} <: SmartPointer{T}
-  ptr::Ptr{Cvoid}
-end
+Base.show(io::IO, x::SmartPointer) = print(io, "C++ smart pointer of type ", typeof(x))
 
-reference_type(t::Type) = Any
-__nullptr(t::Type) = error("Can't make a nullptr of type $t")
-nullptr(t::Type) = __nullptr(t)
+allocated_type(t::Type) = Any
+dereferenced_type(t::Type) = Any
 
-function __cxxwrap_smartptr_dereference(p::SmartPointerWithDeref{T,PT}) where {T,PT}
-  error("Unimplemented smartptr_dereference function for $(typeof(p))")
-end
+__cxxwrap_smartptr_dereference(p::SmartPointer{T}) where {T} = __cxxwrap_smartptr_dereference(CxxRef(p))
+__cxxwrap_smartptr_construct_from_other(t::Type{<:SmartPointer{T}}, p::SmartPointer{T}) where {T} = __cxxwrap_smartptr_construct_from_other(t,CxxRef(p))
+__cxxwrap_smartptr_cast_to_base(p::SmartPointer{T}) where {T} = __cxxwrap_smartptr_cast_to_base(CxxRef(p))
 
-function __cxxwrap_smartptr_construct_from_other(p::SmartPointerWithDeref{T,PT}) where {T,PT}
-  error("Unimplemented smartptr_construct_from_other for type $(typeof(p))")
-end
-
-function __cxxwrap_smartptr_cast_to_base(p::SmartPointerWithDeref{T,PT}) where {T,PT}
-  error("Unimplemented smartptr_cast_to_base for type $(typeof(p))")
-end
-
-function Base.getindex(p::SmartPointerWithDeref{T,PT})::reference_type(T) where {T,PT}
+function Base.getindex(p::SmartPointer{T}) where {T}
   return __cxxwrap_smartptr_dereference(p)
 end
 
 # No conversion if source and target type are identical
-Base.convert(::Type{SmartPointerWithDeref{T,PT}}, p::SmartPointerWithDeref{T,PT}) where {T,PT} = p
+Base.convert(::Type{T}, p::T) where {T <: SmartPointer} = p
 
 # Construct from a related pointer, e.g. a std::weak_ptr from std::shared_ptr
-function Base.convert(::Type{SmartPointerWithDeref{T,PT1}}, p::SmartPointerWithDeref{T,PT2}) where {T,PT1,PT2}
-  __cxxwrap_smartptr_construct_from_other(p)
+function Base.convert(::Type{T1}, p::T2) where {T, T1 <: SmartPointer{T}, T2 <: SmartPointer{T}}
+  __cxxwrap_smartptr_construct_from_other(T1, p)
 end
 
-# Construct from a related pointer, downcasting the type to base class
-function Base.convert(t::Type{SmartPointerWithDeref{BaseT,PT1}}, p::SmartPointerWithDeref{DerivedT,PT2}) where {BaseT,DerivedT,PT1,PT2}
+# upcast to base class
+function Base.convert(::Type{T1}, p::T2) where {BaseT,DerivedT, T1 <: SmartPointer{BaseT}, T2 <: SmartPointer{DerivedT}}
   if !(DerivedT <: BaseT)
     error("$DerivedT does not inherit from $BaseT in smart pointer convert")
   end
   # First convert to base type
   base_p = __cxxwrap_smartptr_cast_to_base(p)
-  return convert(t, base_p)
-end
-
-# Cast to base type enclosed in same pointer type
-function Base.convert(::Type{SmartPointerWithDeref{BaseT,PT}}, p::SmartPointerWithDeref{DerivedT,PT}) where {BaseT,DerivedT,PT}
-  if !(DerivedT <: BaseT)
-    error("$DerivedT does not inherit from $BaseT in smart pointer convert")
-  end
-  return convert(SmartPointerWithDeref{BaseT,PT}, __cxxwrap_smartptr_cast_to_base(p))
+  return convert(T1, base_p)
 end
 
 struct StrictlyTypedNumber{NumberT}
   value::NumberT
 end
-Base.convert(::Type{StrictlyTypedNumber{NumberT}}, n::NumberT) where {NumberT} = StrictlyTypedNumber{NumberT}(n)
-
-struct ConstPtr{T}
-  ptr::Ptr{T}
+function Base.convert(t::Type{<:StrictlyTypedNumber}, n::Number)
+  @assert t == StrictlyTypedNumber{typeof(n)}
+  return StrictlyTypedNumber{typeof(n)}(n)
 end
 
+abstract type CxxBaseRef{T} <: Ref{T} end
+
+struct CxxPtr{T} <: CxxBaseRef{T}
+  cpp_object::Ptr{T}
+  CxxPtr{T}(x::Ptr) where {T} = new{T}(x)
+  CxxPtr{T}(x::CxxBaseRef) where {T} = new{T}(x.cpp_object)
+end
+
+struct ConstCxxPtr{T} <: CxxBaseRef{T}
+  cpp_object::Ptr{T}
+  ConstCxxPtr{T}(x::Ptr) where {T} = new{T}(x)
+  ConstCxxPtr{T}(x::CxxBaseRef) where {T} = new{T}(x.cpp_object)
+end
+
+struct CxxRef{T} <: CxxBaseRef{T}
+  cpp_object::Ptr{T}
+  CxxRef{T}(x::Ptr) where {T} = new{T}(x)
+  CxxRef{T}(x::CxxBaseRef) where {T} = new{T}(x.cpp_object)
+end
+
+struct ConstCxxRef{T} <: CxxBaseRef{T}
+  cpp_object::Ptr{T}
+  ConstCxxRef{T}(x::Ptr) where {T} = new{T}(x)
+  ConstCxxRef{T}(x::CxxBaseRef) where {T} = new{T}(x.cpp_object)
+end
+
+_ref_type(::Type{RefT}, ::Type{<:CxxBaseRef{T}}) where {RefT,T} = _ref_type(RefT,T)
+_ref_type(::Type{RefT}, ::Type{T}) where {RefT,T} = _ref_type(RefT, T, cpp_trait_type(T))
+_ref_type(::Type{RefT}, ::Type{T}, ::Type) where {RefT,T} = error("Manual Cxx Reference creation is only for C++ types")
+function _ref_type(::Type{RefT}, ::Type{T}, ::Type{IsCxxType}) where {RefT,T}
+  if isconcretetype(T)
+    return RefT{supertype(T)}
+  end
+  return RefT{T}
+end
+_make_ref(::Type{RefT}, x::T) where {RefT,T} = _ref_type(RefT,T)(x.cpp_object)
+
+CxxPtr(x) = _make_ref(CxxPtr,x)
+ConstCxxPtr(x) = _make_ref(ConstCxxPtr,x)
+CxxRef(x) = _make_ref(CxxRef,x)
+ConstCxxRef(x) = _make_ref(ConstCxxRef,x)
+
+Base.:(==)(a::CxxBaseRef, b::CxxBaseRef) = (a.cpp_object == b.cpp_object)
+Base.:(==)(a::CxxBaseRef, b::Ptr) = (a.cpp_object == b)
+Base.:(==)(a::Ptr, b::CxxBaseRef) = (b == a)
+
+_deref(p::CxxBaseRef, ::Type) = unsafe_load(p.cpp_object)
+_deref(p::CxxBaseRef{T}, ::Type{IsCxxType}) where {T} = dereferenced_type(T)(p.cpp_object)
+
+_store_to_cxxptr(::Any,::Any,::Type) = error("Resetting the value to a C++ pointer or reference is only supported for non-wrapped types")
+_store_to_cxxptr(r::Union{ConstCxxPtr{T},ConstCxxRef{T}}, x::T, ::Type{IsNormalType}) where {T} = error("Setting the value of a const reference or pointer is not allowed")
+_store_to_cxxptr(r::Union{CxxPtr{T},CxxRef{T}}, x::T, ::Type{IsNormalType}) where {T} = unsafe_store!(r.cpp_object, x)
+
+Base.unsafe_load(p::CxxBaseRef{T}) where {T} = _deref(p, cpp_trait_type(T))
+Base.unsafe_string(p::CxxBaseRef) = unsafe_string(p.cpp_object)
+Base.getindex(r::CxxBaseRef) = unsafe_load(r)
+Base.setindex!(r::CxxBaseRef{T}, x::T) where {T}  = _store_to_cxxptr(r, x, cpp_trait_type(T))
+
+Base.convert(::Type{RT}, p::SmartPointer{T}) where {T, RT <: CxxBaseRef{T}} = p[]
+Base.cconvert(::Type{RT}, p::SmartPointer{T}) where {T, RT <: CxxBaseRef{T}} = p[]
+function Base.convert(::Type{T1}, p::SmartPointer{DerivedT}) where {BaseT,T1 <: BaseT, DerivedT <: BaseT}
+  return cxxupcast(T1, p[])[]
+end
+Base.convert(to_type::Type{Any}, x::CxxWrap.SmartPointer{DerivedT}) where {DerivedT} = x
+function Base.convert(to_type::Type{<:Ref{T1}}, p::T2) where {BaseT,DerivedT, T1 <: BaseT, T2 <: SmartPointer{DerivedT}}
+  return to_type(convert(T1,p))
+end
+
+# This is defined on the C++ side for each wrapped type
+cxxupcast(x) = cxxupcast(CxxRef(x))
+cxxupcast(x::CxxBaseRef) = error("No upcast for type $(supertype(typeof(x))). Did you specialize SuperType to enable automatic upcasting?")
+function cxxupcast(::Type{T}, x) where {T}
+  cxxupcast(T, cxxupcast(x))
+end
+cxxupcast(::Type{T}, x::CxxBaseRef{T}) where {T} = x
+
 struct ConstArray{T,N} <: AbstractArray{T,N}
-  ptr::ConstPtr{T}
+  ptr::ConstCxxPtr{T}
   size::NTuple{N,Int}
 end
 
-ConstArray(ptr::ConstPtr{T}, args::Vararg{Int,N}) where {T,N} = ConstArray{T,N}(ptr, (args...,))
+ConstArray(ptr::ConstCxxPtr{T}, args::Vararg{Int,N}) where {T,N} = ConstArray{T,N}(ptr, (args...,))
 
 Base.IndexStyle(::ConstArray) = IndexLinear()
 Base.size(arr::ConstArray) = arr.size
-Base.getindex(arr::ConstArray, i::Integer) = unsafe_load(arr.ptr.ptr, i)
+Base.getindex(arr::ConstArray, i::Integer) = unsafe_load(arr.ptr.cpp_object, i)
+
+function __delete end
+function delete(x)
+  __delete(CxxPtr(x))
+  x.cpp_object = C_NULL
+end
 
 # Encapsulate information about a function
 mutable struct CppFunctionInfo
   name::Any
   argument_types::Array{Type,1}
-  reference_argument_types::Array{Type,1}
   return_type::Type
   function_pointer::Int
   thunk_pointer::Int
+  override_module::Union{Nothing,Module}
 end
 
 function __init__()
@@ -134,8 +238,8 @@ function __init__()
   end
 
   jlcxxversion = VersionNumber(unsafe_string(ccall((:version_string, jlcxx_path), Cstring, ())))
-  if jlcxxversion < v"0.5.3"
-    error("This version of CxxWrap requires at least libcxxwrap-julia v0.5.3, but version $jlcxxversion was found")
+  if jlcxxversion < v"0.6"
+    error("This version of CxxWrap requires at least libcxxwrap-julia v0.6, but version $jlcxxversion was found")
   end
 end
 
@@ -183,7 +287,7 @@ function register_julia_module(mod::Module)
   fptr = Libdl.dlsym(Libdl.dlopen(mod.__cxxwrap_sopath), mod.__cxxwrap_wrapfunc)
   if !has_cxx_module(mod)
     empty!(mod.__cxxwrap_pointers)
-    ccall((:register_julia_module, jlcxx_path), Cvoid, (Any,Ptr{Cvoid}), mod, fptr)
+    register_julia_module(mod, fptr)
   end
   if length(mod.__cxxwrap_pointers) != mod.__cxxwrap_nbpointers
     error("Binary part of module was changed since last precompilation, please rebuild.")
@@ -198,12 +302,8 @@ function bind_constants(m::Module)
   ccall((:bind_module_constants, jlcxx_path), Cvoid, (Any,), m)
 end
 
-function reference_types(mod::Module)
-  ccall((:get_reference_types, jlcxx_path), Any, (Any,), mod)
-end
-
-function allocated_types(mod::Module)
-  ccall((:get_allocated_types, jlcxx_path), Any, (Any,), mod)
+function box_types(mod::Module)
+  ccall((:get_box_types, jlcxx_path), Any, (Any,), mod)
 end
 
 """
@@ -231,7 +331,7 @@ mutable struct CallOpOverload
 end
 
 process_fname(fn::Symbol) = fn
-process_fname(fn::Tuple{Symbol,Module}) = :($(Symbol(fn[2])).$(fn[1]))
+process_fname(fn::Tuple{Symbol,Module}) = :($(fn[2]).$(fn[1]))
 process_fname(fn::ConstructorFname) = :(::$(Type{fn._type}))
 function process_fname(fn::CallOpOverload)
   return :(arg1::$(fn._type))
@@ -270,21 +370,66 @@ smart_pointer_type(t::Type) = smart_pointer_type(cpp_trait_type(t), t)
 smart_pointer_type(::Type{IsNormalType}, t::Type) = t
 smart_pointer_type(::Type{IsCxxType}, x::Type{T}) where {T} = ptrunion(x)
 
-function smart_pointer_type(::Type{SmartPointerWithDeref{T,PT}}) where {T,PT}
+function smart_pointer_type(::Type{<:SmartPointer{T}}) where {T}
   result{T2 <: T} = SmartPointer{T2}
   return result
 end
 
 map_julia_arg_type(t::Type) = Union{Base.invokelatest(smart_pointer_type,t),argument_overloads(t)...}
 map_julia_arg_type(a::Type{StrictlyTypedNumber{T}}) where {T} = T
+map_julia_arg_type(x::Type{<:Integer}) = Integer
+
+const PtrTypes{T} = Union{CxxPtr{T}, Array{T}, CxxRef{T}, Base.RefValue{T}, Ptr{T},T}
+const ConstPtrTypes{T} = Union{Ref{T}, Array{T}}
+
+map_julia_arg_type(t::Type{<:CxxBaseRef{T}}) where {T} = map_julia_arg_type(t, Base.invokelatest(cpp_trait_type, T))
+
+map_julia_arg_type(t::Type{ConstCxxRef{T}}, ::Type{IsNormalType}) where {T} = Union{ConstPtrTypes{T},map_julia_arg_type(T)}
+map_julia_arg_type(t::Type{ConstCxxPtr{T}}, ::Type{IsNormalType}) where {T} = Union{ConstPtrTypes{T},Ptr{Cvoid}}
+map_julia_arg_type(t::Type{CxxRef{T}}, ::Type{IsNormalType}) where {T} = PtrTypes{T}
+map_julia_arg_type(t::Type{CxxPtr{T}}, ::Type{IsNormalType}) where {T} = Union{PtrTypes{T},Ptr{Cvoid}}
+
+map_julia_arg_type(t::Type{ConstCxxRef{T}}, ::Type{IsNormalType}) where {T<:Union{CxxSigned,CxxUnsigned}} = Union{ConstPtrTypes{julia_int_type(T)},map_julia_arg_type(T)}
+map_julia_arg_type(t::Type{ConstCxxPtr{T}}, ::Type{IsNormalType}) where {T<:Union{CxxSigned,CxxUnsigned}} = Union{ConstPtrTypes{julia_int_type(T)},Ptr{Cvoid}}
+map_julia_arg_type(t::Type{CxxRef{T}}, ::Type{IsNormalType}) where {T<:Union{CxxSigned,CxxUnsigned}} = PtrTypes{julia_int_type(T)}
+map_julia_arg_type(t::Type{CxxPtr{T}}, ::Type{IsNormalType}) where {T<:Union{CxxSigned,CxxUnsigned}} = Union{PtrTypes{julia_int_type(T)},Ptr{Cvoid}}
+
+map_julia_arg_type(t::Type{ConstCxxRef{T}}, ::Type{IsCxxType}) where {T} = Union{map_julia_arg_type(T),ConstCxxRef{<:T},CxxRef{<:T}}
+map_julia_arg_type(t::Type{ConstCxxPtr{T}}, ::Type{IsCxxType}) where {T} = Union{CxxPtr{<:T},ConstCxxPtr{<:T}, Ptr{Cvoid}}
+map_julia_arg_type(t::Type{CxxRef{T}}, ::Type{IsCxxType}) where {T} = Union{map_julia_arg_type(T),CxxRef{<:T}}
+map_julia_arg_type(t::Type{CxxPtr{T}}, ::Type{IsCxxType}) where {T} = Union{CxxPtr{<:T},Ptr{Cvoid}}
+
+map_julia_arg_type(t::Type{CxxPtr{CxxChar}}) = Union{PtrTypes{Cchar}, String}
+map_julia_arg_type(t::Type{ConstCxxPtr{CxxChar}}) = Union{ConstPtrTypes{Cchar}, String}
 
 # names excluded from julia type mapping
 const __excluded_names = Set([
-      :cxxdowncast,
+      :cxxupcast,
       :__cxxwrap_smartptr_dereference,
       :__cxxwrap_smartptr_construct_from_other,
       :__cxxwrap_smartptr_cast_to_base
 ])
+
+function Base.cconvert(to_type::Type{<:CxxBaseRef{T}}, x) where {T}
+  return cxxconvert(to_type, x, cpp_trait_type(T))
+end
+@inline Base.cconvert(::Type{T}, v::T) where {T2,T <: CxxBaseRef{T2}} = v
+Base.cconvert(to_type::Type{<:CxxBaseRef{T}}, v::CxxBaseRef{T}) where {T} = to_type(v.cpp_object)
+Base.unsafe_convert(to_type::Type{<:CxxBaseRef{T}}, v::CxxBaseRef) where {T} = to_type(v.cpp_object)
+Base.unsafe_convert(to_type::Type{<:CxxBaseRef}, v::Base.RefValue) = to_type(pointer_from_objref(v))
+
+cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x, ::Type{IsNormalType}) where {T} = Ref{T}(convert(T,x))
+cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x::Base.RefValue{T}, ::Type{IsNormalType}) where {T} = x
+cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x::Ptr{T}, ::Type{IsNormalType}) where {T} = to_type(x)
+cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x::Ptr{Cvoid}, ::Type{IsNormalType}) where {T} = to_type(x)
+cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x::Union{Array,String}, ::Type{IsNormalType}) where {T} = to_type(pointer(x))
+function cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x, ::Type{IsCxxType}) where {T}
+  return to_type(convert(T,x).cpp_object)
+end
+
+function cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x::CxxBaseRef, ::Type{IsCxxType}) where {T}
+  return to_type(convert(T,x[]))
+end
 
 # Build the expression to wrap the given function
 function build_function_expression(func::CppFunctionInfo, mod=nothing)
@@ -301,25 +446,29 @@ function build_function_expression(func::CppFunctionInfo, mod=nothing)
   map_c_arg_type(::Type{Type}) = Any
   map_c_arg_type(::Type{T}) where {T <: Tuple} = Any
   map_c_arg_type(::Type{ConstArray{T,N}}) where {T,N} = Any
-  map_c_arg_type(::Type{T}) where {T <: SmartPointer} = Any
+  map_c_arg_type(::Type{T}) where {T<:Union{CxxSigned,CxxUnsigned}} = julia_int_type(T)
 
-  map_return_type(t) = map_c_arg_type(t)
-  map_return_type(t::Type{Ref{T}}) where {T} = Ptr{T}
+  # Builds the return type passed to ccall
+  map_c_return_type(t) = t
+  map_c_return_type(::Type{T}) where {T <: Tuple} = Any
+  map_c_return_type(::Type{ConstArray{T,N}}) where {T,N} = Any
+  map_c_return_type(::Type{T}) where {T<:Union{CxxSigned,CxxUnsigned}} = map_c_arg_type(T)
 
   # Build the types for the ccall argument list
-  c_arg_types = [map_c_arg_type(t) for t in func.reference_argument_types]
-  return_type = map_return_type(func.return_type)
+  c_arg_types = map_c_arg_type.(func.argument_types)
+  c_return_type = map_c_return_type(func.return_type)
 
-  converted_args = ([:(Base.cconvert($t,$a)) for (t,a) in zip(func.reference_argument_types,argsymbols)]...,)
+  # Builds the return-type annotation for the Julia function
+  map_julia_return_type(t) = map_c_return_type(t)
+  map_julia_return_type(::Type{CxxBool}) = Bool
 
   # Build the final call expression
-  call_exp = nothing
+  call_exp = quote end
   if thunk == 0
-    call_exp = :(ccall(__cxxwrap_pointers[$fpointer], $return_type, ($(c_arg_types...),), $(converted_args...))) # Direct pointer call
+    push!(call_exp.args, :(ccall(__cxxwrap_pointers[$fpointer], $c_return_type, ($(c_arg_types...),), $(argsymbols...)))) # Direct pointer call
   else
-    call_exp = :(ccall(__cxxwrap_pointers[$fpointer], $return_type, (Ptr{Cvoid}, $(c_arg_types...)), __cxxwrap_pointers[$thunk], $(converted_args...))) # use thunk (= std::function)
+    push!(call_exp.args, :(ccall(__cxxwrap_pointers[$fpointer], $c_return_type, (Ptr{Cvoid}, $(c_arg_types...)), __cxxwrap_pointers[$thunk], $(argsymbols...)))) # use thunk (= std::function)
   end
-  @assert call_exp != nothing
 
   function map_julia_arg_type_named(fname, t)
     if fname ∈ __excluded_names
@@ -338,22 +487,42 @@ function build_function_expression(func::CppFunctionInfo, mod=nothing)
   end
 
   fname = mod === nothing ? func.name : (func.name,mod)
-  function_expression = :($(make_func_declaration(fname, argmap(argtypes)))::$(func.return_type) = $call_exp)
+  function_expression = :($(make_func_declaration(fname, argmap(argtypes)))::$(map_julia_return_type(func.return_type)) = $call_exp)
   return function_expression
 end
 
+function makereftype(::Type{T}, mod) where {T}
+  basename = T.name.name
+  refname = Symbol(basename,"Dereferenced")
+  tmod = T.name.module
+  params = (T.parameters...,)
+  if isempty(params)
+    # If the type is non-parametric, this should be hit only once
+    @assert !isdefined(mod, refname)
+    @assert mod == tmod
+    return Core.eval(mod, :(struct $refname <: $T cpp_object::Ptr{Cvoid} end; $refname))
+  end
+  if !isdefined(tmod, refname)
+    #@assert mod == tmod
+    parameternames = (Symbol(:T,i) for i in 1:length(params))
+    expr = :(struct $refname{$(parameternames...)} <: $basename{$(parameternames...)} cpp_object::Ptr{Cvoid} end)
+    Core.eval(mod, expr)
+  end
+  expr = :($tmod.$refname{$(params...)})
+  return Core.eval(mod, expr)
+end
+
 function wrap_reference_converters(julia_mod)
-  reftypes = reference_types(julia_mod)
-  alloctypes = allocated_types(julia_mod)
-  for (rt, at) in zip(reftypes, alloctypes)
-    st = supertype(at)
+  boxtypes = box_types(julia_mod)
+  for bt in boxtypes
+    st = supertype(bt)
     Core.eval(julia_mod, :(@inline CxxWrap.cpp_trait_type(::Type{<:$st}) = CxxWrap.IsCxxType))
-    Core.eval(julia_mod, :(Base.cconvert(::Type{$rt}, x::$rt) = x))
-    Core.eval(julia_mod, :(Base.cconvert(::Type{$rt}, x::$at) = unsafe_load(reinterpret(Ptr{$rt}, pointer_from_objref(x)))))
-    Core.eval(julia_mod, :(Base.cconvert(t::Type{$rt}, x::T) where {T <: $st} = Base.cconvert(t, $(cxxdowncast)(x))))
-    Core.eval(julia_mod, :(Base.cconvert(::Type{$rt}, x::$(SmartPointer{st})) = x[]))
-    Core.eval(julia_mod, :(Base.cconvert(t::Type{$rt}, x::$(SmartPointer){T}) where {T <: $st} = Base.cconvert(t, $(cxxdowncast)(x[]))))
-    Core.eval(julia_mod, :(CxxWrap.reference_type(::Type{$st}) = $rt))
+    Core.eval(julia_mod, :(Base.convert(t::Type{$st}, x::T) where {T <: $st} = $(cxxupcast)($st,x)))
+    Core.eval(julia_mod, :(CxxWrap.allocated_type(::Type{$st}) = $bt))
+    reftype = makereftype(st, julia_mod)
+    Core.eval(julia_mod, :(CxxWrap.dereferenced_type(::Type{$st}) = $reftype))
+    Core.eval(julia_mod, :(Base.convert(::Type{$st}, x::$bt) = x))
+    Core.eval(julia_mod, :(Base.convert(::Type{$st}, x::$reftype) = x))
   end
 end
 
@@ -369,19 +538,11 @@ function wrap_functions(functions, julia_mod)
     :(==)
   ])
 
-  cxxnames = Set([
-    :cxxdowncast,
-    :__cxxwrap_smartptr_dereference,
-    :__cxxwrap_smartptr_construct_from_other,
-    :__cxxwrap_smartptr_cast_to_base,
-    :__nullptr
-  ])
-
   for func in functions
-    if func.name ∈ basenames
+    if func.override_module != nothing
+      Core.eval(julia_mod, build_function_expression(func, func.override_module))
+    elseif func.name ∈ basenames
       Core.eval(julia_mod, build_function_expression(func, Base))
-    elseif func.name ∈ cxxnames
-      Core.eval(julia_mod, build_function_expression(func, CxxWrap))
     else
       Core.eval(julia_mod, build_function_expression(func))
     end
@@ -475,10 +636,12 @@ macro safe_cfunction(f, rt, args)
   return esc(:(CxxWrap.SafeCFunction(@cfunction($f, $rt, $args), $rt, [$(args.args...)])))
 end
 
-wstring_to_julia(p::Ptr{Cwchar_t}, L::Int) = transcode(String, unsafe_wrap(Array, p, L))
-wstring_to_cpp(s::String) = transcode(Cwchar_t, s)
+isnull(x::CxxBaseRef) = (x.cpp_object == C_NULL)
 
-isnull(x::T) where{T} = isnull(cpp_trait_type(T), x)
-isnull(::Type{IsCxxType}, x) = (x.cpp_object == C_NULL)
+include("StdLib.jl")
+
+using .StdLib: StdVector, StdString, StdWString
+
+export StdVector, StdString, StdWString
 
 end # module

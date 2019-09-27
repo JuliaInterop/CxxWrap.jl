@@ -1,3 +1,5 @@
+using Test
+
 function func1(arr)
   @test arr[1] == 1.0
   @test arr[2] == 2.0
@@ -36,3 +38,5 @@ println()
 mm .= 1.0
 @test Containers.check_mutable_array(mm)
 Containers.do_embedding_test()
+
+@test Containers.array_return() == ["hello", "world"]

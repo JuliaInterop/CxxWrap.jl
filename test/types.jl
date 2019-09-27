@@ -5,12 +5,9 @@ module CppTypes
 
 using CxxWrap
 
-struct ImmutableBits
-  a::Float64
-  b::Float64
-end
-
 @wrapmodule(Main.libtypes)
+
+const greet = getindex ∘ greet_cref
 
 export enum_to_int, get_enum_b, World
 export AConstRef, ReturnConstRef, value, CallOperator, ConstPtrConstruct
@@ -29,7 +26,7 @@ dump(w)
 @test CppTypes.greet(w) == "default hello"
 
 @show fw = CppTypes.world_factory()
-@test CppTypes.greet(fw) == "factory hello"
+@test CppTypes.greet(fw[]) == "factory hello"
 
 swf = CppTypes.shared_world_factory()
 @test CppTypes.greet_shared(swf) == "shared factory hello"
@@ -42,16 +39,16 @@ swf2 = CppTypes.smart_world_factory()
 @test CppTypes.greet(swf2[]) == "smart factory hello" # Explicit dereference
 @test CppTypes.greet(swf2) == "smart factory hello" # Automatic conversion
 @test CppTypes.greet_weak(swf) == "shared factory hello"
-@test_throws ErrorException CppTypes.greet_weak(swf2) == "shared factory hello"
+@test_throws MethodError CppTypes.greet_weak(swf2) == "shared factory hello"
 
 swfr = CppTypes.shared_world_ref()
-@test CppTypes.greet(swfr) == "shared factory hello ref"
+@test CppTypes.greet(swfr[]) == "shared factory hello ref"
 CppTypes.reset_shared_world!(swfr, "reset shared pointer")
-@test CppTypes.greet(swfr) == "reset shared pointer"
+@test CppTypes.greet(swfr[]) == "reset shared pointer"
 CppTypes.reset_shared_world!(swfr, "shared factory hello ref")
 
 @test CppTypes.greet(CppTypes.boxed_world_factory()) == "boxed world"
-@test CppTypes.greet(CppTypes.boxed_world_pointer_factory()) == "boxed world pointer"
+@test CppTypes.greet(CppTypes.boxed_world_pointer_factory()[]) == "boxed world pointer"
 @test CppTypes.greet(CppTypes.world_ref_factory()) == "reffed world"
 
 @show uwf = CppTypes.unique_world_factory()
@@ -98,7 +95,7 @@ other_noncopyable = deepcopy(noncopyable)
 @test CppTypes.value(CppTypes.value(CppTypes.ReturnConstRef())) == 42
 
 wptr = CppTypes.World()
-@test CppTypes.greet(CppTypes.ConstPtrConstruct(wptr)) == "default hello"
+@test CppTypes.greet(CppTypes.ConstPtrConstruct(CxxPtr(wptr))) == "default hello"
 
 call_op = CppTypes.CallOperator()
 @test call_op() == 43
@@ -111,11 +108,11 @@ end
 
 function julia_test_func(data)
   println("a: ", data.a, ", b: ", data.b)
-  @test data.a == 2.
-  @test data.b == 3.
+  @test data.a == 2.0
+  @test data.b == 3.0
 end
 
-CppTypes.call_testype_function()
+CppTypes.call_testtype_function()
 
 @test CppTypes.enum_to_int(CppTypes.EnumValA) == 0
 @test CppTypes.enum_to_int(CppTypes.EnumValB) == 1
@@ -123,7 +120,7 @@ CppTypes.call_testype_function()
 @test CppTypes.EnumValA + CppTypes.EnumValB == CppTypes.EnumValB
 @test CppTypes.EnumValA | CppTypes.EnumValB == CppTypes.EnumValB
 
-foovec = Any[CppTypes.Foo("a", [1.0, 2.0, 3.0]), CppTypes.Foo("b", [11.0, 12.0, 13.0])] # Must be Any because of the boxing
+foovec = Any[CppTypes.Foo(StdWString("a"), [1.0, 2.0, 3.0]), CppTypes.Foo(StdWString("b"), [11.0, 12.0, 13.0])] # Must be Any because of the boxing
 @show CppTypes.name(foovec[1])
 @show CppTypes.data(foovec[1])
 CppTypes.print_foo_array(foovec)
@@ -131,5 +128,25 @@ CppTypes.print_foo_array(foovec)
 @test !isnull(CppTypes.return_ptr())
 @test isnull(CppTypes.return_null())
 
-imm = CppTypes.ImmutableBits(1.0, 2.0)
-@show CppTypes.increment_immutable(imm)
+warr1 = CppTypes.World[CppTypes.World("world$i") for i in 1:5]
+warr2 = [CppTypes.World("worldalloc$i") for i in 1:5]
+wvec1 = StdVector(warr1)
+wvec2 = StdVector(warr2)
+
+for (i,(w1,w2)) in enumerate(zip(wvec1,wvec2))
+  @test CppTypes.greet(w1) == "world$i"
+  @test CppTypes.greet(w2) == "worldalloc$i"
+end
+
+@test CppTypes.greet_vector(wvec1) == string(("world$i " for i in 1:5)...)[1:end-1]
+
+a = [4.0]
+return_int() = Int32(3)
+return_ptr_double() = pointer(a)
+return_world() = CppTypes.World("returned_world")
+wptr = CppTypes.World("returned_world_ptr")
+wref = CppTypes.World("returned_world_ref")
+return_world_ptr() = CxxPtr(wptr)
+return_world_ref() = CxxRef(wref)
+
+@test CppTypes.test_unbox() == fill(true,7)
