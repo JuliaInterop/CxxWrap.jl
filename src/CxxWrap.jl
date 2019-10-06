@@ -108,7 +108,7 @@ Base.convert(::Type{T}, p::T) where {T <: SmartPointer} = p
 
 # Construct from a related pointer, e.g. a std::weak_ptr from std::shared_ptr
 function Base.convert(::Type{T1}, p::T2) where {T, T1 <: SmartPointer{T}, T2 <: SmartPointer{T}}
-  __cxxwrap_smartptr_construct_from_other(T1, p)
+  return __cxxwrap_smartptr_construct_from_other(T1, p)
 end
 
 # upcast to base class
@@ -196,6 +196,8 @@ Base.convert(to_type::Type{Any}, x::CxxWrap.SmartPointer{DerivedT}) where {Deriv
 function Base.convert(to_type::Type{<:Ref{T1}}, p::T2) where {BaseT,DerivedT, T1 <: BaseT, T2 <: SmartPointer{DerivedT}}
   return to_type(convert(T1,p))
 end
+
+Base.unsafe_convert(to_type::Type{<:CxxBaseRef}, x) = to_type(x.cpp_object)
 
 # This is defined on the C++ side for each wrapped type
 cxxupcast(x) = cxxupcast(CxxRef(x))
@@ -424,7 +426,7 @@ cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x::Ptr{T}, ::Type{IsNormalType}) wher
 cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x::Ptr{Cvoid}, ::Type{IsNormalType}) where {T} = to_type(x)
 cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x::Union{Array,String}, ::Type{IsNormalType}) where {T} = to_type(pointer(x))
 function cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x, ::Type{IsCxxType}) where {T}
-  return to_type(convert(T,x).cpp_object)
+  return convert(T,x)
 end
 
 function cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x::CxxBaseRef, ::Type{IsCxxType}) where {T}
