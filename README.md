@@ -685,4 +685,10 @@ template<> struct IsMirroredType<Foo> : std::false_type { };
 * Use `CxxPtr{MyData}(C_NULL)` instead of `nullptr(MyData)`
 
 ### New features
-* STL support: std::vector, use `jlcxx::stl::apply_stl<World>(mod);` for manually adding types to module `mod`.
+* STL support: std::vector, use `jlcxx::stl::apply_stl<World>(mod);` for manually adding types to module `mod`. If the type `World` contains methods that take or return `std::` collections of type `World` or `World*`, however, you must first complete the type, so that CxxWrap can generate the type and the template specializations for the `std::` collections. In this case, you can add those methods to your type like this:
+```
+jlcxx::stl::apply_stl<World*>(mod);
+mod.method("getSecondaryWorldVector", [](const World* p)->const std::vector<World*>& {
+    return p->getSecondaries();
+});
+```
