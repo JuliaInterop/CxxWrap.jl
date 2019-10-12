@@ -40,3 +40,13 @@ append!(svec, CxxRef.(cxxappstrings))
 @test all(svec .== ["one", "two", "three", "four", "five", "six"])
 empty!(svec)
 @test isempty(svec)
+
+stvec = StdVector(Int32[1,2,3])
+for vref in (CxxRef(stvec), CxxPtr(stvec))
+  s = 0
+  for x in vref
+    s += x
+  end
+  @test s == sum(stvec)
+  @test all(vref .== [1,2,3])
+end

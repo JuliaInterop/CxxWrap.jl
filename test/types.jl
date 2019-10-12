@@ -121,8 +121,10 @@ CppTypes.call_testtype_function()
 @test CppTypes.EnumValA | CppTypes.EnumValB == CppTypes.EnumValB
 
 foovec = Any[CppTypes.Foo(StdWString("a"), [1.0, 2.0, 3.0]), CppTypes.Foo(StdWString("b"), [11.0, 12.0, 13.0])] # Must be Any because of the boxing
-@show CppTypes.name(foovec[1])
-@show CppTypes.data(foovec[1])
+@test CppTypes.name(foovec[1]) == "a"
+@test CppTypes.data(foovec[1]) == [1.0, 2.0, 3.0]
+@test CppTypes.name(foovec[2]) == "b"
+@test CppTypes.data(foovec[2]) == [11.0, 12.0, 13.0]
 CppTypes.print_foo_array(foovec)
 
 @test !isnull(CppTypes.return_ptr())

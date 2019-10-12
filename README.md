@@ -685,4 +685,4 @@ template<> struct IsMirroredType<Foo> : std::false_type { };
 * Use `CxxPtr{MyData}(C_NULL)` instead of `nullptr(MyData)`
 
 ### New features
-* STL support: std::vector, use `jlcxx::stl::apply_stl<World>(mod);` for manually adding types to module `mod`.
+* STL support: std::vector, use `jlcxx::stl::apply_stl<World>(mod);` for manually adding types to module `mod`. Remember to link to add `JlCxx::cxxwrap_julia_stl` to the `target_link_libraries` command in your CMakeLists.txt.

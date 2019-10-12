@@ -187,6 +187,17 @@ Base.unsafe_string(p::CxxBaseRef) = unsafe_string(p.cpp_object)
 Base.getindex(r::CxxBaseRef) = unsafe_load(r)
 Base.setindex!(r::CxxBaseRef{T}, x::T) where {T}  = _store_to_cxxptr(r, x, cpp_trait_type(T))
 
+# Delegate iteration to the contained type
+Base.iterate(x::CxxBaseRef) = Base.iterate(x[])
+Base.iterate(x::CxxBaseRef, state) = Base.iterate(x[], state)
+Base.length(x::CxxBaseRef) = Base.length(x[])
+Base.size(x::CxxBaseRef, d) = Base.size(x[], d)
+
+# Delegate broadcast operations to the contained type
+Base.BroadcastStyle(::Type{<:CxxBaseRef{T}}) where {T} = Base.BroadcastStyle(T)
+Base.axes(x::CxxBaseRef) = Base.axes(x[])
+Base.broadcastable(x::CxxBaseRef) = Base.broadcastable(x[])
+
 Base.convert(::Type{RT}, p::SmartPointer{T}) where {T, RT <: CxxBaseRef{T}} = p[]
 Base.cconvert(::Type{RT}, p::SmartPointer{T}) where {T, RT <: CxxBaseRef{T}} = p[]
 function Base.convert(::Type{T1}, p::SmartPointer{DerivedT}) where {BaseT,T1 <: BaseT, DerivedT <: BaseT}
