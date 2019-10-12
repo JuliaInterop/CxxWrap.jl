@@ -37,6 +37,8 @@ function Base.iterate(s::CppBasicString, i::Integer=1)
   return(convert(Char,codeunit(s,i)),i+1)
 end
 
+Base.:(==)(x::CxxWrap.ConstCxxRef{CxxWrap.StdLib.StdString}, y) = x[] == y
+
 function StdWString(s::String)
   char_arr = transcode(Cwchar_t, s)
   StdWString(char_arr, length(char_arr))
