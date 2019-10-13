@@ -4,6 +4,9 @@ using Test
 let s = StdString("test")
   println("This prints a test string: ", s)
   @test s == "test"
+  stref = CxxRef(s)
+  @test stref == s
+  @test stref == stref
 end
 
 let s = "šČô_φ_привет_일보"

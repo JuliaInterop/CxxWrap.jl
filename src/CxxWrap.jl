@@ -171,9 +171,12 @@ ConstCxxPtr(x) = _make_ref(ConstCxxPtr,x)
 CxxRef(x) = _make_ref(CxxRef,x)
 ConstCxxRef(x) = _make_ref(ConstCxxRef,x)
 
-Base.:(==)(a::CxxBaseRef, b::CxxBaseRef) = (a.cpp_object == b.cpp_object)
+Base.:(==)(a::Union{CxxPtr,ConstCxxPtr}, b::Union{CxxPtr,ConstCxxPtr}) = (a.cpp_object == b.cpp_object)
 Base.:(==)(a::CxxBaseRef, b::Ptr) = (a.cpp_object == b)
 Base.:(==)(a::Ptr, b::CxxBaseRef) = (b == a)
+Base.:(==)(a::Union{CxxRef,ConstCxxRef}, b) = (a[] == b)
+Base.:(==)(a, b::Union{CxxRef,ConstCxxRef}) = (b == a)
+Base.:(==)(a::Union{CxxRef,ConstCxxRef}, b::Union{CxxRef,ConstCxxRef}) = (a[] == b[])
 
 _deref(p::CxxBaseRef, ::Type) = unsafe_load(p.cpp_object)
 _deref(p::CxxBaseRef{T}, ::Type{IsCxxType}) where {T} = dereferenced_type(T)(p.cpp_object)
