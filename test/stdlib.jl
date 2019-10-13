@@ -4,6 +4,9 @@ using Test
 let s = StdString("test")
   println("This prints a test string: ", s)
   @test s == "test"
+  stref = CxxRef(s)
+  @test stref == s
+  @test stref == stref
 end
 
 let s = "šČô_φ_привет_일보"
@@ -40,3 +43,17 @@ append!(svec, CxxRef.(cxxappstrings))
 @test all(svec .== ["one", "two", "three", "four", "five", "six"])
 empty!(svec)
 @test isempty(svec)
+
+stvec = StdVector(Int32[1,2,3])
+for vref in (CxxRef(stvec), CxxPtr(stvec))
+  s = 0
+  for x in vref
+    s += x
+  end
+  @test s == sum(stvec)
+  @test all(vref .== [1,2,3])
+  @test vref[1] == 1
+  vref[3] = 10
+  @test vref[3] == 10
+  vref[3] = 3
+end

@@ -171,9 +171,12 @@ ConstCxxPtr(x) = _make_ref(ConstCxxPtr,x)
 CxxRef(x) = _make_ref(CxxRef,x)
 ConstCxxRef(x) = _make_ref(ConstCxxRef,x)
 
-Base.:(==)(a::CxxBaseRef, b::CxxBaseRef) = (a.cpp_object == b.cpp_object)
+Base.:(==)(a::Union{CxxPtr,ConstCxxPtr}, b::Union{CxxPtr,ConstCxxPtr}) = (a.cpp_object == b.cpp_object)
 Base.:(==)(a::CxxBaseRef, b::Ptr) = (a.cpp_object == b)
 Base.:(==)(a::Ptr, b::CxxBaseRef) = (b == a)
+Base.:(==)(a::Union{CxxRef,ConstCxxRef}, b) = (a[] == b)
+Base.:(==)(a, b::Union{CxxRef,ConstCxxRef}) = (b == a)
+Base.:(==)(a::Union{CxxRef,ConstCxxRef}, b::Union{CxxRef,ConstCxxRef}) = (a[] == b[])
 
 _deref(p::CxxBaseRef, ::Type) = unsafe_load(p.cpp_object)
 _deref(p::CxxBaseRef{T}, ::Type{IsCxxType}) where {T} = dereferenced_type(T)(p.cpp_object)
@@ -186,6 +189,21 @@ Base.unsafe_load(p::CxxBaseRef{T}) where {T} = _deref(p, cpp_trait_type(T))
 Base.unsafe_string(p::CxxBaseRef) = unsafe_string(p.cpp_object)
 Base.getindex(r::CxxBaseRef) = unsafe_load(r)
 Base.setindex!(r::CxxBaseRef{T}, x::T) where {T}  = _store_to_cxxptr(r, x, cpp_trait_type(T))
+
+# Delegate iteration to the contained type
+Base.iterate(x::CxxBaseRef) = Base.iterate(x[])
+Base.iterate(x::CxxBaseRef, state) = Base.iterate(x[], state)
+Base.length(x::CxxBaseRef) = Base.length(x[])
+Base.size(x::CxxBaseRef, d) = Base.size(x[], d)
+
+# Delegate broadcast operations to the contained type
+Base.BroadcastStyle(::Type{<:CxxBaseRef{T}}) where {T} = Base.BroadcastStyle(T)
+Base.axes(x::CxxBaseRef) = Base.axes(x[])
+Base.broadcastable(x::CxxBaseRef) = Base.broadcastable(x[])
+
+# Delegate indexing to the wrapped type
+Base.getindex(x::CxxBaseRef, i::Int) = Base.getindex(x[], i)
+Base.setindex!(x::CxxBaseRef, val, i::Int) = Base.setindex!(x[], val, i)
 
 Base.convert(::Type{RT}, p::SmartPointer{T}) where {T, RT <: CxxBaseRef{T}} = p[]
 Base.cconvert(::Type{RT}, p::SmartPointer{T}) where {T, RT <: CxxBaseRef{T}} = p[]
