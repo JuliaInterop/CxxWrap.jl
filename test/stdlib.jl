@@ -49,4 +49,8 @@ for vref in (CxxRef(stvec), CxxPtr(stvec))
   end
   @test s == sum(stvec)
   @test all(vref .== [1,2,3])
+  @test vref[1] == 1
+  vref[3] = 10
+  @test vref[3] == 10
+  vref[3] = 3
 end

@@ -198,6 +198,10 @@ Base.BroadcastStyle(::Type{<:CxxBaseRef{T}}) where {T} = Base.BroadcastStyle(T)
 Base.axes(x::CxxBaseRef) = Base.axes(x[])
 Base.broadcastable(x::CxxBaseRef) = Base.broadcastable(x[])
 
+# Delegate indexing to the wrapped type
+Base.getindex(x::CxxBaseRef, i::Int) = Base.getindex(x[], i)
+Base.setindex!(x::CxxBaseRef, val, i::Int) = Base.setindex!(x[], val, i)
+
 Base.convert(::Type{RT}, p::SmartPointer{T}) where {T, RT <: CxxBaseRef{T}} = p[]
 Base.cconvert(::Type{RT}, p::SmartPointer{T}) where {T, RT <: CxxBaseRef{T}} = p[]
 function Base.convert(::Type{T1}, p::SmartPointer{DerivedT}) where {BaseT,T1 <: BaseT, DerivedT <: BaseT}
