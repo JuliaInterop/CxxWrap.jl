@@ -65,6 +65,7 @@ to_julia_int(x::Union{CxxSigned,CxxUnsigned}) = reinterpret(julia_int_type(typeo
 # Conversion to and from the equivalent Julia type
 Base.convert(::Type{T}, x::Number) where {T<:Union{CxxSigned,CxxUnsigned}} = reinterpret(T, convert(julia_int_type(T), x))
 Base.convert(::Type{JT}, x::CT) where {JT<:Number,CT<:Union{CxxSigned,CxxUnsigned}} = convert(JT,reinterpret(julia_int_type(CT), x))
+Base.convert(::Type{T}, x::CT) where {T <: Union{CxxWrap.CxxSigned, CxxWrap.CxxUnsigned}, CT <: Union{CxxWrap.CxxSigned, CxxWrap.CxxUnsigned}}  = convert(T,reinterpret(julia_int_type(CT), x))
 
 # Convenience constructors
 (::Type{T})(x) where {T<:Union{CxxWrap.CxxSigned,CxxWrap.CxxUnsigned}} = convert(T,x)
@@ -170,6 +171,8 @@ CxxPtr(x) = _make_ref(CxxPtr,x)
 ConstCxxPtr(x) = _make_ref(ConstCxxPtr,x)
 CxxRef(x) = _make_ref(CxxRef,x)
 ConstCxxRef(x) = _make_ref(ConstCxxRef,x)
+
+Base.convert(t::Type{<:CxxBaseRef{T}}, x::Ptr{NT}) where {T <: Union{CxxUnsigned, CxxSigned}, NT <: Integer} = t(reinterpret(Ptr{T}, x))
 
 Base.:(==)(a::Union{CxxPtr,ConstCxxPtr}, b::Union{CxxPtr,ConstCxxPtr}) = (a.cpp_object == b.cpp_object)
 Base.:(==)(a::CxxBaseRef, b::Ptr) = (a.cpp_object == b)
@@ -420,6 +423,7 @@ map_julia_arg_type(t::Type{CxxRef{T}}, ::Type{IsCxxType}) where {T} = Union{map_
 map_julia_arg_type(t::Type{CxxPtr{T}}, ::Type{IsCxxType}) where {T} = Union{CxxPtr{<:T},Ptr{Cvoid}}
 
 map_julia_arg_type(t::Type{CxxPtr{CxxChar}}) = Union{PtrTypes{Cchar}, String}
+map_julia_arg_type(t::Type{<:Array{Ptr{T}}}) where {T <: Union{CxxSigned,CxxUnsigned}} = Union{t, Array{Ptr{julia_int_type(T)}}}
 map_julia_arg_type(t::Type{ConstCxxPtr{CxxChar}}) = Union{ConstPtrTypes{Cchar}, String}
 
 # names excluded from julia type mapping
@@ -432,6 +436,10 @@ const __excluded_names = Set([
 
 function Base.cconvert(to_type::Type{<:CxxBaseRef{T}}, x) where {T}
   return cxxconvert(to_type, x, cpp_trait_type(T))
+end
+function Base.cconvert(to_type::Type{<:CxxBaseRef{T}}, x::Ptr{PT}) where {T<:Integer,PT<:Integer}
+  @assert T == PT || julia_int_type(T) == PT
+  return to_type(x)
 end
 @inline Base.cconvert(::Type{T}, v::T) where {T2,T <: CxxBaseRef{T2}} = v
 Base.cconvert(to_type::Type{<:CxxBaseRef{T}}, v::CxxBaseRef{T}) where {T} = to_type(v.cpp_object)

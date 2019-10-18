@@ -40,3 +40,10 @@ mm .= 1.0
 Containers.do_embedding_test()
 
 @test Containers.array_return() == ["hello", "world"]
+@test Containers.tuple_int_pointer() == (C_NULL,1)
+
+let a1 = [UInt8(3)], a2 = [UInt8(5)]
+  @test Containers.uint8_ptr(pointer(a1)) == 3
+  @test Containers.uint8_ptr(pointer(a2)) == 5
+  @test Containers.uint8_arrayref([pointer(a1), pointer(a2)]) == 8
+end
