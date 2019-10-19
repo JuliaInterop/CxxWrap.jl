@@ -255,7 +255,7 @@ See the test at [`deps/src/jlcxx/examples/inheritance.cpp`](deps/src/jlcxx/examp
 Enum types are converted to strongly-typed bits types on the Julia side. Consider the C++ enum:
 
 ```c++
-enum CppEnum
+enum MyEnum
 {
   EnumValA,
   EnumValB
@@ -265,20 +265,15 @@ enum CppEnum
 This is registered as follows:
 
 ```c++
-namespace jlcxx
-{
-  template<> struct IsBits<CppEnum> : std::true_type {};
-}
-
 JLCXX_MODULE define_types_module(jlcxx::Module& types)
 {
-  types.add_bits<CppEnum>("CppEnum");
+  types.add_bits<MyEnum>("MyEnum", jlcxx::julia_type("CppEnum"));
   types.set_const("EnumValA", EnumValA);
   types.set_const("EnumValB", EnumValB);
 }
 ```
 
-The enum constants will be available on the Julia side as `CppTypes.EnumValA` and `CppTypes.EnumValB`, both of type `CppTypes.CppEnum`. Wrapped C++ functions taking a `CppEnum` will only accept a value of type `CppTypes.CppEnum` in Julia.
+The enum constants will be available on the Julia side as `CppTypes.EnumValA` and `CppTypes.EnumValB`, both of type `CppTypes.MyEnum`. Wrapped C++ functions taking a `MyEnum` will only accept a value of type `CppTypes.MyEnum` in Julia.
 
 ## Template (parametric) types
 The natural Julia equivalent of a C++ template class is the parametric type. The mapping is complicated by the fact that all possible parameter values must be compiled in advance, requiring a deviation from the syntax for adding a regular class. Consider the following template class:
