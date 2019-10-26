@@ -57,3 +57,13 @@ for vref in (CxxRef(stvec), CxxPtr(stvec))
   @test vref[3] == 10
   vref[3] = 3
 end
+
+let
+  valarr1 = StdValArray{Float64}()
+  @test length(valarr1) == 0
+  valarr2 = StdValArray([1.0, 2.0, 3.0])
+  @test valarr2 == [1.0, 2.0, 3.0]
+  valarr2[2] = sum(valarr2)
+  @show valarr2
+  @test valarr2[2] == 6
+end

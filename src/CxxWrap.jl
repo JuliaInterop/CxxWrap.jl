@@ -261,7 +261,7 @@ function __init__()
   end
 
   jlcxxversion = VersionNumber(unsafe_string(ccall((:version_string, jlcxx_path), Cstring, ())))
-  if jlcxxversion < v"0.6.2"
+  if jlcxxversion < v"0.6.3"
     error("This version of CxxWrap requires at least libcxxwrap-julia v0.6.2, but version $jlcxxversion was found")
   end
 end
@@ -407,7 +407,7 @@ const ConstPtrTypes{T} = Union{Ref{T}, Array{T}}
 
 map_julia_arg_type(t::Type{<:CxxBaseRef{T}}) where {T} = map_julia_arg_type(t, Base.invokelatest(cpp_trait_type, T))
 
-map_julia_arg_type(t::Type{ConstCxxRef{T}}, ::Type{IsNormalType}) where {T} = Union{ConstPtrTypes{T},map_julia_arg_type(T)}
+map_julia_arg_type(t::Type{ConstCxxRef{T}}, ::Type{IsNormalType}) where {T} = Union{Ref{T},map_julia_arg_type(T)}
 map_julia_arg_type(t::Type{ConstCxxPtr{T}}, ::Type{IsNormalType}) where {T} = Union{ConstPtrTypes{T},Ptr{Cvoid}}
 map_julia_arg_type(t::Type{CxxRef{T}}, ::Type{IsNormalType}) where {T} = PtrTypes{T}
 map_julia_arg_type(t::Type{CxxPtr{T}}, ::Type{IsNormalType}) where {T} = Union{PtrTypes{T},Ptr{Cvoid}}
@@ -668,8 +668,8 @@ isnull(x::CxxBaseRef) = (x.cpp_object == C_NULL)
 
 include("StdLib.jl")
 
-using .StdLib: StdVector, StdString, StdWString
+using .StdLib: StdVector, StdString, StdWString, StdValArray
 
-export StdVector, StdString, StdWString
+export StdVector, StdString, StdWString, StdValArray
 
 end # module
