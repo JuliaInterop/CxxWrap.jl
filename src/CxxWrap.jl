@@ -262,7 +262,7 @@ function __init__()
 
   jlcxxversion = VersionNumber(unsafe_string(ccall((:version_string, jlcxx_path), Cstring, ())))
   if jlcxxversion < v"0.6.3"
-    error("This version of CxxWrap requires at least libcxxwrap-julia v0.6.2, but version $jlcxxversion was found")
+    error("This version of CxxWrap requires at least libcxxwrap-julia v0.6.3, but version $jlcxxversion was found")
   end
 end
 
@@ -423,6 +423,7 @@ map_julia_arg_type(t::Type{CxxRef{T}}, ::Type{IsCxxType}) where {T} = Union{map_
 map_julia_arg_type(t::Type{CxxPtr{T}}, ::Type{IsCxxType}) where {T} = Union{CxxPtr{<:T},Ptr{Cvoid}}
 
 map_julia_arg_type(t::Type{CxxPtr{CxxChar}}) = Union{PtrTypes{Cchar}, String}
+map_julia_arg_type(t::Type{<:Array{T}}) where {T <: Union{CxxSigned,CxxUnsigned}} = Union{t, Array{julia_int_type(T)}}
 map_julia_arg_type(t::Type{<:Array{Ptr{T}}}) where {T <: Union{CxxSigned,CxxUnsigned}} = Union{t, Array{Ptr{julia_int_type(T)}}}
 map_julia_arg_type(t::Type{ConstCxxPtr{CxxChar}}) = Union{ConstPtrTypes{Cchar}, String}
 
