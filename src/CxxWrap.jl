@@ -7,6 +7,8 @@ ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,
 CppEnum, ConstArray, CxxBool, CxxLong, CxxULong,
 ptrunion, gcprotect, gcunprotect, isnull
 
+const libcxxwrap_version_range = (v"0.6.4",  v"0.7")
+
 # Convert path if it contains lib prefix on windows
 function lib_path(so_path::AbstractString)
   path_copy = so_path
@@ -26,6 +28,46 @@ if !isfile(depsfile)
 end
 include(depsfile)
 const jlcxx_path = libcxxwrap_julia
+
+# Internam function names
+const cxxwrap_cfnames = [
+  :cxxwrap_version_string,
+  :has_cxx_module,
+  :initialize_cxxwrap,
+  :register_julia_module,
+  :get_module_functions,
+  :bind_module_constants,
+  :get_box_types
+]
+
+for fname in cxxwrap_cfnames
+  @eval const $(Symbol(fname,:_p)) = Ref(C_NULL)
+end
+
+function load_cxxwrap_lib()
+  loaded_lib = Libdl.dllist()[findall(x -> occursin("libcxxwrap_julia.",x), Libdl.dllist())]
+  if length(loaded_lib) == 1
+    return Libdl.dlopen(loaded_lib[1])
+  end
+
+  @static if Sys.iswindows()
+    return Libdl.dlopen(jlcxx_path, Libdl.RTLD_GLOBAL)
+  end
+
+  return Libdl.dlopen(jlcxx_path)
+end
+
+function load_cxxwrap_symbols()
+  if cxxwrap_version_string_p[] != C_NULL
+    return
+  end
+
+  libcxxwrap = load_cxxwrap_lib()
+  for fname in cxxwrap_cfnames
+    fnamestr = string(fname)
+    @eval $(Symbol(fname,:_p))[] = Libdl.dlsym($libcxxwrap, $fnamestr)
+  end
+end
 
 # Welcome to the C/C++ integer type mess
 
@@ -256,18 +298,15 @@ mutable struct CppFunctionInfo
 end
 
 function __init__()
-  @static if Sys.iswindows()
-    Libdl.dlopen(jlcxx_path, Libdl.RTLD_GLOBAL)
-  end
-
-  jlcxxversion = VersionNumber(unsafe_string(ccall((:version_string, jlcxx_path), Cstring, ())))
-  if jlcxxversion < v"0.6.3"
-    error("This version of CxxWrap requires at least libcxxwrap-julia v0.6.3, but version $jlcxxversion was found")
+  load_cxxwrap_symbols()
+  jlcxxversion = VersionNumber(unsafe_string(ccall(cxxwrap_version_string_p[], Cstring, ())))
+  if !(libcxxwrap_version_range[1] <= jlcxxversion < libcxxwrap_version_range[2])
+    error("This version of CxxWrap requires a libcxxwrap-julia in the range $(libcxxwrap_version_range), but version $jlcxxversion was found")
   end
 end
 
 function has_cxx_module(mod::Module)
-  r = ccall((:has_cxx_module, jlcxx_path), Cuchar, (Any,), mod)
+  r = ccall(has_cxx_module_p[], Cuchar, (Any,), mod)
   return r != 0
 end
 
@@ -295,14 +334,16 @@ function unprotect_from_gc(x)
 end
 
 function initialize_cxx_lib()
+  load_cxxwrap_symbols()
+
   _c_protect_from_gc = @cfunction protect_from_gc Nothing (Any,)
   _c_unprotect_from_gc = @cfunction unprotect_from_gc Nothing (Any,)
-  ccall((:initialize, jlcxx_path), Cvoid, (Any, Any, Ptr{Cvoid}, Ptr{Cvoid}), @__MODULE__, CppFunctionInfo, _c_protect_from_gc, _c_unprotect_from_gc)
+  ccall(initialize_cxxwrap_p[], Cvoid, (Any, Any, Ptr{Cvoid}, Ptr{Cvoid}), @__MODULE__, CppFunctionInfo, _c_protect_from_gc, _c_unprotect_from_gc)
 end
 
 function register_julia_module(mod::Module, fptr::Ptr{Cvoid})
   initialize_cxx_lib()
-  ccall((:register_julia_module, jlcxx_path), Cvoid, (Any,Ptr{Cvoid}), mod, fptr)
+  ccall(register_julia_module_p[], Cvoid, (Any,Ptr{Cvoid}), mod, fptr)
 end
 
 function register_julia_module(mod::Module)
@@ -318,15 +359,15 @@ function register_julia_module(mod::Module)
 end
 
 function get_module_functions(mod::Module)
-  ccall((:get_module_functions, jlcxx_path), Any, (Any,), mod)
+  ccall(get_module_functions_p[], Any, (Any,), mod)
 end
 
 function bind_constants(m::Module)
-  ccall((:bind_module_constants, jlcxx_path), Cvoid, (Any,), m)
+  ccall(bind_module_constants_p[], Cvoid, (Any,), m)
 end
 
 function box_types(mod::Module)
-  ccall((:get_box_types, jlcxx_path), Any, (Any,), mod)
+  ccall(get_box_types_p[], Any, (Any,), mod)
 end
 
 """
