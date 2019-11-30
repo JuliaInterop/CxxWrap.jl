@@ -65,7 +65,7 @@ function load_cxxwrap_symbols()
   libcxxwrap = load_cxxwrap_lib()
   for fname in cxxwrap_cfnames
     fnamestr = string(fname)
-    @eval $(Symbol(fname,:_p))[] = Libdl.dlsym($libcxxwrap, $fnamestr)
+    @eval CxxWrap $(Symbol(fname,:_p))[] = Libdl.dlsym($libcxxwrap, $fnamestr)
   end
 end
 
@@ -91,7 +91,7 @@ macro add_int_types()
   for signed in (Symbol(), :U)
     super = signed == :U ? CxxUnsigned : CxxSigned
     for nbits in (8,16,32,64)
-      push!(result.args, :(primitive type $(Symbol(:Cxx, signed, :Int, nbits)) <: $super $nbits end))
+      push!(result.args, esc(:(primitive type $(Symbol(:Cxx, signed, :Int, nbits)) <: $super $nbits end)))
     end
   end
   return result
