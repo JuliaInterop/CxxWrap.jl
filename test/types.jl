@@ -119,6 +119,8 @@ CppTypes.call_testtype_function()
 @test CppTypes.get_enum_b() == CppTypes.EnumValB
 @test CppTypes.EnumValA + CppTypes.EnumValB == CppTypes.EnumValB
 @test CppTypes.EnumValA | CppTypes.EnumValB == CppTypes.EnumValB
+@show CppTypes.EnumClassBlue
+@test CppTypes.check_red(CppTypes.EnumClassRed)
 
 foovec = Any[CppTypes.Foo(StdWString("a"), [1.0, 2.0, 3.0]), CppTypes.Foo(StdWString("b"), [11.0, 12.0, 13.0])] # Must be Any because of the boxing
 @test CppTypes.name(foovec[1]) == "a"
