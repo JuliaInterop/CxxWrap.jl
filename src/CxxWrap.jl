@@ -29,6 +29,8 @@ end
 include(depsfile)
 const jlcxx_path = libcxxwrap_julia
 
+prefix_path() = dirname(dirname(jlcxx_path))
+
 # Internam function names
 const cxxwrap_cfnames = [
   :cxxwrap_version_string,
@@ -612,6 +614,7 @@ function wrap_functions(functions, julia_mod)
     if func.override_module != nothing
       Core.eval(julia_mod, build_function_expression(func, func.override_module))
     elseif func.name ∈ basenames
+      @warn "Adding method to $(func.name) in the Base module by default. This default will change in the next release of CxxWrap, please use the C++ function `set_override_module` to explicitly set the method module."
       Core.eval(julia_mod, build_function_expression(func, Base))
     else
       Core.eval(julia_mod, build_function_expression(func))

@@ -65,37 +65,27 @@ end
 @show CppHello.greet()
 ```
 The code for this example can be found in [`hello.cpp`] in the [examples](https://github.com/JuliaInterop/libcxxwrap-julia/tree/master/examples) directory of the libcxx-julia project and [`test/hello.jl`](test/hello.jl).
-Note that the `__init__` function is necessary to support precompilation, which is on by default in Julia 1.0.
+Note that the `__init__` function is necessary to support precompilation, which is on by default since Julia 1.0.
 
-## Hello World example on Windows
-On Windows, it is not necessary to create the Visual Studio project by hand: CMake creates a .sln file in the deps/build directory of the package, and that can be opened using Visual Studio to edit the source files and so on. The drawback is that this file gets overwritten if you add a new C++ source file for example.
+## Compiling the C++ code
 
-If creating the Visual Studio project by hand is preferred, however, the following are the steps (assume Julia has been installed to C:\JuliaPro).
+The recommended way to compile the C++ code is to use CMake to discover `libcxxwrap-julia` and the Julia libraries. A full example is in the [testlib directory of libcxxwrap](https://github.com/JuliaInterop/libcxxwrap-julia/tree/master/testlib-builder/src/testlib). The following sequence of commands can be used to build:
 
-* In Visual Studio 2015, New Project, Installed | Templates | Other Languages | Visual C++ | Win32 | Win32 Project. Type in the name "CppHello" and choose Location of the project.
-* In the Win32 Application Wizard, click Next, then select Application Type as DLL; in Additional options uncheck Security Development Lifecycle (SDL) checks. Then click Finish.
-* Choose the active configuration as Release; choose x86 or x64 to match the CPU and the Julia version installed.
-* Right click on the project name in the Solution Explorer, and choose Properties. Make the following changes (modify directory names as needed to match the actual Julia installation path):
-  * C/C++ | General | Additional Include Directories: insert "C:\JuliaPro\Julia-0.5.1\include\julia;C:\JuliaPro\pkgs-0.5.1.1\v0.5\CxxWrap\deps\usr\include;"
-  * C/C++ | Preprocessor | Preprocessor Definitions: insert "JULIA_ENABLE_THREADING;" before "%(PreprocessorDefinitions)"
-  * Linker | Input | Additional Dependencies: insert "C:\JuliaPro\pkgs-0.5.1.1\v0.5\CxxWrap\deps\usr\lib\jlcxx.lib;C:\JuliaPro\Julia-0.5.1\lib\libjulia.dll.a;" before "%(AdditionalIncludeDirectories)"
-* Click OK to exit the CppHello Property Pages.
-* In Solution Explorer, under Source Files, double click "CppHello.cpp" to open it. Append the following code at the end and save:
-```c++
-#include "jlcxx/jlcxx.hpp"
-
-std::string greet()
-{
-  return "hello, world";
-}
-
-JLCXX_MODULE define_julia_module(jlcxx::Module& mod)
-{
-  mod.method("greet", &greet);
-}
+```bash
+mkdir build && cd build
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/path/to/libcxxwrap-julia-prefix /path/to/sourcedirectory
+cmake --build . --config Release
 ```
-* Build the CppHello project.
-* Locate the resulted CppHello.dll file under the Release folder. For a 64-bit build, the path is the project folder\x64\Release\CppHello.dll.
+
+The path for `CMAKE_PREFIX_PATH` can be obtained from Julia using:
+
+```julia
+julia> using CxxWrap
+julia> CxxWrap.prefix_path()
+```
+
+### Windows and MSVC
+The default binaries installed with CxxWrap are cross-compiled using GCC, and thus incompatible with Visual Studio C++ (MSVC). In MSVC 2019, it is easy to check out `libcxxwrap-julia` from git, and then build it and the wrapper module from source. Details are provided in the [README](https://github.com/JuliaInterop/libcxxwrap-julia#building-on-windows).
 
 ## Module entry point
 
@@ -165,7 +155,7 @@ types.add_type<World>("World")
   .constructor<const std::string&>(false);
 ```
 
-The `add_type` function actually builds two Julia types related to World. The first is an abstract type:
+The `add_type` function actually builds two Julia types related to `World`. The first is an abstract type:
 
 ```julia
 abstract type World end
@@ -200,6 +190,27 @@ The full code for this example and more info on immutables and bits types can be
 ### Checking for null
 
 Values returned from C++ can be checked for being null using the `isnull` function.
+
+## Setting the module to which methods are added
+
+It is possible to add methods directly to e.g. the Julia `Base` module, using `set_override_module`. After calling this, all methods will be added to the specified module. To revert to the default behavior of adding methods to the current module, call `unset_override_module`.
+
+Current _deprecated_ behavior is to add the functions `getindex, setindex!, convert, deepcopy_internal, +, *, ==` to `Base` automatically. This default will change, and it can already be overridden by using `set_override_module`:
+
+```c++
+mod.add_type<A>("A", jlcxx::julia_type("AbstractFloat", "Base"))
+    .constructor<double>();
+mod.set_override_module(mod.module());
+// == will be in the wrapped module:
+mod.method("==", [](A& a, A& b) { return a == b; });
+mod.set_override_module(jl_base_module);
+// The following methods will be in Base
+mod.method("+", [](A& a, A& b) { return a + b; });
+mod.method("float", [](A& a) { return a.get_val(); });
+// Revert to default behavior
+mod.unset_override_module();
+mod.method("val", [](A& a) { return a.get_val(); });
+```
 
 ## Inheritance
 To encapsulate inheritance, types must first inherit from each other in C++, so a `static_cast` to the base type can work:
@@ -523,6 +534,8 @@ The `ArrayRef` type provides basic functionality:
 * `[]` read-write accessor
 * `push_back` for appending elements
 
+Note that `ArrayRef` only works with primitive types, if you need a "boxed" type it has to be made an array of `Any` with type `ArrayRef<jl_value_t*>` in C++.
+
 ### Const arrays
 Sometimes, a function returns a const pointer that is an array, either of fixed size or with a size that can be determined from elsewhere in the API. Example:
 ```c++
@@ -639,6 +652,20 @@ Here, `ExtendedTypes` is a name that matches the module name passed to `create_m
 
 It is also possible to replace the `@wrapmodule` call with a call to `@readmodule` and then separately call `@wraptypes` and `@wrapfunctions`. This allows using the types before the functions get called, which is useful for overloading the `argument_overloads` with types defined on the C++ side.
 
+## STL support
+
+Version 0.9 introduces basic support for the C++ standard library, with mappings for `std::vector` (`StdVector`) and `std::string` (`StdString`). To add support for e.g. vectors of your own type `World`, either just add methods that use an `std::vector<World>` as an argument, or manually wrap them using `jlcxx::stl::apply_stl<World>(mod);`.
+
+If the type `World` contains methods that take or return `std::` collections of type `World` or `World*`, however, you must first complete the type, so that CxxWrap can generate the type and the template specializations for the `std::` collections. In this case, you can add those methods to your type like this:
+```
+jlcxx::stl::apply_stl<World*>(mod);
+mod.method("getSecondaryWorldVector", [](const World* p)->const std::vector<World*>& {
+    return p->getSecondaries();
+});
+```
+Linking wrappers using STL support requires adding `JlCxx::cxxwrap_julia_stl` to the `target_link_libraries` command in CMakeLists.txt.
+
+
 ## Breaking changes for CxxWrap 0.7
 
 * `JULIA_CPP_MODULE_BEGIN` and `JULIA_CPP_MODULE_END` no longer exists, define a function with return type `JLCXX_MODULE` in the global namespace instead. By default, the Julia side expects this function to be named `define_julia_module`, but another name can be chosen and passed as a second argument to `@wrapmodule`.
@@ -662,9 +689,9 @@ It is also possible to replace the `@wrapmodule` call with a call to `@readmodul
   end
   ```
   
-## Breaking changes
+## Breaking changes in v0.9
 
-* No automatic conversion to Julia String
+* No automatic conversion between Julia `String` and `std::string`, but `StdString` (which maps `std::string`) implements the Julia `AbstractString`interface. 
 * No automatic dereference of const ref
 * `ArrayRef` no longer supports boxed values
 * Custom smart pointer: use `jlcxx::add_smart_pointer<MySmartPointer>(module, "MySmartPointer")`
@@ -678,14 +705,3 @@ template<> struct IsMirroredType<Foo> : std::false_type { };
 * Defining `SuperType` on the C++ side is now necessary for any kind of casting to base class, because the previous implementation was wrong in the case of multiple inheritance.
 * Use `Ref(CxxPtr(x))` for pointer or reference to pointer 
 * Use `CxxPtr{MyData}(C_NULL)` instead of `nullptr(MyData)`
-
-### New features
-
-* STL support: std::vector, use `jlcxx::stl::apply_stl<World>(mod);` for manually adding types to module `mod`. If the type `World` contains methods that take or return `std::` collections of type `World` or `World*`, however, you must first complete the type, so that CxxWrap can generate the type and the template specializations for the `std::` collections. In this case, you can add those methods to your type like this:
-```
-jlcxx::stl::apply_stl<World*>(mod);
-mod.method("getSecondaryWorldVector", [](const World* p)->const std::vector<World*>& {
-    return p->getSecondaries();
-});
-```
-Remember to link to add `JlCxx::cxxwrap_julia_stl` to the `target_link_libraries` command in your CMakeLists.txt.
