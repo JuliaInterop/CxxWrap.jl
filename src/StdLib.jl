@@ -1,6 +1,6 @@
 module StdLib
 
-using ..CxxWrap
+using ..CxxWrapCore
 
 abstract type CppBasicString <: AbstractString end
 
@@ -12,18 +12,18 @@ function cxxsetindex! end
 function push_back end
 function resize end
 
-@wrapmodule(CxxWrap.libcxxwrap_julia_stl)
+@wrapmodule(CxxWrapCore.libcxxwrap_julia_stl)
 
 function __init__()
   @initcxx
 end
 
 # Pass-through for fundamental types
-_append_dispatch(v::StdVector,a::Vector,::Type{CxxWrap.IsNormalType}) = append(v,a)
+_append_dispatch(v::StdVector,a::Vector,::Type{CxxWrapCore.IsNormalType}) = append(v,a)
 # For C++ types, convert the array to an array of references, so the pointers can be read directly from a contiguous array on the C++ side
-_append_dispatch(v::StdVector{T}, a::Vector{<:T},::Type{CxxWrap.IsCxxType}) where {T} = append(v,CxxWrap.CxxRef.(a))
+_append_dispatch(v::StdVector{T}, a::Vector{<:T},::Type{CxxWrapCore.IsCxxType}) where {T} = append(v,CxxWrapCore.CxxRef.(a))
 # Choose the correct append method depending on the type trait
-append(v::StdVector{T}, a::Vector{<:T}) where {T} = _append_dispatch(v,a,CxxWrap.cpp_trait_type(T))
+append(v::StdVector{T}, a::Vector{<:T}) where {T} = _append_dispatch(v,a,CxxWrapCore.cpp_trait_type(T))
 
 Base.ncodeunits(s::CppBasicString)::Int = cppsize(s)
 Base.codeunit(s::StdString) = UInt8
@@ -43,7 +43,7 @@ function StdWString(s::String)
 end
 
 function StdVector(v::Vector{T}) where {T}
-  if (CxxWrap.cpp_trait_type(T) == CxxWrap.IsCxxType)
+  if (CxxWrapCore.cpp_trait_type(T) == CxxWrapCore.IsCxxType)
     return StdVector(CxxRef.(v))
   end
   result = StdVector{T}()
@@ -91,10 +91,10 @@ function Base.append!(v::StdVector{CxxBool}, a::Vector{Bool})
 end
 
 # Make sure functions taking a C++ string as argument can also take a Julia string
-CxxWrap.map_julia_arg_type(x::Type{<:StdString}) = AbstractString
+CxxWrapCore.map_julia_arg_type(x::Type{<:StdString}) = AbstractString
 Base.convert(::Type{T}, x::String) where {T<:StdString} = StdString(x)
-Base.cconvert(::Type{CxxWrap.ConstCxxRef{StdString}}, x::String) = StdString(x)
-Base.unsafe_convert(::Type{CxxWrap.ConstCxxRef{StdString}}, x::StdString) = ConstCxxRef(x)
+Base.cconvert(::Type{CxxWrapCore.ConstCxxRef{StdString}}, x::String) = StdString(x)
+Base.unsafe_convert(::Type{CxxWrapCore.ConstCxxRef{StdString}}, x::StdString) = ConstCxxRef(x)
 
 function StdValArray(v::Vector{T}) where {T}
   return StdValArray{T}(v, length(v))

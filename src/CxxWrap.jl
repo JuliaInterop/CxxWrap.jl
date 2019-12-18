@@ -1,5 +1,7 @@
 module CxxWrap
 
+module CxxWrapCore
+
 import Libdl
 
 export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx,
@@ -67,9 +69,12 @@ function load_cxxwrap_symbols()
   libcxxwrap = load_cxxwrap_lib()
   for fname in cxxwrap_cfnames
     fnamestr = string(fname)
-    @eval CxxWrap $(Symbol(fname,:_p))[] = Libdl.dlsym($libcxxwrap, $fnamestr)
+    @eval CxxWrapCore $(Symbol(fname,:_p))[] = Libdl.dlsym($libcxxwrap, $fnamestr)
   end
 end
+
+# Must also be called during precompile
+load_cxxwrap_symbols()
 
 # Welcome to the C/C++ integer type mess
 
@@ -109,10 +114,10 @@ to_julia_int(x::Union{CxxSigned,CxxUnsigned}) = reinterpret(julia_int_type(typeo
 # Conversion to and from the equivalent Julia type
 Base.convert(::Type{T}, x::Number) where {T<:Union{CxxSigned,CxxUnsigned}} = reinterpret(T, convert(julia_int_type(T), x))
 Base.convert(::Type{JT}, x::CT) where {JT<:Number,CT<:Union{CxxSigned,CxxUnsigned}} = convert(JT,reinterpret(julia_int_type(CT), x))
-Base.convert(::Type{T}, x::CT) where {T <: Union{CxxWrap.CxxSigned, CxxWrap.CxxUnsigned}, CT <: Union{CxxWrap.CxxSigned, CxxWrap.CxxUnsigned}}  = convert(T,reinterpret(julia_int_type(CT), x))
+Base.convert(::Type{T}, x::CT) where {T <: Union{CxxWrapCore.CxxSigned, CxxWrapCore.CxxUnsigned}, CT <: Union{CxxWrapCore.CxxSigned, CxxWrapCore.CxxUnsigned}}  = convert(T,reinterpret(julia_int_type(CT), x))
 
 # Convenience constructors
-(::Type{T})(x) where {T<:Union{CxxWrap.CxxSigned,CxxWrap.CxxUnsigned}} = convert(T,x)
+(::Type{T})(x) where {T<:Union{CxxWrapCore.CxxSigned,CxxWrapCore.CxxUnsigned}} = convert(T,x)
 
 Base.flipsign(x::CxxLong, y::CxxLong) = reinterpret(CxxLong, flipsign(to_julia_int(x), to_julia_int(y)))
 
@@ -257,7 +262,7 @@ Base.cconvert(::Type{RT}, p::SmartPointer{T}) where {T, RT <: CxxBaseRef{T}} = p
 function Base.convert(::Type{T1}, p::SmartPointer{DerivedT}) where {BaseT,T1 <: BaseT, DerivedT <: BaseT}
   return cxxupcast(T1, p[])[]
 end
-Base.convert(to_type::Type{Any}, x::CxxWrap.SmartPointer{DerivedT}) where {DerivedT} = x
+Base.convert(to_type::Type{Any}, x::CxxWrapCore.SmartPointer{DerivedT}) where {DerivedT} = x
 function Base.convert(to_type::Type{<:Ref{T1}}, p::T2) where {BaseT,DerivedT, T1 <: BaseT, T2 <: SmartPointer{DerivedT}}
   return to_type(convert(T1,p))
 end
@@ -299,19 +304,6 @@ mutable struct CppFunctionInfo
   override_module::Union{Nothing,Module}
 end
 
-function __init__()
-  load_cxxwrap_symbols()
-  jlcxxversion = VersionNumber(unsafe_string(ccall(cxxwrap_version_string_p[], Cstring, ())))
-  if !(libcxxwrap_version_range[1] <= jlcxxversion < libcxxwrap_version_range[2])
-    error("This version of CxxWrap requires a libcxxwrap-julia in the range $(libcxxwrap_version_range), but version $jlcxxversion was found")
-  end
-end
-
-function has_cxx_module(mod::Module)
-  r = ccall(has_cxx_module_p[], Cuchar, (Any,), mod)
-  return r != 0
-end
-
 const _gc_protected = Dict{UInt64,Tuple{Any, Int}}()
 
 function protect_from_gc(x)
@@ -336,20 +328,33 @@ function unprotect_from_gc(x)
 end
 
 function initialize_cxx_lib()
-  load_cxxwrap_symbols()
-
   _c_protect_from_gc = @cfunction protect_from_gc Nothing (Any,)
   _c_unprotect_from_gc = @cfunction unprotect_from_gc Nothing (Any,)
   ccall(initialize_cxxwrap_p[], Cvoid, (Any, Any, Ptr{Cvoid}, Ptr{Cvoid}), @__MODULE__, CppFunctionInfo, _c_protect_from_gc, _c_unprotect_from_gc)
 end
 
-function register_julia_module(mod::Module, fptr::Ptr{Cvoid})
+# Must also be called during precompile
+initialize_cxx_lib()
+
+function __init__()
+  load_cxxwrap_symbols()
+  jlcxxversion = VersionNumber(unsafe_string(ccall(cxxwrap_version_string_p[], Cstring, ())))
+  if !(libcxxwrap_version_range[1] <= jlcxxversion < libcxxwrap_version_range[2])
+    error("This version of CxxWrap requires a libcxxwrap-julia in the range $(libcxxwrap_version_range), but version $jlcxxversion was found")
+  end
   initialize_cxx_lib()
+end
+
+function has_cxx_module(mod::Module)
+  r = ccall(has_cxx_module_p[], Cuchar, (Any,), mod)
+  return r != 0
+end
+
+function register_julia_module(mod::Module, fptr::Ptr{Cvoid})
   ccall(register_julia_module_p[], Cvoid, (Any,Ptr{Cvoid}), mod, fptr)
 end
 
 function register_julia_module(mod::Module)
-  initialize_cxx_lib()
   fptr = Libdl.dlsym(Libdl.dlopen(mod.__cxxwrap_sopath), mod.__cxxwrap_wrapfunc)
   if !has_cxx_module(mod)
     empty!(mod.__cxxwrap_pointers)
@@ -588,11 +593,11 @@ function wrap_reference_converters(julia_mod)
   boxtypes = box_types(julia_mod)
   for bt in boxtypes
     st = supertype(bt)
-    Core.eval(julia_mod, :(@inline CxxWrap.cpp_trait_type(::Type{<:$st}) = CxxWrap.IsCxxType))
+    Core.eval(julia_mod, :(@inline $(@__MODULE__).cpp_trait_type(::Type{<:$st}) = $(@__MODULE__).IsCxxType))
     Core.eval(julia_mod, :(Base.convert(t::Type{$st}, x::T) where {T <: $st} = $(cxxupcast)($st,x)))
-    Core.eval(julia_mod, :(CxxWrap.allocated_type(::Type{$st}) = $bt))
+    Core.eval(julia_mod, :($(@__MODULE__).allocated_type(::Type{$st}) = $bt))
     reftype = makereftype(st, julia_mod)
-    Core.eval(julia_mod, :(CxxWrap.dereferenced_type(::Type{$st}) = $reftype))
+    Core.eval(julia_mod, :($(@__MODULE__).dereferenced_type(::Type{$st}) = $reftype))
     Core.eval(julia_mod, :(Base.convert(::Type{$st}, x::$bt) = x))
     Core.eval(julia_mod, :(Base.convert(::Type{$st}, x::$reftype) = x))
   end
@@ -706,12 +711,22 @@ struct SafeCFunction
 end
 
 macro safe_cfunction(f, rt, args)
-  return esc(:(CxxWrap.SafeCFunction(@cfunction($f, $rt, $args), $rt, [$(args.args...)])))
+  return esc(:($(@__MODULE__).SafeCFunction(@cfunction($f, $rt, $args), $rt, [$(args.args...)])))
 end
 
 isnull(x::CxxBaseRef) = (x.cpp_object == C_NULL)
 
+end
+
 include("StdLib.jl")
+
+using .CxxWrapCore
+using .CxxWrapCore: jlcxx_path
+
+export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx,
+ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,
+CppEnum, ConstArray, CxxBool, CxxLong, CxxULong,
+ptrunion, gcprotect, gcunprotect, isnull
 
 using .StdLib: StdVector, StdString, StdWString, StdValArray
 

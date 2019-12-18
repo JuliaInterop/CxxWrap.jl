@@ -25,7 +25,7 @@ end
 
 # Test functions from the CppTestFunctions module
 @test CppTestFunctions.concatenate_numbers(4, 2.) == "42"
-@test hasmethod(CppTestFunctions.concatenate_numbers, (Union{Cint,CxxWrap.argument_overloads(Cint)...},Union{Cdouble,CxxWrap.argument_overloads(Cdouble)...}))
+@test hasmethod(CppTestFunctions.concatenate_numbers, (Union{Cint,CxxWrap.CxxWrapCore.argument_overloads(Cint)...},Union{Cdouble,CxxWrap.CxxWrapCore.argument_overloads(Cdouble)...}))
 @test CppTestFunctions.concatenate_strings(2, "ho", "la") == "holahola"
 @test CppTestFunctions.test_int32_array(Int32[1,2])
 @test CppTestFunctions.test_int64_array(Int64[1,2])
@@ -51,7 +51,7 @@ CppTestFunctions.test_array_set(ta, Int64(1), 4.)
 a = "str1"
 b = "str2"
 c = "str3"
-protect_container = CxxWrap._gc_protected
+protect_container = CxxWrap.CxxWrapCore._gc_protected
 start_len = length(protect_container)
 gcprotect(a)
 gcprotect(b)
