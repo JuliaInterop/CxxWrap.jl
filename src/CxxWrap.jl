@@ -154,7 +154,7 @@ function Base.getindex(p::SmartPointer{T}) where {T}
 end
 
 # No conversion if source and target type are identical
-Base.convert(::Type{T}, p::T) where {T <: SmartPointer} = p
+Base.convert(::Type{T}, p::T) where {PT,T <: SmartPointer{PT}} = p
 
 # Construct from a related pointer, e.g. a std::weak_ptr from std::shared_ptr
 function Base.convert(::Type{T1}, p::T2) where {T, T1 <: SmartPointer{T}, T2 <: SmartPointer{T}}
@@ -721,7 +721,7 @@ end
 include("StdLib.jl")
 
 using .CxxWrapCore
-using .CxxWrapCore: jlcxx_path
+using .CxxWrapCore: jlcxx_path, argument_overloads
 
 export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx,
 ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,
