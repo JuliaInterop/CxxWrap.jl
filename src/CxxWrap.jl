@@ -33,7 +33,7 @@ const jlcxx_path = libcxxwrap_julia
 
 prefix_path() = dirname(dirname(jlcxx_path))
 
-# Internam function names
+# Internal function names
 const cxxwrap_cfnames = [
   :cxxwrap_version_string,
   :has_cxx_module,
@@ -68,8 +68,7 @@ function load_cxxwrap_symbols()
 
   libcxxwrap = load_cxxwrap_lib()
   for fname in cxxwrap_cfnames
-    fnamestr = string(fname)
-    @eval CxxWrapCore $(Symbol(fname,:_p))[] = Libdl.dlsym($libcxxwrap, $fnamestr)
+    getproperty(@__MODULE__, Symbol(fname,:_p))[] = Libdl.dlsym(libcxxwrap, string(fname))
   end
 end
 
@@ -721,7 +720,7 @@ end
 include("StdLib.jl")
 
 using .CxxWrapCore
-using .CxxWrapCore: jlcxx_path, argument_overloads
+using .CxxWrapCore: CxxBaseRef, jlcxx_path, argument_overloads, SafeCFunction
 
 export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx,
 ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,

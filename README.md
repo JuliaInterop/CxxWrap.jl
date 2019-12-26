@@ -234,10 +234,10 @@ struct B : A
 When adding the type, add the supertype as a second argument:
 ```c++
 types.add_type<A>("A").method("message", &A::message);
-types.add_type<B>("B", jlcxx::julia_type<A>());
+types.add_type<B>("B", jlcxx::julia_base_type<A>());
 ```
 
-The supertype is of type `jl_datatype_t*` and using the template variant of `jlcxx::julia_type` looks up the corresponding type here. There is also a variant taking a string for the type name and an optional Julia module name as second argument, which is useful for inheriting from a type defined in Julia, e.g.:
+The supertype is of type `jl_datatype_t*` and using the template function `jlcxx::julia_base_type` looks up the abstract type associated with `A` here. There is also a variant taking a string for the type name and an optional Julia module name as second argument, which is useful for inheriting from a type defined in Julia, e.g.:
 
 ```c++
 mod.add_type<Teuchos::ParameterList>("ParameterList", jlcxx::julia_type("AbstractDict", "Base"))
@@ -705,3 +705,4 @@ template<> struct IsMirroredType<Foo> : std::false_type { };
 * Defining `SuperType` on the C++ side is now necessary for any kind of casting to base class, because the previous implementation was wrong in the case of multiple inheritance.
 * Use `Ref(CxxPtr(x))` for pointer or reference to pointer 
 * Use `CxxPtr{MyData}(C_NULL)` instead of `nullptr(MyData)`
+* Defining a C++ supertype in C++ must now be done using the `jlcxx::julia_base_type<T>()` function instead of `jlcxx::julia_type<T>()`
