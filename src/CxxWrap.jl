@@ -4,6 +4,10 @@ module CxxWrapCore
 
 import Libdl
 
+if ccall(:jl_is_debugbuild, Cint, ()) != 0 && get(ENV, "JLCXX_DIR", "") == ""
+  @warn "Julia debug-build may be incompatible with the libcxxwrap-julia binaries, see https://github.com/JuliaInterop/libcxxwrap-julia#building-libcxxwrap-julia for instructions on building compatible binaries."
+end
+
 export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx,
 ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,
 CppEnum, ConstArray, CxxBool, CxxLong, CxxULong,
@@ -340,7 +344,7 @@ function __init__()
   jlcxxversion = VersionNumber(unsafe_string(ccall(cxxwrap_version_string_p[], Cstring, ())))
   if !(libcxxwrap_version_range[1] <= jlcxxversion < libcxxwrap_version_range[2])
     error("This version of CxxWrap requires a libcxxwrap-julia in the range $(libcxxwrap_version_range), but version $jlcxxversion was found")
-  end
+  end  
   initialize_cxx_lib()
 end
 
