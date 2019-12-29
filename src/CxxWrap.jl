@@ -3,6 +3,7 @@ module CxxWrap
 module CxxWrapCore
 
 import Libdl
+import MacroTools
 
 if ccall(:jl_is_debugbuild, Cint, ()) != 0 && get(ENV, "JLCXX_DIR", "") == ""
   @warn "Julia debug-build may be incompatible with the libcxxwrap-julia binaries, see https://github.com/JuliaInterop/libcxxwrap-julia#building-libcxxwrap-julia for instructions on building compatible binaries."
@@ -719,12 +720,50 @@ end
 
 isnull(x::CxxBaseRef) = (x.cpp_object == C_NULL)
 
+reference_type_union(::Type{T}) where {T} = reference_type_union(T, Base.invokelatest(cpp_trait_type, T))
+reference_type_union(::Type{T}, ::Type{IsNormalType}) where {T} = T
+reference_type_union(::Type{T}, ::Type{IsCxxType}) where {T} = Union{T, CxxBaseRef{T}, SmartPointer{T}}
+reference_type_union(t::TypeVar) = t
+
+dereference_argument(x) = x
+dereference_argument(x::CxxBaseRef) = x[]
+dereference_argument(x::SmartPointer) = x[]
+
+macro cxxdereference(f)
+  fdict = MacroTools.splitdef(f)
+  
+  function maparg(a)
+    (argname, argtype, slurp, default) = MacroTools.splitarg(a)
+    return MacroTools.combinearg(argname, :($(@__MODULE__).reference_type_union($(argtype))), slurp, default)
+  end
+
+  # Adapt the signature
+  fdict[:args] .= maparg.(fdict[:args])
+  fdict[:kwargs] .= maparg.(fdict[:kwargs])
+
+  # Dereference the arguments
+  deref_expr = quote end
+  for arg in vcat(fdict[:args], fdict[:kwargs])
+    (argname, _, slurp, _) = MacroTools.splitarg(arg)
+    if !slurp
+      push!(deref_expr.args, :($argname = $(@__MODULE__).dereference_argument($argname)))
+    else
+      push!(deref_expr.args, :($argname = (($(@__MODULE__).dereference_argument.($argname))...,)))
+    end
+  end
+  insert!(fdict[:body].args, 1, deref_expr)
+  fdict[:body] = MacroTools.flatten(fdict[:body])
+
+  # Reassemble the function
+  return esc(MacroTools.combinedef(fdict))
+end
+
 end
 
 include("StdLib.jl")
 
 using .CxxWrapCore
-using .CxxWrapCore: CxxBaseRef, jlcxx_path, argument_overloads, SafeCFunction
+using .CxxWrapCore: CxxBaseRef, jlcxx_path, argument_overloads, SafeCFunction, reference_type_union, dereference_argument, @cxxdereference
 
 export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx,
 ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,
@@ -733,6 +772,6 @@ ptrunion, gcprotect, gcunprotect, isnull
 
 using .StdLib: StdVector, StdString, StdWString, StdValArray
 
-export StdVector, StdString, StdWString, StdValArray
+export StdVector, StdString, StdWString, StdValArray, @cxxdereference
 
 end # module

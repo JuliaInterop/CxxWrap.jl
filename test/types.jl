@@ -12,6 +12,9 @@ const greet = getindex ∘ greet_cref
 export enum_to_int, get_enum_b, World
 export AConstRef, ReturnConstRef, value, CallOperator, ConstPtrConstruct
 
+julia_greet1(w::World) = greet_lambda(w)
+@cxxdereference julia_greet2(w::World) = greet_lambda(w)
+
 end
 
 # Stress test
@@ -154,3 +157,8 @@ return_world_ptr() = CxxPtr(wptr)
 return_world_ref() = CxxRef(wref)
 
 @test CppTypes.test_unbox() == fill(true,7)
+
+@test_throws MethodError CppTypes.julia_greet1(fw)
+@test_throws MethodError CppTypes.julia_greet1(swf)
+@test CppTypes.julia_greet2(fw) == "factory hello"
+@test CppTypes.julia_greet2(swf) == "shared factory hello"

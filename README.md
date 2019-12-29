@@ -480,6 +480,37 @@ namespace jlcxx
 
 Here, the first line marks our type as a smart pointer, enabling automatic conversion from the pointer to its referenced type and adding the dereferencing pointer. If the type uses inheritance and the hierarchy is defined using `SuperType`, automatic conversion to the pointer or reference of the base type is also supported. The second line indicates that our smart pointer can be constructed from a `std::shared_ptr`, also adding auto-conversion for that case. This is useful for a relation as in `std::weak_ptr` and `std::shared_ptr`, for example.
 
+## Function arguments
+
+Because C++ functions often return references or pointers, writing Julia functions that operate on C++ types can be tricky. For example, writing a function like:
+
+```julia
+julia_greet(w::World) = greet_cpp(w)
+```
+
+If `World` is a type from C++, this will only work with objects that have been constructed directly or that were returned by value from C++. To make it work with references and pointers, we would need an additional method:
+
+```julia
+julia_greet(w::CxxWrap.CxxBaseRef{World}) = greet_cpp(w[])
+```
+
+Note that in the general case, both the signature and the implementation need to change, making this cumbersome when there are many functions like this. Enter the `@cxxdereference` macro. Declaring the function like this makes sure it can accept both values and references:
+
+```julia
+@cxxdereference julia_greet(w::World) = greet_cpp(w)
+```
+
+The `@cxxdereference` macro changes the function into:
+
+```julia
+function julia_greet(w::CxxWrap.reference_type_union(World))
+    w = CxxWrap.dereference_argument(w)
+    greet_cpp(w)
+end
+```
+
+The type of `w` is now calculated by the `CxxWrap.reference_type_union` function, which resolves to `Union{World, CxxWrap.CxxBaseRef{World}, CxxWrap.SmartPointer{World}}`. The behavior of the macro can be customized by adding methods to `CxxWrap.reference_type_union` and `CxxWrap.dereference_argument`.
+
 ## Exceptions
 When directly adding a regular free C++ function as a method, it will be called directly using ccall and any exception will abort the Julia program. To avoid this, you can force wrapping it in an `std::functor` to intercept the exception automatically by setting the `force_convert` argument to `method` to true:
 ```c++
