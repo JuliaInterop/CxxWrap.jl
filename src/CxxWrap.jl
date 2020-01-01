@@ -275,7 +275,7 @@ Base.unsafe_convert(to_type::Type{<:CxxBaseRef}, x) = to_type(x.cpp_object)
 
 # This is defined on the C++ side for each wrapped type
 cxxupcast(x) = cxxupcast(CxxRef(x))
-cxxupcast(x::CxxBaseRef) = error("No upcast for type $(supertype(typeof(x))). Did you specialize SuperType to enable automatic upcasting?")
+cxxupcast(x::CxxRef) = error("No upcast for type $(supertype(typeof(x))). Did you specialize SuperType to enable automatic upcasting?")
 function cxxupcast(::Type{T}, x) where {T}
   cxxupcast(T, cxxupcast(x))
 end
