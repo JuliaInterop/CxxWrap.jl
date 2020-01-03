@@ -303,6 +303,7 @@ mutable struct CppFunctionInfo
   name::Any
   argument_types::Array{Type,1}
   return_type::Type
+  julia_return_type::Type
   function_pointer::Int
   thunk_pointer::Int
   override_module::Union{Nothing,Module}
@@ -540,7 +541,8 @@ function build_function_expression(func::CppFunctionInfo, mod=nothing)
   c_return_type = map_c_return_type(func.return_type)
 
   # Builds the return-type annotation for the Julia function
-  map_julia_return_type(t) = map_c_return_type(t)
+  map_julia_return_type(t) = t
+  map_julia_return_type(::Type{T}) where {T<:Union{CxxSigned,CxxUnsigned}} = map_c_arg_type(T)
   map_julia_return_type(::Type{CxxBool}) = Bool
 
   # Build the final call expression
@@ -568,7 +570,7 @@ function build_function_expression(func::CppFunctionInfo, mod=nothing)
   end
 
   fname = mod === nothing ? func.name : (func.name,mod)
-  function_expression = :($(make_func_declaration(fname, argmap(argtypes)))::$(map_julia_return_type(func.return_type)) = $call_exp)
+  function_expression = :($(make_func_declaration(fname, argmap(argtypes)))::$(map_julia_return_type(func.julia_return_type)) = $call_exp)
   return function_expression
 end
 

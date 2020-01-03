@@ -162,3 +162,16 @@ return_world_ref() = CxxRef(wref)
 @test_throws MethodError CppTypes.julia_greet1(swf)
 @test CppTypes.julia_greet2(fw) == "factory hello"
 @test CppTypes.julia_greet2(swf) == "shared factory hello"
+
+function bench_greet()
+  w = CppTypes.World()
+  l = 0
+  for i = 1:1000
+    l += length(CppTypes.greet(w))
+  end
+  return l
+end
+
+@test bench_greet() == 1000*length(CppTypes.greet(CppTypes.World()))
+_, _, _, _, memallocs = @timed bench_greet()
+@test 0 < memallocs.poolalloc < 100
