@@ -12,7 +12,7 @@ function cxxsetindex! end
 function push_back end
 function resize end
 
-@wrapmodule(CxxWrapCore.libcxxwrap_julia_stl)
+@wrapmodule(CxxWrapCore.libcxxwrap_julia_stl, :define_cxxwrap_stl_module)
 
 function __init__()
   @initcxx
