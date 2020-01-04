@@ -117,6 +117,12 @@ module B
 end
 ```
 
+In specific cases, it may also be necessary to specify `dlopen` flags such as `RTLD_GLOBAL`. These can be supplied in a third, optional argument to `@wrapmodule`, e.g:
+
+```julia
+@wrapmodule(CxxWrapCore.libcxxwrap_julia_stl, :define_cxxwrap_stl_module, Libdl.RTLD_GLOBAL)
+```
+
 ## More extensive example and function call performance
 A more extensive example, including wrapping a C++11 lambda and conversion for arrays can be found in [`deps/src/jlcxx/examples/functions.cpp`](deps/src/jlcxx/examples/functions.cpp) and [`test/functions.jl`](test/functions.jl). This test also includes some performance measurements, showing that the function call overhead is the same as using ccall on a C function if the C++ function is a regular function and does not require argument conversion. When `std::function` is used (e.g. for C++ lambdas) extra overhead appears, as expected.
 

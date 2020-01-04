@@ -12,7 +12,8 @@ function cxxsetindex! end
 function push_back end
 function resize end
 
-@wrapmodule(CxxWrapCore.libcxxwrap_julia_stl, :define_cxxwrap_stl_module)
+import Libdl
+@wrapmodule(CxxWrapCore.libcxxwrap_julia_stl, :define_cxxwrap_stl_module, Libdl.RTLD_GLOBAL)
 
 function __init__()
   @initcxx

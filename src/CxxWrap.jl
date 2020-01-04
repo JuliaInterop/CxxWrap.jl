@@ -56,14 +56,10 @@ end
 function load_cxxwrap_lib()
   loaded_lib = Libdl.dllist()[findall(x -> occursin("libcxxwrap_julia.",x), Libdl.dllist())]
   if length(loaded_lib) == 1
-    return Libdl.dlopen(loaded_lib[1])
+    return Libdl.dlopen(loaded_lib[1], Libdl.RTLD_GLOBAL)
   end
 
-  @static if Sys.iswindows()
-    return Libdl.dlopen(jlcxx_path, Libdl.RTLD_GLOBAL)
-  end
-
-  return Libdl.dlopen(jlcxx_path)
+  return Libdl.dlopen(jlcxx_path, Libdl.RTLD_GLOBAL)
 end
 
 function load_cxxwrap_symbols()
@@ -360,7 +356,7 @@ function register_julia_module(mod::Module, fptr::Ptr{Cvoid})
 end
 
 function register_julia_module(mod::Module)
-  fptr = Libdl.dlsym(Libdl.dlopen(mod.__cxxwrap_sopath), mod.__cxxwrap_wrapfunc)
+  fptr = Libdl.dlsym(Libdl.dlopen(mod.__cxxwrap_sopath, mod.__cxxwrap_flags), mod.__cxxwrap_wrapfunc)
   if !has_cxx_module(mod)
     empty!(mod.__cxxwrap_pointers)
     register_julia_module(mod, fptr)
@@ -644,18 +640,22 @@ function wrapfunctions(jlmod)
   wrap_functions(module_functions, jlmod)
 end
 
-function readmodule(so_path::AbstractString, funcname, m::Module)
+function readmodule(so_path::AbstractString, funcname, m::Module, flags)
+  if flags === nothing
+    flags = Libdl.RTLD_LAZY | Libdl.RTLD_DEEPBIND
+  end
   Core.eval(m, :(const __cxxwrap_pointers = Ptr{Cvoid}[]))
   Core.eval(m, :(const __cxxwrap_sopath = $so_path))
   Core.eval(m, :(const __cxxwrap_wrapfunc = $(QuoteNode(funcname))))
-  fptr = Libdl.dlsym(Libdl.dlopen(so_path), funcname)
+  Core.eval(m, :(const __cxxwrap_flags = $flags))
+  fptr = Libdl.dlsym(Libdl.dlopen(so_path, flags), funcname)
   register_julia_module(m, fptr)
   nb_pointers = length(m.__cxxwrap_pointers)
   Core.eval(m, :(const __cxxwrap_nbpointers = $nb_pointers))
 end
 
-function wrapmodule(so_path::AbstractString, funcname, m::Module)
-  readmodule(so_path, funcname, m)
+function wrapmodule(so_path::AbstractString, funcname, m::Module, flags)
+  readmodule(so_path, funcname, m, flags)
   wraptypes(m)
   wrapfunctions(m)
 end
@@ -667,8 +667,8 @@ Place the functions and types from the C++ lib into the module enclosing this ma
 Calls an entry point named `define_julia_module`, unless another name is specified as
 the second argument.
 """
-macro wrapmodule(libraryfile, register_func=:(:define_julia_module))
-  return :(wrapmodule($(esc(libraryfile)), $(esc(register_func)), $__module__))
+macro wrapmodule(libraryfile, register_func=:(:define_julia_module), flags=:(nothing))
+  return :(wrapmodule($(esc(libraryfile)), $(esc(register_func)), $__module__, $(esc(flags))))
 end
 
 """
@@ -676,8 +676,8 @@ end
 
 Read a C++ module and associate it with the Julia module enclosing the macro call.
 """
-macro readmodule(libraryfile, register_func=:(:define_julia_module))
-  return :(readmodule($(esc(libraryfile)), $(esc(register_func)), $__module__))
+macro readmodule(libraryfile, register_func=:(:define_julia_module), flags=:(nothing))
+  return :(readmodule($(esc(libraryfile)), $(esc(register_func)), $__module__, $(esc(flags))))
 end
 
 """
