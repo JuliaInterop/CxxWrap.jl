@@ -175,3 +175,9 @@ end
 @test bench_greet() == 1000*length(CppTypes.greet(CppTypes.World()))
 _, _, _, _, memallocs = @timed bench_greet()
 @test 0 < memallocs.poolalloc < 100
+
+if isdefined(CppTypes, :IntDerived)
+  Base.promote_rule(::Type{<:CppTypes.IntDerived}, ::Type{<:Number}) = Int
+  @test CppTypes.IntDerived() == CppTypes.IntDerived()
+  @test CppTypes.IntDerived() == 42
+end

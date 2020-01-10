@@ -449,7 +449,9 @@ end
 
 map_julia_arg_type(t::Type) = Union{Base.invokelatest(smart_pointer_type,t),argument_overloads(t)...}
 map_julia_arg_type(a::Type{StrictlyTypedNumber{T}}) where {T} = T
-map_julia_arg_type(x::Type{<:Integer}) = Integer
+map_julia_arg_type(x::Type{T}) where {T<:Integer} = map_julia_arg_type(x, Base.invokelatest(cpp_trait_type, T))
+map_julia_arg_type(x::Type{<:Integer}, ::Type{IsNormalType}) = Integer
+map_julia_arg_type(x::Type{<:Integer}, ::Type{IsCxxType}) = x
 
 const PtrTypes{T} = Union{CxxPtr{T}, Array{T}, CxxRef{T}, Base.RefValue{T}, Ptr{T},T}
 const ConstPtrTypes{T} = Union{Ref{T}, Array{T}}
