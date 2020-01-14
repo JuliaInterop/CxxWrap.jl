@@ -29,7 +29,7 @@ append(v::StdVector{T}, a::Vector{<:T}) where {T} = _append_dispatch(v,a,CxxWrap
 Base.ncodeunits(s::CppBasicString)::Int = cppsize(s)
 Base.codeunit(s::StdString) = UInt8
 Base.codeunit(s::StdWString) = Cwchar_t == Int32 ? UInt32 : UInt16
-Base.codeunit(s::CppBasicString, i::Integer) = s[i]
+Base.codeunit(s::CppBasicString, i::Integer) = reinterpret(codeunit(s), s[i])
 Base.isvalid(s::CppBasicString, i::Integer) = (0 < i <= ncodeunits(s))
 function Base.iterate(s::CppBasicString, i::Integer=1)
   if !isvalid(s,i)
@@ -90,6 +90,15 @@ function Base.append!(v::StdVector{CxxBool}, a::Vector{Bool})
   append(v, convert(Vector{CxxBool}, a))
   return v
 end
+
+Base.String(s::StdString) = unsafe_string(reinterpret(Ptr{Cchar},c_str(s).cpp_object))
+function Base.String(s::StdWString)
+  chars = unsafe_wrap(Vector{Cwchar_t}, reinterpret(Ptr{Cwchar_t},c_str(s).cpp_object), (cppsize(s),))
+  return transcode(String, chars)
+end
+Base.show(io::IO, s::CppBasicString) = show(io, String(s))
+Base.cmp(a::CppBasicString, b::String) = cmp(String(a),b)
+Base.cmp(a::String, b::CppBasicString) = cmp(a,String(b))
 
 # Make sure functions taking a C++ string as argument can also take a Julia string
 CxxWrapCore.map_julia_arg_type(x::Type{<:StdString}) = AbstractString

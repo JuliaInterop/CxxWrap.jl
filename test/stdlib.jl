@@ -15,6 +15,18 @@ let s = "šČô_φ_привет_일보"
   @test String(StdWString(s)) == s
 end
 
+let s = "😄😈😼"
+  @show StdWString(s)
+  @test StdWString(s) == s
+  @test String(StdWString(s)) == s
+end
+
+let s = "café"
+  @show StdString(s)
+  @test StdString(s) == s
+  @test String(StdString(s)) == s
+end
+
 stvec = StdVector(Int32[1,2,3])
 @test all(stvec .== [1,2,3])
 push!(stvec,1)
