@@ -16,6 +16,8 @@ end
 
 using .CppInheritance
 
+@testset "$(basename(@__FILE__)[1:end-3])" begin
+
 b = B()
 c = C()
 global d = D()
@@ -56,3 +58,5 @@ VirtualSolver.solve(a)
 
 b = VirtualSolver.F(@safe_cfunction(x -> 2x, Float64, (Float64,)))
 VirtualSolver.solve(b)
+
+end

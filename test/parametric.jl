@@ -16,6 +16,8 @@ p2 = TemplateType{ParametricTypes.P2, ParametricTypes.P1}()
 println("Dumping object p1:")
 dump(p1)
 
+@testset "$(basename(@__FILE__)[1:end-3])" begin
+
 @test ParametricTypes.get_first(p1) == 1
 @test ParametricTypes.get_second(p2) == 1
 @test typeof(ParametricTypes.get_first(p1)) == Int32
@@ -75,3 +77,5 @@ vec3 = ParametricTypes.CppVector{Complex{Float32}}(pointer(carr), 2)
 @test ParametricTypes.get(vec1,2)[] == 3.0
 @test ParametricTypes.get(vec3,0)[] == 1+2im
 @test ParametricTypes.get(vec3,1)[] == 3+4im
+
+end

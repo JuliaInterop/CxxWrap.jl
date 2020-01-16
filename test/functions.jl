@@ -12,6 +12,36 @@ using CxxWrap
 
 end
 
+testf(x,y) = x+y
+
+function byval_cb(n::CppTestFunctions.BoxedNumber, result::Ref{Int32})
+  result[] = CppTestFunctions.getnumber(n)
+end
+
+function byref_cb(n::CxxRef{CppTestFunctions.BoxedNumber}, result::Ref{Int32})
+  result[] = CppTestFunctions.getnumber(n)
+end
+
+function byptr_cb(n::CxxPtr{CppTestFunctions.BoxedNumber}, result::Ref{Int32})
+  result[] = CppTestFunctions.getnumber(n[])
+end
+
+function testf_arf(v::Vector{Float64}, s::AbstractString)
+  r = sum(v)
+  GC.gc()
+  printstyled("callback in Julia: $s = $r\n", color=:green)
+  return r
+end
+
+function testf2(p::ConstCxxPtr{Float64}, n_elems::Int)
+  arr = ConstArray(p, n_elems)
+  @test arr[1] == 1.0
+  @test arr[2] == 2.0
+  return
+end
+
+@testset "$(basename(@__FILE__)[1:end-3])" begin
+
 # Test functions from the CppHalfFunctions module
 @test CppHalfFunctions.half_d(3) == 1.5
 @show methods(CppHalfFunctions.half_d)
@@ -70,22 +100,10 @@ darr = [1.,2.]
 CppTestFunctions.test_append_array!(darr)
 @test darr == [1.,2.,3.]
 
-testf(x,y) = x+y
+
 c_func = @safe_cfunction(testf, Float64, (Float64,Float64))
 CppTestFunctions.test_safe_cfunction(c_func)
 CppTestFunctions.test_safe_cfunction2(c_func)
-
-function byval_cb(n::CppTestFunctions.BoxedNumber, result::Ref{Int32})
-  result[] = CppTestFunctions.getnumber(n)
-end
-
-function byref_cb(n::CxxRef{CppTestFunctions.BoxedNumber}, result::Ref{Int32})
-  result[] = CppTestFunctions.getnumber(n)
-end
-
-function byptr_cb(n::CxxPtr{CppTestFunctions.BoxedNumber}, result::Ref{Int32})
-  result[] = CppTestFunctions.getnumber(n[])
-end
 
 let boxed_num_val = Ref{Int32}(0)
   CppTestFunctions.callback_byval(byval_cb, boxed_num_val)
@@ -105,24 +123,11 @@ let boxed_num_val = Ref{Int32}(0)
   @test CppTestFunctions.boxednumber_nb_deleted() == 5
 end
 
-function testf_arf(v::Vector{Float64}, s::AbstractString)
-  r = sum(v)
-  GC.gc()
-  printstyled("callback in Julia: $s = $r\n", color=:green)
-  return r
-end
-
 c_func_arf = @safe_cfunction(testf_arf, Float64, (Any,Any))
 
 CppTestFunctions.fn_clb(c_func_arf)
 CppTestFunctions.fn_clb2(testf_arf)
 
-function testf2(p::ConstCxxPtr{Float64}, n_elems::Int)
-  arr = ConstArray(p, n_elems)
-  @test arr[1] == 1.0
-  @test arr[2] == 2.0
-  return
-end
 c_func2 = @safe_cfunction(testf2, Nothing, (ConstCxxPtr{Float64},Int))
 CppTestFunctions.test_safe_cfunction3(c_func2)
 
@@ -152,6 +157,8 @@ cppdref[] = 1.0
 @test typeof(CppTestFunctions.make_complex(Float32(3.0), Float32(4.0))) == Complex{Float32}
 
 @test CppTestFunctions.process_irrational(π, 2) == 2*π
+
+end
 
 # Performance tests
 const test_size = Sys.ARCH == :armv7l ? 1000000 : 50000000

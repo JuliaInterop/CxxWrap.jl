@@ -18,5 +18,9 @@ end
 using .ExtendedTypes
 using Test
 
+@testset "$(basename(@__FILE__)[1:end-3])" begin
+
 w = ExtendedWorld()
 @test greet(w) == "default hello"
+
+end

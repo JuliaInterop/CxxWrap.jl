@@ -13,5 +13,9 @@ using Test
 # Output:
 @show CppHello.greet()
 
+@testset "$(basename(@__FILE__)[1:end-3])" begin
+
 # Test the result
 @test CppHello.greet() == "hello, world"
+
+end

@@ -5,7 +5,9 @@ module CppTypes
 
 using CxxWrap
 
+GC.gc()
 @wrapmodule(Main.libtypes)
+GC.gc()
 
 const greet = getindex ∘ greet_cref
 
@@ -21,6 +23,37 @@ end
 for i in 1:1000000
   global d = CppTypes.DoubleData()
 end
+
+function bench_greet()
+  w = CppTypes.World()
+  l = 0
+  for i = 1:1000
+    l += length(CppTypes.greet(w))
+  end
+  return l
+end
+
+mutable struct JuliaTestType
+    a::Float64
+    b::Float64
+end
+
+function julia_test_func(data)
+  println("a: ", data.a, ", b: ", data.b)
+  @test data.a == 2.0
+  @test data.b == 3.0
+end
+
+return_int() = Int32(3)
+a = [4.0]
+return_ptr_double() = pointer(a)
+return_world() = CppTypes.World("returned_world")
+wptr = CppTypes.World("returned_world_ptr")
+wref = CppTypes.World("returned_world_ref")
+return_world_ptr() = CxxPtr(wptr)
+return_world_ref() = CxxRef(wref)
+
+@testset "$(basename(@__FILE__)[1:end-3])" begin
 
 # Default constructor
 w = CppTypes.World()
@@ -104,17 +137,6 @@ call_op = CppTypes.CallOperator()
 @test call_op() == 43
 @test call_op(42) == 42
 
-mutable struct JuliaTestType
-    a::Float64
-    b::Float64
-end
-
-function julia_test_func(data)
-  println("a: ", data.a, ", b: ", data.b)
-  @test data.a == 2.0
-  @test data.b == 3.0
-end
-
 CppTypes.call_testtype_function()
 
 @test CppTypes.enum_to_int(CppTypes.EnumValA) == 0
@@ -147,30 +169,12 @@ end
 
 @test CppTypes.greet_vector(wvec1) == string(("world$i " for i in 1:5)...)[1:end-1]
 
-a = [4.0]
-return_int() = Int32(3)
-return_ptr_double() = pointer(a)
-return_world() = CppTypes.World("returned_world")
-wptr = CppTypes.World("returned_world_ptr")
-wref = CppTypes.World("returned_world_ref")
-return_world_ptr() = CxxPtr(wptr)
-return_world_ref() = CxxRef(wref)
-
 @test CppTypes.test_unbox() == fill(true,7)
 
 @test_throws MethodError CppTypes.julia_greet1(fw)
 @test_throws MethodError CppTypes.julia_greet1(swf)
 @test CppTypes.julia_greet2(fw) == "factory hello"
 @test CppTypes.julia_greet2(swf) == "shared factory hello"
-
-function bench_greet()
-  w = CppTypes.World()
-  l = 0
-  for i = 1:1000
-    l += length(CppTypes.greet(w))
-  end
-  return l
-end
 
 @test bench_greet() == 1000*length(CppTypes.greet(CppTypes.World()))
 _, _, _, _, memallocs = @timed bench_greet()
@@ -180,4 +184,6 @@ if isdefined(CppTypes, :IntDerived)
   Base.promote_rule(::Type{<:CppTypes.IntDerived}, ::Type{<:Number}) = Int
   @test CppTypes.IntDerived() == CppTypes.IntDerived()
   @test CppTypes.IntDerived() == 42
+end
+
 end

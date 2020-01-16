@@ -1,6 +1,8 @@
 using CxxWrap
 using Test
 
+@testset "$(basename(@__FILE__)[1:end-3])" begin
+
 let s = StdString("test")
   println("This prints a test string: ", s)
   @test s == "test"
@@ -78,4 +80,6 @@ let
   valarr2[2] = sum(valarr2)
   @show valarr2
   @test valarr2[2] == 6
+end
+
 end

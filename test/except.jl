@@ -1,5 +1,7 @@
 include(joinpath(@__DIR__, "testcommon.jl"))
 
+@testset "$(basename(@__FILE__)[1:end-3])" begin
+
 @test ccall((:internalthrow, libexcept), Cint, (Cint,), -1) == 1
 @test ccall((:internalthrow, libexcept), Cint, (Cint,), -2) == 2
 @test ccall((:internalthrow, libexcept), Cint, (Cint,), -1) == 1
@@ -29,4 +31,6 @@ try
 catch
   println("exception 3")
   @test true
+end
+
 end

@@ -26,6 +26,14 @@ end
 using CxxWrap
 using Test
 
+result = Ref(0.0)
+function test_boxed_struct(x)
+    result[] = x.a + x.b
+    return
+end
+
+@testset "$(basename(@__FILE__)[1:end-3])" begin
+
 let a = BasicTypes.A(2,3)
   @test BasicTypes.f(a) == 5.0
   @test BasicTypes.g(a) == 5.0
@@ -125,12 +133,6 @@ let s = BasicTypes.StringHolder("hello")
   @test_throws MethodError BasicTypes.replace_str_val!(strcptr, "can't work")
 end
 
-result = Ref(0.0)
-function test_boxed_struct(x)
-    result[] = x.a + x.b
-    return
-end
-
 let cfunc = @safe_cfunction(test_boxed_struct, Cvoid, (Any,))
   BasicTypes.boxed_mirrored_type(cfunc)
   @test result[] == 3.0
@@ -140,3 +142,5 @@ let cfunc = @safe_cfunction(test_boxed_struct, Cvoid, (Any,))
 end
 
 @test BasicTypes.test_for_each_type() == (sizeof(Float32) + sizeof(Float64))
+
+end

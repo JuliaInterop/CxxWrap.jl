@@ -13,8 +13,11 @@ module PtrModif
   end
 end
 
+using BenchmarkTools
 using CxxWrap
 using Test
+
+@testset "$(basename(@__FILE__)[1:end-3])" begin
 
 let d = PtrModif.MyData()
   PtrModif.setvalue!(d, 10)
@@ -48,12 +51,12 @@ let a = PtrModif.MyData(9), b = PtrModif.MyData(2)
   @test PtrModif.value.((q,r)) == (4,1)
 end
 
+end
+
 GC.gc()
 @test PtrModif.alive_count() == 0
 
 # Must be after the GC test, because BenchmarkTools keeps a reference to the value
-
-using BenchmarkTools
 
 let a = PtrModif.MyData(11)
   println("value timing:")
