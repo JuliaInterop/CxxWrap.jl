@@ -749,6 +749,9 @@ macro cxxdereference(f)
   deref_expr = quote end
   for arg in vcat(fdict[:args], fdict[:kwargs])
     (argname, _, slurp, _) = MacroTools.splitarg(arg)
+    if argname === nothing
+      continue
+    end
     if !slurp
       push!(deref_expr.args, :($argname = $(@__MODULE__).dereference_argument($argname)))
     else
