@@ -27,6 +27,8 @@ function byptr_cb(n::CxxPtr{CppTestFunctions.BoxedNumber}, result::Ref{Int32})
 end
 
 function testf_arf(v::Vector{Float64}, s::AbstractString)
+  CxxWrap.gcprotect(s) # Not sure why this is needed, since s is protected in C++ using GC_PUSH
+  GC.enable(true)
   r = sum(v)
   GC.gc()
   printstyled("callback in Julia: $s = $r\n", color=:green)
@@ -125,6 +127,7 @@ end
 
 c_func_arf = @safe_cfunction(testf_arf, Float64, (Any,Any))
 
+GC.enable(false) # enabled again in testf_arf
 CppTestFunctions.fn_clb(c_func_arf)
 CppTestFunctions.fn_clb2(testf_arf)
 
