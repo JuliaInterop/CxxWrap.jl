@@ -6,6 +6,10 @@ module ParametricTypes
 using CxxWrap
 @wrapmodule(Main.libparametric)
 
+function __init__()
+    @initcxx
+end
+
 end
 
 import .ParametricTypes.TemplateType, .ParametricTypes.NonTypeParam

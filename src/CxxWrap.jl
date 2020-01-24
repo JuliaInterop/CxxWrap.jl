@@ -14,7 +14,7 @@ ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,
 CppEnum, ConstArray, CxxBool, CxxLong, CxxULong,
 ptrunion, gcprotect, gcunprotect, isnull
 
-const libcxxwrap_version_range = (v"0.6.4",  v"0.7")
+const libcxxwrap_version_range = (v"0.6.6",  v"0.7")
 
 # Convert path if it contains lib prefix on windows
 function lib_path(so_path::AbstractString)
@@ -370,8 +370,8 @@ function get_module_functions(mod::Module)
   ccall(get_module_functions_p[], Any, (Any,), mod)
 end
 
-function bind_constants(m::Module)
-  ccall(bind_module_constants_p[], Cvoid, (Any,), m)
+function bind_constants(m::Module, symbols::Array, values::Array)
+  ccall(bind_module_constants_p[], Cvoid, (Any,Any,Any), m, symbols, values)
 end
 
 function box_types(mod::Module)
@@ -633,7 +633,12 @@ end
 
 # Place the types for the module with the name corresponding to the current module name in the current module
 function wraptypes(jlmod)
-  bind_constants(jlmod)
+  symbols = Any[]
+  values = Any[]
+  bind_constants(jlmod, symbols, values)
+  for (sym,val) in zip(symbols, values)
+    Core.eval(jlmod, :(const $sym = $val))
+  end
 end
 
 function wrapfunctions(jlmod)

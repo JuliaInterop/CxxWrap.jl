@@ -5,6 +5,11 @@ module CppInheritance
 
 using CxxWrap
 @wrapmodule(Main.libinheritance, :define_types_module)
+
+function __init__()
+  @initcxx
+end
+
 export A, B, C, D, message, create_abstract, shared_ptr_message, shared_b, shared_c, shared_d, weak_ptr_message_a, weak_ptr_message_b, dynamic_message_c, take_ref
 
 end
@@ -12,6 +17,10 @@ end
 module VirtualSolver
   using CxxWrap
   @wrapmodule(Main.libinheritance, :define_vsolver_module)
+  
+  function __init__()
+    @initcxx
+  end
 end
 
 using .CppInheritance

@@ -8,9 +8,9 @@ end
 
 include(joinpath(@__DIR__, "build.jl"))
 
-exename = joinpath(Sys.BINDIR, Base.julia_exename())
-
-for f in filter(fname -> fname ∉ excluded, readdir())
-  println("Running tests from $f...")
-  run(`$exename --check-bounds=yes --color=yes $f`)
+@testset "CxxWrap tests" begin
+  for f in filter(fname -> fname ∉ excluded, readdir())
+    println("Running tests from $f...")
+    include(f)
+  end
 end
