@@ -73,8 +73,16 @@ function load_cxxwrap_symbols()
   end
 end
 
+function checkversion()
+  jlcxxversion = VersionNumber(unsafe_string(ccall(cxxwrap_version_string_p[], Cstring, ())))
+  if !(libcxxwrap_version_range[1] <= jlcxxversion < libcxxwrap_version_range[2])
+    error("This version of CxxWrap requires a libcxxwrap-julia in the range $(libcxxwrap_version_range), but version $jlcxxversion was found")
+  end
+end
+
 # Must also be called during precompile
 load_cxxwrap_symbols()
+checkversion()
 
 # Welcome to the C/C++ integer type mess
 
@@ -339,10 +347,7 @@ initialize_cxx_lib()
 
 function __init__()
   load_cxxwrap_symbols()
-  jlcxxversion = VersionNumber(unsafe_string(ccall(cxxwrap_version_string_p[], Cstring, ())))
-  if !(libcxxwrap_version_range[1] <= jlcxxversion < libcxxwrap_version_range[2])
-    error("This version of CxxWrap requires a libcxxwrap-julia in the range $(libcxxwrap_version_range), but version $jlcxxversion was found")
-  end  
+  checkversion()
   initialize_cxx_lib()
 end
 
