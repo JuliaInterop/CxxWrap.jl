@@ -9,6 +9,10 @@ GC.gc()
 @wrapmodule(Main.libtypes)
 GC.gc()
 
+function __init__()
+  @initcxx
+end
+
 const greet = getindex ∘ greet_cref
 
 export enum_to_int, get_enum_b, World

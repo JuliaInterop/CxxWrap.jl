@@ -4,11 +4,24 @@ cxx_available = false
 const functions_lib_path = libfunctions
 
 # Wrap the functions defined in C++
-module CppHalfFunctions Main.@wrapmodule(Main.functions_lib_path, :init_half_module) end
+module CppHalfFunctions
+  using CxxWrap
+
+  @wrapmodule(Main.functions_lib_path, :init_half_module)
+
+  function __init__()
+    @initcxx
+  end
+end
+
 module CppTestFunctions
 
 using CxxWrap
 @wrapmodule(Main.functions_lib_path, :init_test_module)
+
+function __init__()
+    @initcxx
+end
 
 end
 

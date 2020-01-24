@@ -10,6 +10,10 @@ module Containers
   include(joinpath(@__DIR__, "testcommon.jl"))
   @wrapmodule libjlcxx_containers
 
+  function __init__()
+    @initcxx
+  end
+
   export test_tuple, const_ptr, const_ptr_arg, const_vector, const_matrix
 end
 using Main.Containers
