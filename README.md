@@ -3,12 +3,17 @@
 [![Build Status](https://travis-ci.org/JuliaInterop/CxxWrap.jl.svg?branch=master)](https://travis-ci.org/JuliaInterop/CxxWrap.jl)
 [![Build status](https://ci.appveyor.com/api/projects/status/emjnb5afswn0lq6x?svg=true)](https://ci.appveyor.com/project/barche/cxxwrap-jl)
 
-This package aims to provide a Boost.Python-like wrapping for C++ types and functions to Julia. The idea is to write the code for the Julia wrapper in C++, and then use a one-liner on the Julia side to make the wrapped C++ library available there.
+This package aims to provide a Boost.Python-like wrapping for C++ types and functions to Julia.
+The idea is to write the code for the Julia wrapper in C++, and then use a one-liner on the Julia side to make the wrapped C++ library available there.
 
-The mechanism behind this package is that functions and types are registered in C++ code that is compiled into a dynamic library. This dynamic library is then loaded into Julia, where the Julia part of this package uses the data provided through a C interface to generate functions accessible from Julia. The functions are passed to Julia either as raw function pointers (for regular C++ functions that  don't need argument or return type conversion) or std::functions (for lambda expressions and automatic conversion of arguments and return types). The Julia side of this package wraps all this into Julia methods automatically.
+The mechanism behind this package is that functions and types are registered in C++ code that is compiled into a dynamic library.
+This dynamic library is then loaded into Julia, where the Julia part of this package uses the data provided through a C interface to generate functions accessible from Julia.
+The functions are passed to Julia either as raw function pointers (for regular C++ functions that  don't need argument or return type conversion) or std::functions (for lambda expressions and automatic conversion of arguments and return types).
+The Julia side of this package wraps all this into Julia methods automatically.
 
 ## What's the difference with Cxx.jl?
-With [Cxx.jl](https://github.com/Keno/Cxx.jl/) it is possible to directly access C++ using the `@cxx` macro from Julia. So when facing the task of wrapping a C++ library in a Julia package, authors now have two options:
+With [Cxx.jl](https://github.com/Keno/Cxx.jl/) it is possible to directly access C++ using the `@cxx` macro from Julia.
+So when facing the task of wrapping a C++ library in a Julia package, authors now have two options:
 * Use Cxx.jl to write the wrapper package in Julia code (much like one uses `ccall` for wrapping a C library)
 * Use CxxWrap to write the wrapper completely in C++ (and one line of Julia code to load the .so)
 
@@ -28,10 +33,12 @@ Just like any registered package, in pkg mode (`]` at the REPL)
 add CxxWrap
 ```
 
-This will also install the [JlCxx](https://github.com/JuliaInterop/libcxxwrap-julia) library (in `deps/usr` relative to the package dir), which is the C++ component of this package. If you want to use existing binaries for this library, set the environment variable `JLCXX_DIR` to the prefix where libcxxwrap-julia is installed and then add the package or run `Pkg.build("CxxWrap")`.
+This will also install the [JlCxx](https://github.com/JuliaInterop/libcxxwrap-julia) library (in `deps/usr` relative to the package dir), which is the C++ component of this package.
+If you want to use existing binaries for this library, set the environment variable `JLCXX_DIR` to the prefix where `libcxxwrap-julia` is installed and then add the package or run `Pkg.build("CxxWrap")`.
 
 ## Boost Python Hello World example
-Let's try to reproduce the example from the [Boost.Python tutorial](http://www.boost.org/doc/libs/1_59_0/libs/python/doc/tutorial/doc/html/index.html). Suppose we want to expose the following C++ function to Julia in a module called `CppHello`:
+Let's try to reproduce the example from the [Boost.Python tutorial](http://www.boost.org/doc/libs/1_59_0/libs/python/doc/tutorial/doc/html/index.html).
+Suppose we want to expose the following C++ function to Julia in a module called `CppHello`:
 ```c++
 std::string greet()
 {
@@ -69,7 +76,9 @@ Note that the `__init__` function is necessary to support precompilation, which 
 
 ## Compiling the C++ code
 
-The recommended way to compile the C++ code is to use CMake to discover `libcxxwrap-julia` and the Julia libraries. A full example is in the [`testlib` directory of `libcxxwrap-julia`](https://github.com/JuliaInterop/libcxxwrap-julia/tree/master/testlib-builder/src/testlib). The following sequence of commands can be used to build:
+The recommended way to compile the C++ code is to use CMake to discover `libcxxwrap-julia` and the Julia libraries.
+A full example is in the [`testlib` directory of `libcxxwrap-julia`](https://github.com/JuliaInterop/libcxxwrap-julia/tree/master/testlib-builder/src/testlib).
+The following sequence of commands can be used to build:
 
 ```bash
 mkdir build && cd build
@@ -85,12 +94,14 @@ julia> CxxWrap.prefix_path()
 ```
 
 ### Windows and MSVC
-The default binaries installed with CxxWrap are cross-compiled using GCC, and thus incompatible with Visual Studio C++ (MSVC). In MSVC 2019, it is easy to check out `libcxxwrap-julia` from git, and then build it and the wrapper module from source. Details are provided in the [README](https://github.com/JuliaInterop/libcxxwrap-julia#building-on-windows).
+the default binaries installed with CxxWrap are cross-compiled using GCC, and thus incompatible with Visual Studio C++ (MSVC).
+In MSVC 2019, it is easy to check out `libcxxwrap-julia` from git, and then build it and the wrapper module from source.
+Details are provided in the [README](https://github.com/JuliaInterop/libcxxwrap-julia#building-on-windows).
 
 ## Module entry point
 
-Above, we defined the module entry point as a function `JLCXX_MODULE define_julia_module(jlcxx::Module& mod)`. In the general case, there may be multiple modules defined in a single library, and each should have its own entry
-point, called within the appropriate module:
+Above, we defined the module entry point as a function `JLCXX_MODULE define_julia_module(jlcxx::Module& mod)`.
+In the general case, there may be multiple modules defined in a single library, and each should have its own entry point, called within the appropriate module:
 
 ```c++
 JLCXX_MODULE define_module_a(jlcxx::Module& mod)
@@ -105,6 +116,7 @@ JLCXX_MODULE define_module_b(jlcxx::Module& mod)
 ```
 
 In Julia, the name of the entry point must now be specified explicitly:
+
 ```julia
 module A
   using CxxWrap
@@ -117,17 +129,22 @@ module B
 end
 ```
 
-In specific cases, it may also be necessary to specify `dlopen` flags such as `RTLD_GLOBAL`. These can be supplied in a third, optional argument to `@wrapmodule`, e.g:
+In specific cases, it may also be necessary to specify `dlopen` flags such as `RTLD_GLOBAL`.
+These can be supplied in a third, optional argument to `@wrapmodule`, e.g:
 
 ```julia
 @wrapmodule(CxxWrapCore.libcxxwrap_julia_stl, :define_cxxwrap_stl_module, Libdl.RTLD_GLOBAL)
 ```
 
 ## More extensive example and function call performance
-A more extensive example, including wrapping a C++11 lambda and conversion for arrays can be found in [`examples/functions.cpp`](https://github.com/JuliaInterop/libcxxwrap-julia/tree/master/examples/functions.cpp) and [`test/functions.jl`](test/functions.jl). This test also includes some performance measurements, showing that the function call overhead is the same as using ccall on a C function if the C++ function is a regular function and does not require argument conversion. When `std::function` is used (e.g. for C++ lambdas) extra overhead appears, as expected.
+A more extensive example, including wrapping a C++11 lambda and conversion for arrays can be found in [`examples/functions.cpp`](https://github.com/JuliaInterop/libcxxwrap-julia/tree/master/examples/functions.cpp) and [`test/functions.jl`](test/functions.jl).
+This test also includes some performance measurements, showing that the function call overhead is the same as using `ccall` on a C function if the C++ function is a regular function and does not require argument conversion.
+When `std::function` is used (e.g. for C++ lambdas) extra overhead appears, as expected.
 
 ## Exposing classes
+
 Consider the following C++ class to be wrapped:
+
 ```c++
 struct World
 {
@@ -140,13 +157,20 @@ struct World
 ```
 
 Wrapped in the entry point function as before and defining a module `CppTypes`, the code for exposing the type and some methods to Julia is:
+
 ```c++
 types.add_type<World>("World")
   .constructor<const std::string&>()
   .method("set", &World::set)
   .method("greet", &World::greet);
 ```
-Here, the first line just adds the type. The second line adds the non-default constructor taking a string. Finally, the two `method` calls add member functions, using a pointer-to-member. The member functions become free functions in Julia, taking their object as the first argument. This can now be used in Julia as
+
+Here, the first line just adds the type.
+The second line adds the non-default constructor taking a string.
+Finally, the two `method` calls add member functions, using a pointer-to-member.
+The member functions become free functions in Julia, taking their object as the first argument.
+This can now be used in Julia as
+
 ```julia
 w = CppTypes.World()
 @test CppTypes.greet(w) == "default hello"
@@ -154,14 +178,16 @@ CppTypes.set(w, "hello")
 @test CppTypes.greet(w) == "hello"
 ```
 
-The manually added constructor using the `constructor` function also creates a finalizer. This can be disabled by adding the argument `false`:
+The manually added constructor using the `constructor` function also creates a finalizer.
+This can be disabled by adding the argument `false`:
 
 ```c++
 types.add_type<World>("World")
   .constructor<const std::string&>(false);
 ```
 
-The `add_type` function actually builds two Julia types related to `World`. The first is an abstract type:
+The `add_type` function actually builds two Julia types related to `World`.
+The first is an abstract type:
 
 ```julia
 abstract type World end
@@ -176,10 +202,10 @@ mutable struct WorldAllocated <: World
 end
 ```
 
-This type needs to be mutable, because it must have a finalizer attached to it that deletes the held
-C++ object.
+This type needs to be mutable, because it must have a finalizer attached to it that deletes the held C++ object.
 
-This means that the variable `w` in the above example is of concrete type `WorldAllocated` and letting it go out of scope may trigger the finalizer and delete the object. When calling a C++ constructor, it is the responsibility of the caller to manage the lifetime of the resulting variable.
+This means that the variable `w` in the above example is of concrete type `WorldAllocated` and letting it go out of scope may trigger the finalizer and delete the object.
+When calling a C++ constructor, it is the responsibility of the caller to manage the lifetime of the resulting variable.
 
 The above types are used in method generation as follows, considering for example the greet method taking a `World` argument:
 
@@ -199,9 +225,12 @@ Values returned from C++ can be checked for being null using the `isnull` functi
 
 ## Setting the module to which methods are added
 
-It is possible to add methods directly to e.g. the Julia `Base` module, using `set_override_module`. After calling this, all methods will be added to the specified module. To revert to the default behavior of adding methods to the current module, call `unset_override_module`.
+It is possible to add methods directly to e.g. the Julia `Base` module, using `set_override_module`.
+After calling this, all methods will be added to the specified module.
+To revert to the default behavior of adding methods to the current module, call `unset_override_module`.
 
-Current _deprecated_ behavior is to add the functions `getindex, setindex!, convert, deepcopy_internal, +, *, ==` to `Base` automatically. This default will change, and it can already be overridden by using `set_override_module`:
+Current _deprecated_ behavior is to add the functions `getindex, setindex!, convert, deepcopy_internal, +, *, ==` to `Base` automatically.
+This default will change, and it can already be overridden by using `set_override_module`:
 
 ```c++
 mod.add_type<A>("A", jlcxx::julia_type("AbstractFloat", "Base"))
@@ -238,12 +267,14 @@ struct B : A
 ```
 
 When adding the type, add the supertype as a second argument:
+
 ```c++
 types.add_type<A>("A").method("message", &A::message);
 types.add_type<B>("B", jlcxx::julia_base_type<A>());
 ```
 
-The supertype is of type `jl_datatype_t*` and using the template function `jlcxx::julia_base_type` looks up the abstract type associated with `A` here. There is also a variant taking a string for the type name and an optional Julia module name as second argument, which is useful for inheriting from a type defined in Julia, e.g.:
+The supertype is of type `jl_datatype_t*` and using the template function `jlcxx::julia_base_type` looks up the abstract type associated with `A` here.
+There is also a variant taking a string for the type name and an optional Julia module name as second argument, which is useful for inheriting from a type defined in Julia, e.g.:
 
 ```c++
 mod.add_type<Teuchos::ParameterList>("ParameterList", jlcxx::julia_type("AbstractDict", "Base"))
@@ -256,7 +287,8 @@ auto multi_vector_base = mod.add_type<Parametric<TypeVar<1>>>("MultiVectorBase")
 auto vector_base = mod.add_type<Parametric<TypeVar<1>>>("VectorBase", multi_vector_base.dt());
 ```
 
-Since the concrete arguments given to `ccall` are the reference types, we need a way to convert `BRef` into `ARef`. To allow CxxWrap to figure out the correct static_cast to use, the hierarchy must be defined at compile time as follows:
+Since the concrete arguments given to `ccall` are the reference types, we need a way to convert `BRef` into `ARef`.
+To allow CxxWrap to figure out the correct static_cast to use, the hierarchy must be defined at compile time as follows:
 
 ```c++
 namespace jlcxx
@@ -269,7 +301,8 @@ See the test at [`examples/inheritance.cpp`](https://github.com/JuliaInterop/lib
 
 ## Enum types
 
-Enum types are converted to strongly-typed bits types on the Julia side. Consider the C++ enum:
+Enum types are converted to strongly-typed bits types on the Julia side.
+Consider the C++ enum:
 
 ```c++
 enum MyEnum
@@ -290,10 +323,15 @@ JLCXX_MODULE define_types_module(jlcxx::Module& types)
 }
 ```
 
-The enum constants will be available on the Julia side as `CppTypes.EnumValA` and `CppTypes.EnumValB`, both of type `CppTypes.MyEnum`. Wrapped C++ functions taking a `MyEnum` will only accept a value of type `CppTypes.MyEnum` in Julia.
+The enum constants will be available on the Julia side as `CppTypes.EnumValA` and `CppTypes.EnumValB`, both of type `CppTypes.MyEnum`.
+Wrapped C++ functions taking a `MyEnum` will only accept a value of type `CppTypes.MyEnum` in Julia.
 
 ## Template (parametric) types
-The natural Julia equivalent of a C++ template class is the parametric type. The mapping is complicated by the fact that all possible parameter values must be compiled in advance, requiring a deviation from the syntax for adding a regular class. Consider the following template class:
+
+The natural Julia equivalent of a C++ template class is the parametric type.
+The mapping is complicated by the fact that all possible parameter values must be compiled in advance, requiring a deviation from the syntax for adding a regular class.
+Consider the following template class:
+
 ```c++
 template<typename A, typename B>
 struct TemplateType
@@ -312,7 +350,9 @@ struct TemplateType
   }
 };
 ```
+
 The code for wrapping this is:
+
 ```c++
 types.add_type<Parametric<TypeVar<1>, TypeVar<2>>>("TemplateType")
   .apply<TemplateType<P1,P2>, TemplateType<P2,P1>>([](auto wrapped)
@@ -322,9 +362,16 @@ types.add_type<Parametric<TypeVar<1>, TypeVar<2>>>("TemplateType")
   wrapped.method("get_second", &WrappedT::get_second);
 });
 ```
-The first line adds the parametric type, using the generic placeholder `Parametric` and a `TypeVar` for each parameter. On the second line, the possible instantiations are created by calling `apply` on the result of `add_type`. Here, we allow for `TemplateType<P1,P2>` and `TemplateType<P2,P1>` to exist, where `P1` and `P2` are C++ classes that also must be wrapped and that fulfill the requirements for being a parameter to `TemplateType`. The argument to `apply` is a functor (generic C++14 lambda here) that takes the wrapped instantiated type (called `wrapped` here) as argument. This object can then be used as before to define methods. In the case of a generic lambda, the actual type being wrapped can be obtained using `decltype` as shown on the 4th line.
+
+The first line adds the parametric type, using the generic placeholder `Parametric` and a `TypeVar` for each parameter.
+On the second line, the possible instantiations are created by calling `apply` on the result of `add_type`.
+Here, we allow for `TemplateType<P1,P2>` and `TemplateType<P2,P1>` to exist, where `P1` and `P2` are C++ classes that also must be wrapped and that fulfill the requirements for being a parameter to `TemplateType`.
+The argument to `apply` is a functor (generic C++14 lambda here) that takes the wrapped instantiated type (called `wrapped` here) as argument.
+This object can then be used as before to define methods.
+In the case of a generic lambda, the actual type being wrapped can be obtained using `decltype` as shown on the 4th line.
 
 Use on the Julia side:
+
 ```julia
 import ParametricTypes.TemplateType, ParametricTypes.P1, ParametricTypes.P2
 
@@ -340,13 +387,18 @@ There is also an `apply_combination` method to make applying all combinations of
 Full example and test including non-type parameters at: [`examples/parametric.cpp`](https://github.com/JuliaInterop/libcxxwrap-julia/tree/master/examples/parametric.cpp) and [`test/parametric.jl`](test/parametric.jl).
 
 ## Constructors and destructors
-The default constructor and any manually added constructor using the `constructor` function will automatically create a Julia object that has a finalizer attached that calls delete to free the memory. To write a C++ function that returns a new object that can be garbage-collected in Julia, use the `jlcxx::create` function:
+
+The default constructor and any manually added constructor using the `constructor` function will automatically create a Julia object that has a finalizer attached that calls delete to free the memory.
+To write a C++ function that returns a new object that can be garbage-collected in Julia, use the `jlcxx::create` function:
+
 ```c++
 jlcxx::create<Class>(constructor_arg1, ...);
 ```
+
 This will return the new C++ object wrapped in a `jl_value_t*` that has a finalizer.
 
 ## Call operator overload
+
 Since Julia supports overloading the function call operator `()`, this can be used to wrap `operator()` by just omitting the method name:
 
 ```c++
@@ -373,7 +425,9 @@ call_op = CallOperator()
 The C++ function does not even have to be `operator()`, but of course it is most logical use case.
 
 ## Automatic argument conversion
-By default, overloaded signatures for wrapper methods are generated, so a method taking a `double` in C++ can be called with e.g. an `Int` in Julia. Wrapping a function like this:
+
+By default, overloaded signatures for wrapper methods are generated, so a method taking a `double` in C++ can be called with e.g. an `Int` in Julia.
+Wrapping a function like this:
 
 ```c++
 mod.method("half_lambda", [](const double a) {return a*0.5;});
@@ -386,7 +440,8 @@ half_lambda(arg1::Int64)
 half_lambda(arg1::Float64)
 ```
 
-In some cases (e.g. when a template parameter depends on the number type) this is not desired, so the behavior can be disabled on a per-argument basis using the `StrictlyTypedNumber` type. Wrapping a function like this:
+In some cases (e.g. when a template parameter depends on the number type) this is not desired, so the behavior can be disabled on a per-argument basis using the `StrictlyTypedNumber` type.
+Wrapping a function like this:
 
 ```c++
 mod.method("strict_half", [](const jlcxx::StrictlyTypedNumber<double> a) {return a.value*0.5;});
@@ -401,16 +456,20 @@ strict_half(arg1::Float64)
 Note that in C++ the number value is accessed using the `value` member of `StrictlyTypedNumber`.
 
 ### Customization
-The automatic overloading can be customized. For example, to allow passing an `Int64` where a `UInt64` is normally expected, the following method can be added:
+
+The automatic overloading can be customized.
+For example, to allow passing an `Int64` where a `UInt64` is normally expected, the following method can be added:
 
 ```julia
 CxxWrap.argument_overloads(t::Type{UInt64}) = [Int64]
 ```
+
 ## Pointers and references
 
 Simple pointers and references are treated the same way, and wrapped in a struct with as a single member the pointer to the C++ object.
 
 ### References to pointers
+
 A reference to a pointer allows changing the referred object, e.g.:
 
 ```c++
@@ -422,15 +481,19 @@ void writepointerref(MyData*& ptrref)
 ```
 
 is called from Julia as:
+
 ```julia
 d = PtrModif.MyData()
 writepointerref(Ref(d))
 ```
 
-Note that this modifies `d` itself, so `d` must be a `MyDataAllocated`. More details are in the `pointer_modification` example.
+Note that this modifies `d` itself, so `d` must be a `MyDataAllocated`.
+More details are in the `pointer_modification` example.
 
 ### Smart pointers
-Currently, `std::shared_ptr`, `std::unique_ptr` and `std::weak_ptr` are supported transparently. Returning one of these pointer types will return an object inheriting from `SmartPointer{T}`:
+
+Currently, `std::shared_ptr`, `std::unique_ptr` and `std::weak_ptr` are supported transparently.
+Returning one of these pointer types will return an object inheriting from `SmartPointer{T}`:
 
 ```c++
 types.method("shared_world_factory", []()
@@ -438,6 +501,7 @@ types.method("shared_world_factory", []()
   return std::shared_ptr<World>(new World("shared factory hello"));
 });
 ```
+
 The shared pointer can then be used in a function taking an object of type `World` like this (the module is named `CppTypes` here):
 
 ```julia
@@ -452,7 +516,9 @@ CppTypes.greet(swf[])
 ```
 
 #### Adding a custom smart pointer
+
 Suppose we have a "smart" pointer type defined as follows:
+
 ```c++
 template<typename T>
 struct MySmartPointer
@@ -484,23 +550,30 @@ namespace jlcxx
 }
 ```
 
-Here, the first line marks our type as a smart pointer, enabling automatic conversion from the pointer to its referenced type and adding the dereferencing pointer. If the type uses inheritance and the hierarchy is defined using `SuperType`, automatic conversion to the pointer or reference of the base type is also supported. The second line indicates that our smart pointer can be constructed from a `std::shared_ptr`, also adding auto-conversion for that case. This is useful for a relation as in `std::weak_ptr` and `std::shared_ptr`, for example.
+Here, the first line marks our type as a smart pointer, enabling automatic conversion from the pointer to its referenced type and adding the dereferencing pointer.
+If the type uses inheritance and the hierarchy is defined using `SuperType`, automatic conversion to the pointer or reference of the base type is also supported.
+The second line indicates that our smart pointer can be constructed from a `std::shared_ptr`, also adding auto-conversion for that case.
+This is useful for a relation as in `std::weak_ptr` and `std::shared_ptr`, for example.
 
 ## Function arguments
 
-Because C++ functions often return references or pointers, writing Julia functions that operate on C++ types can be tricky. For example, writing a function like:
+Because C++ functions often return references or pointers, writing Julia functions that operate on C++ types can be tricky.
+For example, writing a function like:
 
 ```julia
 julia_greet(w::World) = greet_cpp(w)
 ```
 
-If `World` is a type from C++, this will only work with objects that have been constructed directly or that were returned by value from C++. To make it work with references and pointers, we would need an additional method:
+If `World` is a type from C++, this will only work with objects that have been constructed directly or that were returned by value from C++.
+To make it work with references and pointers, we would need an additional method:
 
 ```julia
 julia_greet(w::CxxWrap.CxxBaseRef{World}) = greet_cpp(w[])
 ```
 
-Note that in the general case, both the signature and the implementation need to change, making this cumbersome when there are many functions like this. Enter the `@cxxdereference` macro. Declaring the function like this makes sure it can accept both values and references:
+Note that in the general case, both the signature and the implementation need to change, making this cumbersome when there are many functions like this.
+Enter the `@cxxdereference` macro.
+Declaring the function like this makes sure it can accept both values and references:
 
 ```julia
 @cxxdereference julia_greet(w::World) = greet_cpp(w)
@@ -515,18 +588,24 @@ function julia_greet(w::CxxWrap.reference_type_union(World))
 end
 ```
 
-The type of `w` is now calculated by the `CxxWrap.reference_type_union` function, which resolves to `Union{World, CxxWrap.CxxBaseRef{World}, CxxWrap.SmartPointer{World}}`. The behavior of the macro can be customized by adding methods to `CxxWrap.reference_type_union` and `CxxWrap.dereference_argument`.
+The type of `w` is now calculated by the `CxxWrap.reference_type_union` function, which resolves to `Union{World, CxxWrap.CxxBaseRef{World}, CxxWrap.SmartPointer{World}}`.
+The behavior of the macro can be customized by adding methods to `CxxWrap.reference_type_union` and `CxxWrap.dereference_argument`.
 
 ## Exceptions
-When directly adding a regular free C++ function as a method, it will be called directly using ccall and any exception will abort the Julia program. To avoid this, you can force wrapping it in an `std::functor` to intercept the exception automatically by setting the `force_convert` argument to `method` to true:
+
+When directly adding a regular free C++ function as a method, it will be called directly using `ccall` and any exception will abort the Julia program.
+To avoid this, you can force wrapping it in an `std::functor` to intercept the exception automatically by setting the `force_convert` argument to `method` to true:
+
 ```c++
 mod.method("test_exception", test_exception, true);
 ```
+
 Member functions and lambdas are automatically wrapped in an `std::functor` and so any exceptions thrown there are always intercepted and converted to a Julia exception.
 
 ## Tuples
 
 C++11 tuples can be converted to Julia tuples by including the `containers/tuple.hpp` header:
+
 ```c++
 #include "jlcxx/jlcxx.hpp"
 #include "jlcxx/tuple.hpp"
@@ -551,20 +630,28 @@ using Containers
 
 @test test_tuple() == (1,2.0,3.0f0)
 ```
+
 ## Working with arrays
+
 ### Reference native Julia arrays
-The `ArrayRef` type is provided to work conveniently with array data from Julia. Defining a function like this in C++:
+
+The `ArrayRef` type is provided to work conveniently with array data from Julia.
+Defining a function like this in C++:
+
 ```c++
 void test_array_set(jlcxx::ArrayRef<double> a, const int64_t i, const double v)
 {
   a[i] = v;
 }
 ```
+
 This can be called from Julia as:
+
 ```julia
 ta = [1.,2.]
 test_array_set(ta, 0, 3.)
 ```
+
 The `ArrayRef` type provides basic functionality:
 * iterators
 * `size`
@@ -574,7 +661,10 @@ The `ArrayRef` type provides basic functionality:
 Note that `ArrayRef` only works with primitive types, if you need a "boxed" type it has to be made an array of `Any` with type `ArrayRef<jl_value_t*>` in C++.
 
 ### Const arrays
-Sometimes, a function returns a const pointer that is an array, either of fixed size or with a size that can be determined from elsewhere in the API. Example:
+
+Sometimes, a function returns a `const` pointer that is an array, either of fixed size or with a size that can be determined from elsewhere in the API.
+Example:
+
 ```c++
 const double* const_vector()
 {
@@ -584,11 +674,13 @@ const double* const_vector()
 ```
 
 In this simple case, the most logical way to translate this would be as a tuple:
+
 ```c++
 mymodule.method("const_ptr_arg", []() { return std::make_tuple(const_vector().ptr[0], const_vector().ptr[1], const_vector().ptr[2]); });
 ```
 
 In the case of a larger blob of heap-allocated data it makes more sense to convert this to a `ConstArray`, which implements the read-only part of the Julia array interface, so it exposes the data safely to Julia in a way that can be used natively:
+
 ```c++
 mymodule.method("const_vector", []() { return jlcxx::make_const_array(const_vector(), 3); });
 ```
@@ -608,6 +700,7 @@ mymodule.method("const_matrix", []() { return jlcxx::make_const_array(const_matr
 ```
 
 Note that because of the column-major convention in Julia, the sizes are in reversed order from C++, so the Julia code:
+
 ```julia
 display(const_matrix())
 ```
@@ -627,8 +720,12 @@ Replacing `make_const_array` in the examples above by `make_julia_array` creates
 
 
 ## Calling Julia functions from C++
+
 ### Direct call to Julia
-Directly calling Julia functions uses `jl_call` from `julia.h` but with a more convenient syntax and automatic argument conversion and boxing. Use a `JuliaFunction` to get a functor that can be invoked directly. Example for calling the `max` function from `Base`:
+
+Directly calling Julia functions uses `jl_call` from `julia.h` but with a more convenient syntax and automatic argument conversion and boxing.
+Use a `JuliaFunction` to get a functor that can be invoked directly.
+Example for calling the `max` function from `Base`:
 
 ```c++
 mymodule.method("julia_max", [](double a, double b)
@@ -641,7 +738,10 @@ mymodule.method("julia_max", [](double a, double b)
 Internally, the arguments and return value are boxed, making this method convenient but slower than calling a regular C function.
 
 ### Safe `cfunction`
-The function `CxxWrap.safe_cfunction` provides a wrapper around `Base.cfunction` that checks the type of the function pointer. Example C++ function:
+
+The function `CxxWrap.safe_cfunction` provides a wrapper around `Base.cfunction` that checks the type of the function pointer.
+Example C++ function:
+
 ```c++
 mymodule.method("call_safe_function", [](double(*f)(double,double))
 {
@@ -651,16 +751,21 @@ mymodule.method("call_safe_function", [](double(*f)(double,double))
   }
 });
 ```
+
 Use from Julia:
+
 ```julia
 testf(x,y) = x+y
 c_func = safe_cfunction(testf, Float64, (Float64,Float64))
 MyModule.call_safe_function(c_func)
 ```
 
-Using types different from the expected function pointer call will result in an error. This check incurs a runtime overhead, so the idea here is that the function is converted only once and then applied many times on the C++ side.
+Using types different from the expected function pointer call will result in an error.
+This check incurs a runtime overhead, so the idea here is that the function is converted only once and then applied many times on the C++ side.
 
-If the result of `safe_cfunction` needs to be stored before the calling signature is known, direct conversion of the created structure (type `SafeCFunction`) is also possible. It can then be converted later using `jlcxx::make_function_pointer`:
+If the result of `safe_cfunction` needs to be stored before the calling signature is known, direct conversion of the created structure (type `SafeCFunction`) is also possible.
+It can then be converted later using `jlcxx::make_function_pointer`:
+
 ```c++
 mymodule.method("call_safe_function", [](jlcxx::SafeCFunction f_data)
 {
@@ -675,7 +780,10 @@ mymodule.method("call_safe_function", [](jlcxx::SafeCFunction f_data)
 This method of calling a Julia function is less convenient, but the call overhead should be no larger than calling a regular C function through its pointer.
 
 ## Adding Julia code to the module
-Sometimes, you may want to write additional Julia code in the module that is built from C++. To do this, call the `wrapmodule` method inside an appropriately named Julia module:
+
+Sometimes, you may want to write additional Julia code in the module that is built from C++.
+To do this, call the `wrapmodule` method inside an appropriately named Julia module:
+
 ```julia
 module ExtendedTypes
 
@@ -685,27 +793,35 @@ export ExtendedWorld, greet
 
 end
 ```
-Here, `ExtendedTypes` is a name that matches the module name passed to `create_module` on the C++ side. The `@wrapmodule` call works as before, but now the functions and types are defined in the existing `ExtendedTypes` module, and additional Julia code such as exports and macros can be defined.
 
-It is also possible to replace the `@wrapmodule` call with a call to `@readmodule` and then separately call `@wraptypes` and `@wrapfunctions`. This allows using the types before the functions get called, which is useful for overloading the `argument_overloads` with types defined on the C++ side.
+Here, `ExtendedTypes` is a name that matches the module name passed to `create_module` on the C++ side.
+The `@wrapmodule` call works as before, but now the functions and types are defined in the existing `ExtendedTypes` module, and additional Julia code such as exports and macros can be defined.
+
+It is also possible to replace the `@wrapmodule` call with a call to `@readmodule` and then separately call `@wraptypes` and `@wrapfunctions`.
+This allows using the types before the functions get called, which is useful for overloading the `argument_overloads` with types defined on the C++ side.
 
 ## STL support
 
-Version 0.9 introduces basic support for the C++ standard library, with mappings for `std::vector` (`StdVector`) and `std::string` (`StdString`). To add support for e.g. vectors of your own type `World`, either just add methods that use an `std::vector<World>` as an argument, or manually wrap them using `jlcxx::stl::apply_stl<World>(mod);`.
+Version 0.9 introduces basic support for the C++ standard library, with mappings for `std::vector` (`StdVector`) and `std::string` (`StdString`).
+To add support for e.g. vectors of your own type `World`, either just add methods that use an `std::vector<World>` as an argument, or manually wrap them using `jlcxx::stl::apply_stl<World>(mod);`.
 
-If the type `World` contains methods that take or return `std::` collections of type `World` or `World*`, however, you must first complete the type, so that CxxWrap can generate the type and the template specializations for the `std::` collections. In this case, you can add those methods to your type like this:
+If the type `World` contains methods that take or return `std::` collections of type `World` or `World*`, however, you must first complete the type, so that CxxWrap can generate the type and the template specializations for the `std::` collections.
+In this case, you can add those methods to your type like this:
+
 ```
 jlcxx::stl::apply_stl<World*>(mod);
 mod.method("getSecondaryWorldVector", [](const World* p)->const std::vector<World*>& {
     return p->getSecondaries();
 });
 ```
-Linking wrappers using STL support requires adding `JlCxx::cxxwrap_julia_stl` to the `target_link_libraries` command in CMakeLists.txt.
+
+Linking wrappers using STL support requires adding `JlCxx::cxxwrap_julia_stl` to the `target_link_libraries` command in `CMakeLists.txt`.
 
 
 ## Breaking changes for CxxWrap 0.7
 
-* `JULIA_CPP_MODULE_BEGIN` and `JULIA_CPP_MODULE_END` no longer exists, define a function with return type `JLCXX_MODULE` in the global namespace instead. By default, the Julia side expects this function to be named `define_julia_module`, but another name can be chosen and passed as a second argument to `@wrapmodule`.
+* `JULIA_CPP_MODULE_BEGIN` and `JULIA_CPP_MODULE_END` no longer exists, define a function with return type `JLCXX_MODULE` in the global namespace instead.
+  By default, the Julia side expects this function to be named `define_julia_module`, but another name can be chosen and passed as a second argument to `@wrapmodule`.
 
 * `wrap_modules` is removed, replace `wrap_modules(lib_file_path)` with:
   ```julia
@@ -717,7 +833,7 @@ Linking wrappers using STL support requires adding `JlCxx::cxxwrap_julia_stl` to
 
 * `export_symbols` is removed, since all C++ modules are now wrapped in a corresponding module declared on the Julia side, so the regular Julia export statement can be used.
 
-* `safe_cfunction` is now a macro, just like cfunction became a macro in Julia.
+* `safe_cfunction` is now a macro, just like `cfunction` became a macro in Julia.
 
 * Precompilation: add this function after the `@wrapmodule` macro:
   ```julia
@@ -725,21 +841,22 @@ Linking wrappers using STL support requires adding `JlCxx::cxxwrap_julia_stl` to
     @initcxx
   end
   ```
-  
+
 ## Breaking changes in v0.9
 
-* No automatic conversion between Julia `String` and `std::string`, but `StdString` (which maps `std::string`) implements the Julia `AbstractString`interface. 
+* No automatic conversion between Julia `String` and `std::string`, but `StdString` (which maps `std::string`) implements the Julia `AbstractString`interface.
 * No automatic dereference of const ref
 * `ArrayRef` no longer supports boxed values
 * Custom smart pointer: use `jlcxx::add_smart_pointer<MySmartPointer>(module, "MySmartPointer")`
-* `IsMirroredType` instead of `IsImmutable` and `IsBits`, added using map_type. By default, `IsMirroredType` is true for trivial standard layout types, so if you want to wrap these normally
-(i.e. you get an unexpected error `Mirrored types (marked with IsMirroredType) can't be added using add_type, map them directly to a struct instead and use map_type`) then you have to explicitly disable the mirroring for that type:
+* `IsMirroredType` instead of `IsImmutable` and `IsBits`, added using map_type.
+  By default, `IsMirroredType` is true for trivial standard layout types, so if you want to wrap these normally
+  (i.e. you get an unexpected error `Mirrored types (marked with IsMirroredType) can't be added using add_type, map them directly to a struct instead and use map_type`) then you have to explicitly disable the mirroring for that type:
 ```c++
 template<> struct IsMirroredType<Foo> : std::false_type { };
 ```
 * `box` C++ function takes an explicit template argument
 * Introduction of specific integer types, such as `CxxBool`, that map to the C++ equivalent (should be transparent except for template parameters)
 * Defining `SuperType` on the C++ side is now necessary for any kind of casting to base class, because the previous implementation was wrong in the case of multiple inheritance.
-* Use `Ref(CxxPtr(x))` for pointer or reference to pointer 
+* Use `Ref(CxxPtr(x))` for pointer or reference to pointer
 * Use `CxxPtr{MyData}(C_NULL)` instead of `nullptr(MyData)`
 * Defining a C++ supertype in C++ must now be done using the `jlcxx::julia_base_type<T>()` function instead of `jlcxx::julia_type<T>()`
