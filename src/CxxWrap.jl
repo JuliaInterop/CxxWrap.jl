@@ -745,7 +745,7 @@ dereference_argument(x::SmartPointer) = x[]
 
 macro cxxdereference(f)
   fdict = MacroTools.splitdef(f)
-  
+
   function maparg(a)
     (argname, argtype, slurp, default) = MacroTools.splitarg(a)
     return MacroTools.combinearg(argname, :($(@__MODULE__).reference_type_union($(argtype))), slurp, default)
