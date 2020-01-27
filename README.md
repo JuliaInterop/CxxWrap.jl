@@ -716,7 +716,7 @@ shows:
 
 ### Mutable arrays
 
-Replacing `make_const_array` in the examples above by `make_julia_array` creates a mutable, regular Julia array with memory owned by Julia.
+Replacing `make_const_array` in the examples above by `make_julia_array` creates a mutable, regular Julia array with memory owned by C++.
 
 
 ## Calling Julia functions from C++
