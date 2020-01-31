@@ -235,7 +235,7 @@ This default will change, and it can already be overridden by using `set_overrid
 ```c++
 mod.add_type<A>("A", jlcxx::julia_type("AbstractFloat", "Base"))
     .constructor<double>();
-mod.set_override_module(mod.module());
+mod.set_override_module(mod.julia_module());
 // == will be in the wrapped module:
 mod.method("==", [](A& a, A& b) { return a == b; });
 mod.set_override_module(jl_base_module);
