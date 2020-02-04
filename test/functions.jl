@@ -92,19 +92,6 @@ CppTestFunctions.test_array_set(ta, Int64(1), 4.)
 @test CppTestFunctions.test_long_long() == 42
 @test CppTestFunctions.test_short() == 43
 
-# Test GC protection array
-a = "str1"
-b = "str2"
-c = "str3"
-protect_container = CxxWrap.CxxWrapCore._gc_protected
-start_len = length(protect_container)
-gcprotect(a)
-gcprotect(b)
-@test length(protect_container) == start_len + 2
-@test protect_container[objectid(a)] == (a,1)
-gcunprotect(a)
-@test length(protect_container) == start_len + 1
-
 @test CppTestFunctions.test_julia_call(1.,2.) == 2
 @test CppTestFunctions.test_julia_call_any(1) == 1
 @test CppTestFunctions.test_julia_call_any("Foo") == "Foo"
@@ -119,6 +106,8 @@ CppTestFunctions.test_append_array!(darr)
 c_func = @safe_cfunction(testf, Float64, (Float64,Float64))
 CppTestFunctions.test_safe_cfunction(c_func)
 CppTestFunctions.test_safe_cfunction2(c_func)
+
+Base.show(io::IO, x::CppTestFunctions.BoxedNumber) = show(io, CppTestFunctions.getnumber(x))
 
 let boxed_num_val = Ref{Int32}(0)
   CppTestFunctions.callback_byval(byval_cb, boxed_num_val)
@@ -136,6 +125,23 @@ let boxed_num_val = Ref{Int32}(0)
   @test boxed_num_val[] == 3
   @test CppTestFunctions.boxednumber_nb_created() == 5
   @test CppTestFunctions.boxednumber_nb_deleted() == 5
+
+  CppTestFunctions.BoxedNumber(41)
+  GC.gc()
+  @test CppTestFunctions.boxednumber_nb_created() == 6
+  @test CppTestFunctions.boxednumber_nb_deleted() == 6
+
+  CxxWrap.gcprotect(CppTestFunctions.BoxedNumber(42))
+  GC.gc()
+  @test CppTestFunctions.boxednumber_nb_created() == 7
+  @test CppTestFunctions.boxednumber_nb_deleted() == 6
+  @test CppTestFunctions.getnumber(CppTestFunctions.marked_boxed_value()) == 43
+  @test CppTestFunctions.boxednumber_nb_created() == 8
+  @test CppTestFunctions.boxednumber_nb_deleted() == 6
+  CppTestFunctions.unmark_boxed()
+  GC.gc()
+  @test CppTestFunctions.boxednumber_nb_created() == 8
+  @test CppTestFunctions.boxednumber_nb_deleted() == 7
 end
 
 c_func_arf = @safe_cfunction(testf_arf, Float64, (Any,Any))

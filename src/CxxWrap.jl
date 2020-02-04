@@ -14,7 +14,7 @@ ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,
 CppEnum, ConstArray, CxxBool, CxxLong, CxxULong,
 ptrunion, gcprotect, gcunprotect, isnull
 
-const libcxxwrap_version_range = (v"0.6.6",  v"0.7")
+const libcxxwrap_version_range = (v"0.7.0",  v"0.8")
 
 # Convert path if it contains lib prefix on windows
 function lib_path(so_path::AbstractString)
@@ -46,7 +46,9 @@ const cxxwrap_cfnames = [
   :register_julia_module,
   :get_module_functions,
   :bind_module_constants,
-  :get_box_types
+  :get_box_types,
+  :gcprotect,
+  :gcunprotect,
 ]
 
 for fname in cxxwrap_cfnames
@@ -313,33 +315,8 @@ mutable struct CppFunctionInfo
   override_module::Union{Nothing,Module}
 end
 
-const _gc_protected = Dict{UInt64,Tuple{Any, Int}}()
-
-function protect_from_gc(x)
-  id = objectid(x)
-  (_,n) = get(_gc_protected, id, (x,0))
-  _gc_protected[id] = (x,n+1)
-  return
-end
-
-function unprotect_from_gc(x)
-  id = objectid(x)
-  (_,n) = get(_gc_protected, id, (x,0))
-  if n == 0
-    println("warning: attempt to unprotect non-protected object $x")
-  end
-  if n == 1
-    delete!(_gc_protected, id)
-  else
-    _gc_protected[id] = (x,n-1)
-  end
-  return
-end
-
 function initialize_cxx_lib()
-  _c_protect_from_gc = @cfunction protect_from_gc Nothing (Any,)
-  _c_unprotect_from_gc = @cfunction unprotect_from_gc Nothing (Any,)
-  ccall(initialize_cxxwrap_p[], Cvoid, (Any, Any, Ptr{Cvoid}, Ptr{Cvoid}), @__MODULE__, CppFunctionInfo, _c_protect_from_gc, _c_unprotect_from_gc)
+  ccall(initialize_cxxwrap_p[], Cvoid, (Any, Any), @__MODULE__, CppFunctionInfo)
 end
 
 # Must also be called during precompile
@@ -387,14 +364,14 @@ end
 Protect a variable from garbage collection by adding it to the global array kept by CxxWrap
 """
 function gcprotect(x)
-  protect_from_gc(x)
+  ccall(gcprotect_p[], Cvoid, (Any,), x)
 end
 
 """
 Unprotect a variable from garbage collection by removing it from the global array kept by CxxWrap
 """
 function gcunprotect(x)
-  unprotect_from_gc(x)
+  ccall(gcunprotect_p[], Cvoid, (Any,), x)
 end
 
 # Interpreted as a constructor for Julia  > 0.5
