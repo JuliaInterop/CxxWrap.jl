@@ -408,7 +408,13 @@ mutable struct CallOpOverload
 end
 
 process_fname(fn::Symbol) = fn
-process_fname(fn::Tuple{Symbol,Module}) = :($(fn[2]).$(fn[1]))
+function process_fname(fn::Tuple{Symbol,Module})
+  (fname, mod) = fn
+  if isdefined(mod, fname) # Adding a method (possibly in a different module)
+    return :($mod.$fname)
+  end
+  return fname # defining a new function
+end
 process_fname(fn::ConstructorFname) = :(::$(Type{fn._type}))
 function process_fname(fn::CallOpOverload)
   return :(arg1::$(fn._type))
