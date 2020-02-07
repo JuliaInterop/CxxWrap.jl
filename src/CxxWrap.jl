@@ -16,24 +16,7 @@ ptrunion, gcprotect, gcunprotect, isnull
 
 const libcxxwrap_version_range = (v"0.7.0",  v"0.8")
 
-# Convert path if it contains lib prefix on windows
-function lib_path(so_path::AbstractString)
-  path_copy = so_path
-  @static if Sys.iswindows()
-    basedir, libname = splitdir(so_path)
-    libdir_suffix = Sys.WORD_SIZE == 32 ? "32" : ""
-    if startswith(libname, "lib") && !isfile(so_path)
-      path_copy = joinpath(basedir*libdir_suffix, libname[4:end])
-    end
-  end
-  return path_copy
-end
-
-const depsfile = joinpath(dirname(dirname(@__FILE__)), "deps", "deps.jl")
-if !isfile(depsfile)
-  error("$depsfile not found, CxxWrap did not build properly")
-end
-include(depsfile)
+using libcxxwrap_julia_jll
 const jlcxx_path = libcxxwrap_julia
 
 prefix_path() = dirname(dirname(jlcxx_path))
