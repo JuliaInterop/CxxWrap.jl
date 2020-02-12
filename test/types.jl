@@ -6,7 +6,7 @@ module CppTypes
 using CxxWrap
 
 GC.gc()
-@wrapmodule(Main.libtypes)
+@wrapmodule(CxxWrap.CxxWrapCore.libtypes)
 GC.gc()
 
 function __init__()

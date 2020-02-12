@@ -19,6 +19,13 @@ const libcxxwrap_version_range = (v"0.7.0",  v"0.8")
 using libcxxwrap_julia_jll
 const jlcxx_path = libcxxwrap_julia
 
+# These can't be products, since we want to control how and when they are dlopened
+for basename in ["jlcxx_containers", "except", "extended", "functions", "hello", "basic_types", "inheritance", "parametric", "pointer_modification", "types", "cxxwrap_julia_stl"]
+  libpath = replace(libcxxwrap_julia_jll.libcxxwrap_julia_path, "cxxwrap_julia" => basename)
+  symname = "lib"*basename
+  @eval const $(Symbol(symname)) = $libpath
+end
+
 prefix_path() = dirname(dirname(jlcxx_path))
 
 # Internal function names
