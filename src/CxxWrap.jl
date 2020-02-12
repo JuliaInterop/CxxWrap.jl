@@ -20,9 +20,12 @@ using libcxxwrap_julia_jll
 const jlcxx_path = libcxxwrap_julia
 
 # These can't be products, since we want to control how and when they are dlopened
-for basename in ["jlcxx_containers", "except", "extended", "functions", "hello", "basic_types", "inheritance", "parametric", "pointer_modification", "types", "cxxwrap_julia_stl"]
-  libpath = replace(libcxxwrap_julia_jll.libcxxwrap_julia_path, "cxxwrap_julia" => basename)
-  symname = "lib"*basename
+for libname in ["jlcxx_containers", "except", "extended", "functions", "hello", "basic_types", "inheritance", "parametric", "pointer_modification", "types", "cxxwrap_julia_stl"]
+  libcxxwrap_julia_name = basename(libcxxwrap_julia_jll.libcxxwrap_julia_path)
+  libprefix = startswith(libcxxwrap_julia_name, "lib") ? "lib" : ""
+  libext = libcxxwrap_julia_name[findlast('.', libcxxwrap_julia_name):end]
+  libpath = joinpath(dirname(libcxxwrap_julia_jll.libcxxwrap_julia_path), libprefix * libname * libext)
+  symname = "lib"*libname
   @eval const $(Symbol(symname)) = $libpath
 end
 
