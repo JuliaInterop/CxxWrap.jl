@@ -1,7 +1,7 @@
 include(joinpath(@__DIR__, "testcommon.jl"))
 cxx_available = false
 
-const functions_lib_path = libfunctions
+const functions_lib_path = CxxWrap.CxxWrapCore.libfunctions
 
 # Wrap the functions defined in C++
 module CppHalfFunctions

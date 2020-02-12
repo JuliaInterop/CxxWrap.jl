@@ -1,6 +1,6 @@
 module PtrModif
   include(joinpath(@__DIR__, "testcommon.jl"))
-  @wrapmodule libpointer_modification
+  @wrapmodule CxxWrap.CxxWrapCore.libpointer_modification
 
   function __init__()
     @initcxx
