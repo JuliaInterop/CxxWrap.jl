@@ -5,10 +5,6 @@ module CxxWrapCore
 import Libdl
 import MacroTools
 
-if ccall(:jl_is_debugbuild, Cint, ()) != 0 && get(ENV, "JLCXX_DIR", "") == ""
-  @warn "Julia debug-build may be incompatible with the libcxxwrap-julia binaries, see https://github.com/JuliaInterop/libcxxwrap-julia#building-libcxxwrap-julia for instructions on building compatible binaries."
-end
-
 export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx,
 ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,
 CppEnum, ConstArray, CxxBool, CxxLong, CxxULong,
@@ -113,6 +109,8 @@ end
 @generated julia_int_type(::Type{T}) where {T<:CxxUnsigned} = Symbol(:UInt, 8*sizeof(T))
 
 to_julia_int(x::Union{CxxSigned,CxxUnsigned}) = reinterpret(julia_int_type(typeof(x)),x)
+
+Base.show(io::IO, n::Union{CxxSigned,CxxUnsigned}) = show(to_julia_int(n))
 
 # Conversion to and from the equivalent Julia type
 Base.convert(::Type{T}, x::Number) where {T<:Union{CxxSigned,CxxUnsigned}} = reinterpret(T, convert(julia_int_type(T), x))
