@@ -110,7 +110,18 @@ end
 
 to_julia_int(x::Union{CxxSigned,CxxUnsigned}) = reinterpret(julia_int_type(typeof(x)),x)
 
-Base.show(io::IO, n::Union{CxxSigned,CxxUnsigned}) = show(to_julia_int(n))
+const CxxNumber = Union{CxxSigned,CxxUnsigned}
+Base.show(io::IO, n::CxxNumber) = show(to_julia_int(n))
+function Base.promote_rule(::Type{CT}, ::Type{JT}) where {CT <: CxxNumber, JT <: Number}
+  if julia_int_type(CT) == JT
+    return JT
+  end
+  return Base.promote_rule(julia_int_type(CT), JT)
+end
+Base.promote_type(::Type{T}, ::Type{T}) where {T<:CxxNumber} = julia_int_type(T)
+Base.promote_rule(::Type{T}, ::Type{T}) where {T<:CxxNumber} = Base.promote_type(T,T)
+Base.promote_rule(::Type{T1}, ::Type{T2}) where {T1<:CxxNumber, T2<:CxxNumber} = Base.promote_rule(julia_int_type(T1), julia_int_type(T2))
+Base.AbstractFloat(x::CxxNumber) = Base.AbstractFloat(to_julia_int(x))
 
 # Conversion to and from the equivalent Julia type
 Base.convert(::Type{T}, x::Number) where {T<:Union{CxxSigned,CxxUnsigned}} = reinterpret(T, convert(julia_int_type(T), x))
