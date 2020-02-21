@@ -33,8 +33,7 @@ Just like any registered package, in pkg mode (`]` at the REPL)
 add CxxWrap
 ```
 
-This will also install the [JlCxx](https://github.com/JuliaInterop/libcxxwrap-julia) library (in `deps/usr` relative to the package dir), which is the C++ component of this package.
-If you want to use existing binaries for this library, set the environment variable `JLCXX_DIR` to the prefix where `libcxxwrap-julia` is installed and then add the package or run `Pkg.build("CxxWrap")`.
+CxxWrap v0.10 and later depends on the `libcxxwrap_julia_jll` [JLL package](https://julialang.org/blog/2019/11/artifacts/) to manage the `libcxxwrap-julia` binaries. See the [libcxxwrap-julia Readme](https://github.com/JuliaInterop/libcxxwrap-julia) for information on how to build this library yourself and force CxxWrap to use your own version.
 
 ## Boost Python Hello World example
 Let's try to reproduce the example from the [Boost.Python tutorial](http://www.boost.org/doc/libs/1_59_0/libs/python/doc/tutorial/doc/html/index.html).

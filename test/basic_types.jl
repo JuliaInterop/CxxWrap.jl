@@ -141,6 +141,17 @@ let cfunc = @safe_cfunction(test_boxed_struct, Cvoid, (Any,))
   @test result[] == 5.0
 end
 
+let a = CxxLong(3), b = CxxWrap.CxxWrapCore.CxxUInt64(2)
+  @test typeof(a*b) == UInt64
+  @test typeof(a+b) == UInt64
+  @test typeof(a/b) == Float64
+  @test a*b == 6
+  @test a+b == 5
+  @test typeof(a/a) == Float64
+  @test typeof(a+a) == CxxWrap.CxxWrapCore.julia_int_type(CxxLong)
+  @test typeof(a*a) == CxxWrap.CxxWrapCore.julia_int_type(CxxLong)
+end
+
 @test BasicTypes.test_for_each_type() == (sizeof(Float32) + sizeof(Float64))
 
 end
