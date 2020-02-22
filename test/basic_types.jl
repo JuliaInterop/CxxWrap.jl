@@ -152,6 +152,13 @@ let a = CxxLong(3), b = CxxWrap.CxxWrapCore.CxxUInt64(2)
   @test typeof(a*a) == CxxWrap.CxxWrapCore.julia_int_type(CxxLong)
 end
 
+let buf = IOBuffer()
+  show(buf,CxxBool(true))
+  @test String(take!(buf)) == "true"
+  show(buf,CxxLong(42))
+  @test String(take!(buf)) == "42"
+end
+
 @test BasicTypes.test_for_each_type() == (sizeof(Float32) + sizeof(Float64))
 
 end

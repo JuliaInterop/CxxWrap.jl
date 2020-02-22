@@ -111,7 +111,8 @@ end
 to_julia_int(x::Union{CxxSigned,CxxUnsigned}) = reinterpret(julia_int_type(typeof(x)),x)
 
 const CxxNumber = Union{CxxSigned,CxxUnsigned}
-Base.show(io::IO, n::CxxNumber) = show(to_julia_int(n))
+Base.show(io::IO, n::CxxNumber) = show(io, to_julia_int(n))
+Base.show(io::IO, b::CxxBool) = show(io, Bool(b))
 function Base.promote_rule(::Type{CT}, ::Type{JT}) where {CT <: CxxNumber, JT <: Number}
   if julia_int_type(CT) == JT
     return JT
