@@ -161,4 +161,16 @@ end
 
 @test BasicTypes.test_for_each_type() == (sizeof(Float32) + sizeof(Float64))
 
+@test BasicTypes.strict_method(CxxChar(1)) == "char"
+@test BasicTypes.strict_method(CxxLong(1)) == "long"
+@test_throws MethodError BasicTypes.strict_method(1)
+
+let (intnames, inttypes) = BasicTypes.julia_integer_mapping()
+  lmax = maximum(length.(intnames))
+  for (name, type) in zip(intnames, inttypes)
+    padding = repeat(' ', lmax-length(name))
+    println("$name$padding -> $type")
+  end
+end
+
 end

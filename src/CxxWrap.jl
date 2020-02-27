@@ -7,7 +7,7 @@ import MacroTools
 
 export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx,
 ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,
-CppEnum, ConstArray, CxxBool, CxxLong, CxxULong,
+CppEnum, ConstArray, CxxBool, CxxLong, CxxULong, CxxChar, CxxUChar,
 ptrunion, gcprotect, gcunprotect, isnull
 
 const libcxxwrap_version_range = (v"0.7.0",  v"0.8")
@@ -770,7 +770,7 @@ using .CxxWrapCore: CxxBaseRef, jlcxx_path, argument_overloads, SafeCFunction, r
 
 export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx,
 ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,
-CppEnum, ConstArray, CxxBool, CxxLong, CxxULong,
+CppEnum, ConstArray, CxxBool, CxxLong, CxxULong, CxxChar, CxxUChar,
 ptrunion, gcprotect, gcunprotect, isnull
 
 using .StdLib: StdVector, StdString, StdWString, StdValArray
