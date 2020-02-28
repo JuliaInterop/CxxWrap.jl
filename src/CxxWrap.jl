@@ -326,6 +326,10 @@ end
 initialize_cxx_lib()
 
 function __init__()
+  # Make sure we reopen the libs with RTLD_GLOBAL, see https://github.com/JuliaLang/julia/issues/2312
+  Libdl.dlopen(libcxxwrap_julia, Libdl.RTLD_GLOBAL | Libdl.RTLD_NOLOAD, throw_error = false)
+  Libdl.dlopen(libcxxwrap_julia_stl, Libdl.RTLD_GLOBAL | Libdl.RTLD_NOLOAD, throw_error = false)
+  
   load_cxxwrap_symbols()
   checkversion()
   initialize_cxx_lib()
