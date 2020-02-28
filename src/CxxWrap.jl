@@ -12,8 +12,7 @@ ptrunion, gcprotect, gcunprotect, isnull
 
 const libcxxwrap_version_range = (v"0.7.0",  v"0.8")
 
-using libcxxwrap_julia_jll
-const jlcxx_path = libcxxwrap_julia
+using libcxxwrap_julia_jll # for libcxxwrap_julia and libcxxwrap_julia_stl
 
 # These can't be products, since we want to control how and when they are dlopened
 for libname in ["jlcxx_containers", "except", "extended", "functions", "hello", "basic_types", "inheritance", "parametric", "pointer_modification", "types", "cxxwrap_julia_stl"]
@@ -25,54 +24,16 @@ for libname in ["jlcxx_containers", "except", "extended", "functions", "hello", 
   @eval const $(Symbol(symname)) = $libpath
 end
 
-prefix_path() = dirname(dirname(jlcxx_path))
-
-# Internal function names
-const cxxwrap_cfnames = [
-  :cxxwrap_version_string,
-  :has_cxx_module,
-  :initialize_cxxwrap,
-  :register_julia_module,
-  :get_module_functions,
-  :bind_module_constants,
-  :get_box_types,
-  :gcprotect,
-  :gcunprotect,
-]
-
-for fname in cxxwrap_cfnames
-  @eval const $(Symbol(fname,:_p)) = Ref(C_NULL)
-end
-
-function load_cxxwrap_lib()
-  loaded_lib = Libdl.dllist()[findall(x -> occursin("libcxxwrap_julia.",x), Libdl.dllist())]
-  if length(loaded_lib) == 1
-    return Libdl.dlopen(loaded_lib[1], Libdl.RTLD_GLOBAL)
-  end
-
-  return Libdl.dlopen(jlcxx_path, Libdl.RTLD_GLOBAL)
-end
-
-function load_cxxwrap_symbols()
-  if cxxwrap_version_string_p[] != C_NULL
-    return
-  end
-
-  libcxxwrap = load_cxxwrap_lib()
-  for fname in cxxwrap_cfnames
-    getproperty(@__MODULE__, Symbol(fname,:_p))[] = Libdl.dlsym(libcxxwrap, string(fname))
-  end
-end
+prefix_path() = dirname(dirname(libcxxwrap_julia))
 
 function checkversion()
-  jlcxxversion = VersionNumber(unsafe_string(ccall(cxxwrap_version_string_p[], Cstring, ())))
+  jlcxxversion = VersionNumber(unsafe_string(ccall((:cxxwrap_version_string,libcxxwrap_julia), Cstring, ())))
   if !(libcxxwrap_version_range[1] <= jlcxxversion < libcxxwrap_version_range[2])
     error("This version of CxxWrap requires a libcxxwrap-julia in the range $(libcxxwrap_version_range), but version $jlcxxversion was found")
   end
 end
 
 # Must also be called during precompile
-load_cxxwrap_symbols()
 checkversion()
 
 # Welcome to the C/C++ integer type mess
@@ -319,29 +280,24 @@ mutable struct CppFunctionInfo
 end
 
 function initialize_cxx_lib()
-  ccall(initialize_cxxwrap_p[], Cvoid, (Any, Any), @__MODULE__, CppFunctionInfo)
+  ccall((:initialize_cxxwrap,libcxxwrap_julia), Cvoid, (Any, Any), @__MODULE__, CppFunctionInfo)
 end
 
 # Must also be called during precompile
 initialize_cxx_lib()
 
 function __init__()
-  # Make sure we reopen the libs with RTLD_GLOBAL, see https://github.com/JuliaLang/julia/issues/2312
-  Libdl.dlopen(libcxxwrap_julia, Libdl.RTLD_GLOBAL | Libdl.RTLD_NOLOAD, throw_error = false)
-  Libdl.dlopen(libcxxwrap_julia_stl, Libdl.RTLD_GLOBAL | Libdl.RTLD_NOLOAD, throw_error = false)
-  
-  load_cxxwrap_symbols()
   checkversion()
   initialize_cxx_lib()
 end
 
 function has_cxx_module(mod::Module)
-  r = ccall(has_cxx_module_p[], Cuchar, (Any,), mod)
+  r = ccall((:has_cxx_module,libcxxwrap_julia), Cuchar, (Any,), mod)
   return r != 0
 end
 
 function register_julia_module(mod::Module, fptr::Ptr{Cvoid})
-  ccall(register_julia_module_p[], Cvoid, (Any,Ptr{Cvoid}), mod, fptr)
+  ccall((:register_julia_module,libcxxwrap_julia), Cvoid, (Any,Ptr{Cvoid}), mod, fptr)
 end
 
 function register_julia_module(mod::Module)
@@ -356,29 +312,29 @@ function register_julia_module(mod::Module)
 end
 
 function get_module_functions(mod::Module)
-  ccall(get_module_functions_p[], Any, (Any,), mod)
+  ccall((:get_module_functions,libcxxwrap_julia), Any, (Any,), mod)
 end
 
 function bind_constants(m::Module, symbols::Array, values::Array)
-  ccall(bind_module_constants_p[], Cvoid, (Any,Any,Any), m, symbols, values)
+  ccall((:bind_module_constants,libcxxwrap_julia), Cvoid, (Any,Any,Any), m, symbols, values)
 end
 
 function box_types(mod::Module)
-  ccall(get_box_types_p[], Any, (Any,), mod)
+  ccall((:get_box_types,libcxxwrap_julia), Any, (Any,), mod)
 end
 
 """
 Protect a variable from garbage collection by adding it to the global array kept by CxxWrap
 """
 function gcprotect(x)
-  ccall(gcprotect_p[], Cvoid, (Any,), x)
+  ccall((:gcprotect,libcxxwrap_julia), Cvoid, (Any,), x)
 end
 
 """
 Unprotect a variable from garbage collection by removing it from the global array kept by CxxWrap
 """
 function gcunprotect(x)
-  ccall(gcunprotect_p[], Cvoid, (Any,), x)
+  ccall((:gcunprotect,libcxxwrap_julia), Cvoid, (Any,), x)
 end
 
 # Interpreted as a constructor for Julia  > 0.5
@@ -770,7 +726,7 @@ end
 include("StdLib.jl")
 
 using .CxxWrapCore
-using .CxxWrapCore: CxxBaseRef, jlcxx_path, argument_overloads, SafeCFunction, reference_type_union, dereference_argument, @cxxdereference
+using .CxxWrapCore: CxxBaseRef, argument_overloads, SafeCFunction, reference_type_union, dereference_argument, @cxxdereference, prefix_path
 
 export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx,
 ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,
