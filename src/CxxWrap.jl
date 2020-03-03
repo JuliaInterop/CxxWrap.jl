@@ -535,7 +535,6 @@ function makereftype(::Type{T}, mod) where {T}
     return Core.eval(mod, :(struct $refname <: $T cpp_object::Ptr{Cvoid} end; $refname))
   end
   if !isdefined(tmod, refname)
-    #@assert mod == tmod
     parameternames = (Symbol(:T,i) for i in 1:length(params))
     expr = :(struct $refname{$(parameternames...)} <: $basename{$(parameternames...)} cpp_object::Ptr{Cvoid} end)
     Core.eval(mod, expr)
@@ -555,6 +554,8 @@ function wrap_reference_converters(julia_mod)
     Core.eval(julia_mod, :($(@__MODULE__).dereferenced_type(::Type{$st}) = $reftype))
     Core.eval(julia_mod, :(Base.convert(::Type{$st}, x::$bt) = x))
     Core.eval(julia_mod, :(Base.convert(::Type{$st}, x::$reftype) = x))
+    Core.eval(julia_mod, :(Base.:(==)(a::Union{CxxRef,ConstCxxRef,$bt}, b::$reftype) = (a.cpp_object == b.cpp_object)))
+    Core.eval(julia_mod, :(Base.:(==)(a::$reftype, b::Union{CxxRef,ConstCxxRef,$bt}) = (b == a)))
   end
 end
 
