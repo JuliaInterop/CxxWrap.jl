@@ -190,4 +190,23 @@ if isdefined(CppTypes, :IntDerived)
   @test CppTypes.IntDerived() == 42
 end
 
+let weq = CppTypes.World()
+  weqref1 = CxxRef(weq)
+  weqptr1 = CxxPtr(weq)
+  weqref2 = CxxRef(weq)
+  weqptr2 = CxxPtr(weq)
+  @test weqptr1 == weqptr2
+  @test weqref1 == weqref2
+  @test weq == weqref1
+  @test weq == weqref1[]
+  @test weqref2[] == weqptr1[]
+  d = Dict{CppTypes.World, Int}()
+  d[weqref1[]] = 1
+  d[weqref2[]] += 1
+  d[weqptr1[]] += 1
+  d[weqptr2[]] += 1
+  @test length(d) == 1
+  @test d[weqref1[]] == 4
+end
+
 end
