@@ -274,9 +274,88 @@ mutable struct CppFunctionInfo
   argument_types::Array{Type,1}
   return_type::Type
   julia_return_type::Type
-  function_pointer::Int
-  thunk_pointer::Int
-  override_module::Union{Nothing,Module}
+  function_pointer::Ptr{Cvoid}
+  thunk_pointer::Ptr{Cvoid}
+  override_module::Module
+end
+
+# Interpreted as a constructor for Julia  > 0.5
+mutable struct ConstructorFname
+  _type::DataType
+end
+
+# Interpreted as an operator call overload
+mutable struct CallOpOverload
+  _type::DataType
+end
+
+_parameter_name(p) = string(p)
+_parameter_name(p::DataType) = _fully_qualified_name(p)
+
+_type_name(m::Module) = string(nameof(m))
+function _type_name(::Type{T}) where {T}
+  if T isa UnionAll
+    return string(T)
+  end
+  typename = string(nameof(T))
+  if isempty(T.parameters)
+    return typename
+  end
+  return "$typename{$(join(_parameter_name.(T.parameters),","))}"
+end
+
+function _fully_qualified_name(root, modules=[parentmodule(root)])
+  parent = parentmodule(modules[end])
+  if parent == modules[end] || parent == Main
+    if root == modules[end] || modules[end] == Main
+      pop!(modules)
+      if isempty(modules)
+        return _type_name(root)
+      end
+    end
+    return join(reverse(nameof.(modules)), ".") * "." * _type_name(root)
+  end
+  push!(modules, parent)
+  return _fully_qualified_name(root, modules)
+end
+
+# Provide globally unique names for each distinct method signature
+_method_name_string(funcname::ConstructorFname, mod) = "(::$(_fully_qualified_name(funcname._type)))"
+_method_name_string(funcname::CallOpOverload, mod) = "(callable::$(_fully_qualified_name(funcname._type)))"
+_method_name_string(funcname::Symbol, mod) = "$(_fully_qualified_name(mod)).$funcname"
+
+function Base.print(io::IO, f::CppFunctionInfo)
+  print(io, "$(_method_name_string(f.name, f.override_module))($(join(_fully_qualified_name.(f.argument_types), ", ")))::$(_fully_qualified_name(f.julia_return_type))")
+end
+
+# Pointers to function and thunk
+const FunctionPointers = Tuple{Ptr{Cvoid},Ptr{Cvoid},Bool}
+
+# Store a unique map between methods and their pointer, filled whenever a method is created in a module
+# This solves a problem with e.g. vectors of vectors ov vectors of... where it is impossible to predict
+# how many times and in which module a method will be defined
+# This map is used to update a per-module vector of pointers upon module initialization, so it doesn't slow
+# down each function call
+const __global_method_map = Dict{String, FunctionPointers}()
+
+function _register_function_pointers(func, precompiling)
+  fstring = string(func)
+  fptrs = (func.function_pointer, func.thunk_pointer, precompiling)
+  if haskey(__global_method_map, fstring)
+    existing = __global_method_map[fstring]
+    if existing[3] == precompiling
+      error("Double registration for method $fstring")
+    end
+  end
+  __global_method_map[fstring] = fptrs
+  return (fstring, fptrs)
+end
+
+function _get_function_pointer(fstr)
+  if !haskey(__global_method_map, fstr)
+    error("Method $fstr is undefined, maybe you need to precompile the Julia module?")
+  end
+  return __global_method_map[fstr]
 end
 
 function initialize_cxx_lib()
@@ -300,14 +379,19 @@ function register_julia_module(mod::Module, fptr::Ptr{Cvoid})
   ccall((:register_julia_module,libcxxwrap_julia), Cvoid, (Any,Ptr{Cvoid}), mod, fptr)
 end
 
-function register_julia_module(mod::Module)
-  fptr = Libdl.dlsym(Libdl.dlopen(mod.__cxxwrap_sopath, mod.__cxxwrap_flags), mod.__cxxwrap_wrapfunc)
-  if !has_cxx_module(mod)
-    empty!(mod.__cxxwrap_pointers)
-    register_julia_module(mod, fptr)
+function initialize_julia_module(mod::Module)
+  if has_cxx_module(mod) # Happens when not precompiling
+    return
   end
-  if length(mod.__cxxwrap_pointers) != mod.__cxxwrap_nbpointers
-    error("Binary part of module was changed since last precompilation, please rebuild.")
+  fptr = Libdl.dlsym(Libdl.dlopen(mod.__cxxwrap_sopath, mod.__cxxwrap_flags), mod.__cxxwrap_wrapfunc)
+  register_julia_module(mod, fptr)
+  funcs = get_module_functions(mod)
+  precompiling = false
+  for func in funcs
+    _register_function_pointers(func, precompiling)
+  end
+  for (fidx,fstr) in enumerate(mod.__cxxwrap_methodnames)    
+    mod.__cxxwrap_pointers[fidx] = _get_function_pointer(fstr)
   end
 end
 
@@ -337,17 +421,8 @@ function gcunprotect(x)
   ccall((:gcunprotect,libcxxwrap_julia), Cvoid, (Any,), x)
 end
 
-# Interpreted as a constructor for Julia  > 0.5
-mutable struct ConstructorFname
-  _type::DataType
-end
-
-# Interpreted as an operator call overload
-mutable struct CallOpOverload
-  _type::DataType
-end
-
 process_fname(fn::Symbol) = fn
+process_fname(fn::Tuple{<:Any,Module}) = process_fname(fn[1])
 function process_fname(fn::Tuple{Symbol,Module})
   (fname, mod) = fn
   if isdefined(mod, fname) # Adding a method (possibly in a different module)
@@ -361,7 +436,7 @@ function process_fname(fn::CallOpOverload)
 end
 
 make_func_declaration(fn, argmap) = :($(process_fname(fn))($(argmap...)))
-function make_func_declaration(fn::CallOpOverload, argmap)
+function make_func_declaration(fn::Tuple{CallOpOverload,Module}, argmap)
   return :($(process_fname(fn))($((argmap[2:end])...)))
 end
 
@@ -463,14 +538,10 @@ function cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x::CxxBaseRef, ::Type{IsCxxT
 end
 
 # Build the expression to wrap the given function
-function build_function_expression(func::CppFunctionInfo, mod=nothing)
+function build_function_expression(func::CppFunctionInfo, funcidx)
   # Arguments and types
   argtypes = func.argument_types
   argsymbols = map((i) -> Symbol(:arg,i[1]), enumerate(argtypes))
-
-  # These are actually indices into the module-global function pointer table
-  fpointer = func.function_pointer
-  thunk = func.thunk_pointer
 
   map_c_arg_type(t::Type) = t
   map_c_arg_type(::Type{Array{T,1}}) where {T <: AbstractString} = Any
@@ -496,10 +567,10 @@ function build_function_expression(func::CppFunctionInfo, mod=nothing)
 
   # Build the final call expression
   call_exp = quote end
-  if thunk == 0
-    push!(call_exp.args, :(ccall(__cxxwrap_pointers[$fpointer], $c_return_type, ($(c_arg_types...),), $(argsymbols...)))) # Direct pointer call
+  if func.thunk_pointer == C_NULL
+    push!(call_exp.args, :(ccall(__cxxwrap_pointers[$funcidx][1], $c_return_type, ($(c_arg_types...),), $(argsymbols...)))) # Direct pointer call
   else
-    push!(call_exp.args, :(ccall(__cxxwrap_pointers[$fpointer], $c_return_type, (Ptr{Cvoid}, $(c_arg_types...)), __cxxwrap_pointers[$thunk], $(argsymbols...)))) # use thunk (= std::function)
+    push!(call_exp.args, :(ccall(__cxxwrap_pointers[$funcidx][1], $c_return_type, (Ptr{Cvoid}, $(c_arg_types...)), __cxxwrap_pointers[$funcidx][2], $(argsymbols...)))) # use thunk (= std::function)
   end
 
   function map_julia_arg_type_named(fname, t)
@@ -518,8 +589,7 @@ function build_function_expression(func::CppFunctionInfo, mod=nothing)
     return result
   end
 
-  fname = mod === nothing ? func.name : (func.name,mod)
-  function_expression = :($(make_func_declaration(fname, argmap(argtypes)))::$(map_julia_return_type(func.julia_return_type)) = $call_exp)
+  function_expression = :($(make_func_declaration((func.name,func.override_module), argmap(argtypes)))::$(map_julia_return_type(func.julia_return_type)) = $call_exp)
   return function_expression
 end
 
@@ -571,15 +641,16 @@ function wrap_functions(functions, julia_mod)
     :(==)
   ])
 
+  @assert isempty(julia_mod.__cxxwrap_pointers)
+  precompiling = true
+
   for func in functions
-    if func.override_module != nothing
-      Core.eval(julia_mod, build_function_expression(func, func.override_module))
-    elseif func.name ∈ basenames
-      @warn "Adding method to $(func.name) in the Base module by default. This default will change in the next release of CxxWrap, please use the C++ function `set_override_module` to explicitly set the method module."
-      Core.eval(julia_mod, build_function_expression(func, Base))
-    else
-      Core.eval(julia_mod, build_function_expression(func))
-    end
+    (fstring,fptrs) = _register_function_pointers(func, precompiling)
+    push!(julia_mod.__cxxwrap_methodnames, fstring)
+    push!(julia_mod.__cxxwrap_pointers, fptrs)
+    funcidx = length(julia_mod.__cxxwrap_pointers)
+
+    Core.eval(julia_mod, build_function_expression(func, funcidx))
   end
 end
 
@@ -603,14 +674,13 @@ function readmodule(so_path::AbstractString, funcname, m::Module, flags)
   if flags === nothing
     flags = Libdl.RTLD_LAZY | Libdl.RTLD_DEEPBIND
   end
-  Core.eval(m, :(const __cxxwrap_pointers = Ptr{Cvoid}[]))
+  Core.eval(m, :(const __cxxwrap_methodnames = String[]))
+  Core.eval(m, :(const __cxxwrap_pointers = $(FunctionPointers)[]))
   Core.eval(m, :(const __cxxwrap_sopath = $so_path))
   Core.eval(m, :(const __cxxwrap_wrapfunc = $(QuoteNode(funcname))))
   Core.eval(m, :(const __cxxwrap_flags = $flags))
   fptr = Libdl.dlsym(Libdl.dlopen(so_path, flags), funcname)
   register_julia_module(m, fptr)
-  nb_pointers = length(m.__cxxwrap_pointers)
-  Core.eval(m, :(const __cxxwrap_nbpointers = $nb_pointers))
 end
 
 function wrapmodule(so_path::AbstractString, funcname, m::Module, flags)
@@ -666,7 +736,7 @@ Initialize the C++ pointer tables in a precompiled module using CxxWrap. Must be
 `__init__` in the wrapped module
 """
 macro initcxx()
-  return :(register_julia_module($__module__))
+  return :(initialize_julia_module($__module__))
 end
 
 struct SafeCFunction
