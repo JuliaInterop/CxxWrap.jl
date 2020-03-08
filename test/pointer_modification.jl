@@ -1,4 +1,10 @@
 module PtrModif
+  function divrem(a,b)
+    r = Ref(CxxPtr{MyData}(C_NULL))
+    q = PtrModif.divrem(CxxPtr(a),CxxPtr(b),r)
+    return (q,r[])
+  end
+
   include(joinpath(@__DIR__, "testcommon.jl"))
   @wrapmodule CxxWrap.CxxWrapCore.libpointer_modification
 
@@ -6,11 +12,6 @@ module PtrModif
     @initcxx
   end
 
-  function divrem(a,b)
-    r = Ref(CxxPtr{MyData}(C_NULL))
-    q = divrem(CxxPtr(a),CxxPtr(b),r)
-    return (q,r[])
-  end
 end
 
 using BenchmarkTools

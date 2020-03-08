@@ -23,6 +23,30 @@ julia_greet1(w::World) = greet_lambda(w)
 
 end
 
+module CppTypes2
+
+using CxxWrap
+
+@wrapmodule CxxWrap.CxxWrapCore.libtypes :define_types2_module
+
+function __init__()
+  @initcxx
+end
+
+end
+
+module CppTypes3
+
+using CxxWrap
+
+@wrapmodule CxxWrap.CxxWrapCore.libtypes :define_types3_module
+
+function __init__()
+  @initcxx
+end
+
+end
+
 # Stress test
 for i in 1:1000000
   global d = CppTypes.DoubleData()
@@ -207,6 +231,13 @@ let weq = CppTypes.World()
   d[weqptr2[]] += 1
   @test length(d) == 1
   @test d[weqref1[]] == 4
+end
+
+let vvec1 = StdVector([StdVector([Int32(3)])]), vvec2 = StdVector([StdVector([CppTypes.World("vvec")])])
+  @test CppTypes2.vecvec(vvec1) == 3
+  @test CppTypes3.vecvec(vvec1) == 6
+  @test CppTypes.greet(CppTypes2.vecvec(vvec2)) == "vvec"
+  @show @test CppTypes.greet(CppTypes3.vecvec(vvec2)) == "vvec"
 end
 
 end
