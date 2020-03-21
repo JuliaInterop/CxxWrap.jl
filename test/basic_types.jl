@@ -164,6 +164,10 @@ end
 @test BasicTypes.strict_method(CxxChar(1)) == "char"
 @test BasicTypes.strict_method(CxxLong(1)) == "long"
 @test_throws MethodError BasicTypes.strict_method(1)
+@test BasicTypes.strict_method(CxxBool(true)) == "bool"
+@test BasicTypes.strict_method(true) == "bool"
+@test BasicTypes.loose_method(Int32(3)) == "int"
+@test BasicTypes.loose_method(false) == "bool"
 
 let (intnames, inttypes) = BasicTypes.julia_integer_mapping()
   lmax = maximum(length.(intnames))

@@ -152,6 +152,7 @@ function Base.convert(t::Type{<:StrictlyTypedNumber}, n::Number)
   @assert t == StrictlyTypedNumber{typeof(n)}
   return StrictlyTypedNumber{typeof(n)}(n)
 end
+Base.convert(t::Type{StrictlyTypedNumber{CxxBool}}, b::Bool) = StrictlyTypedNumber{CxxBool}(b)
 
 abstract type CxxBaseRef{T} <: Ref{T} end
 
@@ -475,6 +476,8 @@ end
 
 map_julia_arg_type(t::Type) = Union{Base.invokelatest(smart_pointer_type,t),argument_overloads(t)...}
 map_julia_arg_type(a::Type{StrictlyTypedNumber{T}}) where {T} = T
+map_julia_arg_type(a::Type{StrictlyTypedNumber{CxxBool}}) = Union{Bool,CxxBool}
+map_julia_arg_type(x::Type{CxxBool}) = Union{Bool,CxxBool}
 map_julia_arg_type(x::Type{T}) where {T<:Integer} = map_julia_arg_type(x, Base.invokelatest(cpp_trait_type, T))
 map_julia_arg_type(x::Type{<:Integer}, ::Type{IsNormalType}) = Integer
 map_julia_arg_type(x::Type{<:Integer}, ::Type{IsCxxType}) = x
