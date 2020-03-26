@@ -69,30 +69,30 @@ Base.size(v::StdVector) = (Int(cppsize(v)),)
 Base.getindex(v::StdVector, i::Int) = cxxgetindex(v,i)[]
 Base.setindex!(v::StdVector{T}, val, i::Int) where {T} = cxxsetindex!(v, convert(T,val), i)
 
-function Base.push!(v::StdVector, x)
+@cxxdereference function Base.push!(v::StdVector, x)
   push_back(v, x)
   return v
 end
 
-function Base.resize!(v::StdVector, n::Integer)
+@cxxdereference function Base.resize!(v::StdVector, n::Integer)
   resize(v, n)
   return v
 end
 
-Base.empty!(v::StdVector) = Base.resize!(v, 0)
+@cxxdereference Base.empty!(v::StdVector) = Base.resize!(v, 0)
 
-function Base.append!(v::StdVector, a::Vector)
+@cxxdereference function Base.append!(v::StdVector, a::Vector)
   append(v, a)
   return v
 end
 
-function Base.append!(v::StdVector{CxxBool}, a::Vector{Bool})
+@cxxdereference function Base.append!(v::StdVector{CxxBool}, a::Vector{Bool})
   append(v, convert(Vector{CxxBool}, a))
   return v
 end
 
-Base.String(s::StdString) = unsafe_string(reinterpret(Ptr{Cchar},c_str(s).cpp_object))
-function Base.String(s::StdWString)
+@cxxdereference Base.String(s::StdString) = unsafe_string(reinterpret(Ptr{Cchar},c_str(s).cpp_object))
+@cxxdereference function Base.String(s::StdWString)
   chars = unsafe_wrap(Vector{Cwchar_t}, reinterpret(Ptr{Cwchar_t},c_str(s).cpp_object), (cppsize(s),))
   return transcode(String, chars)
 end

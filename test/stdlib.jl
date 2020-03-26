@@ -29,6 +29,15 @@ let s = "café"
   @test String(StdString(s)) == s
 end
 
+let s = StdString("foo")
+  @test String(s) == "foo"
+  sref = CxxRef(s)
+  @test sref == "foo"
+  @test String(sref) == "foo"
+  @test unsafe_string(CxxWrap.StdLib.c_str(s)) == "foo"
+  @test unsafe_string(CxxWrap.StdLib.c_str(s),2) == "fo"
+end
+
 stvec = StdVector(Int32[1,2,3])
 @test all(stvec .== [1,2,3])
 push!(stvec,1)
