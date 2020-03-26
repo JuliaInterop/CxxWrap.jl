@@ -213,7 +213,9 @@ _store_to_cxxptr(r::Union{ConstCxxPtr{T},ConstCxxRef{T}}, x::T, ::Type{IsNormalT
 _store_to_cxxptr(r::Union{CxxPtr{T},CxxRef{T}}, x::T, ::Type{IsNormalType}) where {T} = unsafe_store!(r.cpp_object, x)
 
 Base.unsafe_load(p::CxxBaseRef{T}) where {T} = _deref(p, cpp_trait_type(T))
-Base.unsafe_string(p::CxxBaseRef) = unsafe_string(p.cpp_object)
+_julia_pointer(p::CxxBaseRef{T}) where {T} = reinterpret(Ptr{julia_int_type(T)}, p.cpp_object)
+Base.unsafe_string(p::CxxBaseRef) = unsafe_string(_julia_pointer(p))
+Base.unsafe_string(p::CxxBaseRef, len::Integer) = unsafe_string(_julia_pointer(p), len)
 Base.getindex(r::CxxBaseRef) = unsafe_load(r)
 Base.setindex!(r::CxxBaseRef{T}, x::T) where {T}  = _store_to_cxxptr(r, x, cpp_trait_type(T))
 
@@ -795,12 +797,14 @@ macro cxxdereference(f)
   return esc(MacroTools.combinedef(fdict))
 end
 
+export @cxxdereference
+
 end
 
 include("StdLib.jl")
 
 using .CxxWrapCore
-using .CxxWrapCore: CxxBaseRef, argument_overloads, SafeCFunction, reference_type_union, dereference_argument, @cxxdereference, prefix_path
+using .CxxWrapCore: CxxBaseRef, argument_overloads, SafeCFunction, reference_type_union, dereference_argument, prefix_path
 
 export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx,
 ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,
