@@ -141,15 +141,15 @@ let cfunc = @safe_cfunction(test_boxed_struct, Cvoid, (Any,))
   @test result[] == 5.0
 end
 
-let a = CxxLong(3), b = CxxWrap.CxxWrapCore.CxxUInt64(2)
-  @test typeof(a*b) == UInt64
-  @test typeof(a+b) == UInt64
+let a = CxxChar(3), b = CxxWchar(2)
+  @test typeof(a*b) == CxxWrap.CxxWrapCore.julia_int_type(CxxWchar)
+  @test typeof(a+b) == CxxWrap.CxxWrapCore.julia_int_type(CxxWchar)
   @test typeof(a/b) == Float64
   @test a*b == 6
   @test a+b == 5
   @test typeof(a/a) == Float64
-  @test typeof(a+a) == CxxWrap.CxxWrapCore.julia_int_type(CxxLong)
-  @test typeof(a*a) == CxxWrap.CxxWrapCore.julia_int_type(CxxLong)
+  @test typeof(a+a) == CxxWrap.CxxWrapCore.julia_int_type(CxxChar)
+  @test typeof(a*a) == CxxWrap.CxxWrapCore.julia_int_type(CxxChar)
 end
 
 let buf = IOBuffer()
@@ -163,7 +163,7 @@ end
 
 @test BasicTypes.strict_method(CxxChar(1)) == "char"
 @test BasicTypes.strict_method(CxxLong(1)) == "long"
-@test_throws MethodError BasicTypes.strict_method(1)
+@test_throws MethodError BasicTypes.strict_method(Int16(1))
 @test BasicTypes.strict_method(CxxBool(true)) == "bool"
 @test BasicTypes.strict_method(true) == "bool"
 @test BasicTypes.loose_method(Int32(3)) == "int"

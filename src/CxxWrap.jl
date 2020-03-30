@@ -7,7 +7,7 @@ import MacroTools
 
 export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx,
 ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,
-CppEnum, ConstArray, CxxBool, CxxLong, CxxULong, CxxChar, CxxUChar,
+CppEnum, ConstArray, CxxBool, CxxLong, CxxULong, CxxChar, CxxWchar, CxxUChar, CxxSignedChar, CxxLongLong, CxxULongLong,
 ptrunion, gcprotect, gcunprotect, isnull
 
 const libcxxwrap_version_range = (v"0.7.0",  v"0.8")
@@ -37,35 +37,57 @@ end
 checkversion()
 
 # Welcome to the C/C++ integer type mess
+# See https://en.cppreference.com/w/cpp/language/types and https://en.cppreference.com/w/cpp/types/integer
 
 abstract type CxxSigned <: Signed end
 abstract type CxxUnsigned <: Unsigned end
 
-# long is a special case, because depending on the platform it overlaps with int or long long. See https://en.cppreference.com/w/cpp/language/types
-primitive type CxxLong <: CxxSigned 8*sizeof(Clong) end
-primitive type CxxULong <: CxxUnsigned 8*sizeof(Culong) end
+
 primitive type CxxBool <: CxxUnsigned 8*sizeof(Cuchar) end
 const CharSigning = supertype(Cchar) == Signed ? CxxSigned : CxxUnsigned
 primitive type CxxChar <: CharSigning 8*sizeof(Cchar) end
-primitive type CxxUChar <: CxxUnsigned 8*sizeof(Cuchar) end
 const WCharSigning = supertype(Cwchar_t) == Signed ? CxxSigned : CxxUnsigned
 primitive type CxxWchar <: WCharSigning 8*sizeof(Cwchar_t) end
 
-# This macro adds the fixed integer types described on https://en.cppreference.com/w/cpp/types/integer
+function _transform_fundamental_type(fundamental_type_name)
+  julianame = "Cxx"
+  for part in split(fundamental_type_name)
+    if part == "unsigned"
+      julianame *= "U"
+      continue
+    end
+    julianame *= titlecase(part)
+  end
+  return Symbol(julianame)
+end
+
+_transform_fixed_type(fixed_type_name) = Symbol(replace(titlecase(fixed_type_name), "int" => "Int")[1:end-2])
+
+# This macro adds the fundamental integer types such as long, which becomes CxxLong
 # Names are e.g. CxxInt32 or CxxUInt64
 macro add_int_types()
+  all_fundamental_types = String[]
+  type_sizes = Any[]
+  fundamental_types_matched = String[]
+  equivalent_types = String[]
+  ccall((:get_integer_types,libcxxwrap_julia), Cvoid, (Any,Any,Any,Any), all_fundamental_types, type_sizes, fundamental_types_matched, equivalent_types)
+  @assert all(all_fundamental_types .!= "undefined")
+  sizedict = Dict(all_fundamental_types .=> type_sizes)
   result = quote end
-  for signed in (Symbol(), :U)
-    super = signed == :U ? CxxUnsigned : CxxSigned
-    for nbits in (8,16,32,64)
-      push!(result.args, esc(:(primitive type $(Symbol(:Cxx, signed, :Int, nbits)) <: $super $nbits end)))
-    end
+  for (fundamentaltype, fixedtype) in zip(fundamental_types_matched, equivalent_types)
+    push!(result.args, esc(:(const $(_transform_fundamental_type(fundamentaltype)) = $(_transform_fixed_type(fixedtype)))))
+  end
+  missing_types = setdiff(all_fundamental_types, fundamental_types_matched)
+  for missingtype in missing_types
+    super = startswith(missingtype, "unsigned") ? CxxUnsigned : CxxSigned
+    nbits = sizedict[missingtype]*8
+    push!(result.args, esc(:(primitive type $(_transform_fundamental_type(missingtype)) <: $super $nbits end)))
   end
   return result
 end
 @add_int_types
 
-# Get the equivalen Julia type for a Cxx integer type
+# Get the equivalent Julia type for a Cxx integer type
 @generated julia_int_type(::Type{T}) where {T<:CxxSigned} = Symbol(:Int, 8*sizeof(T))
 @generated julia_int_type(::Type{T}) where {T<:CxxUnsigned} = Symbol(:UInt, 8*sizeof(T))
 
@@ -93,7 +115,7 @@ Base.convert(::Type{T}, x::CT) where {T <: Union{CxxWrapCore.CxxSigned, CxxWrapC
 # Convenience constructors
 (::Type{T})(x) where {T<:Union{CxxWrapCore.CxxSigned,CxxWrapCore.CxxUnsigned}} = convert(T,x)
 
-Base.flipsign(x::CxxLong, y::CxxLong) = reinterpret(CxxLong, flipsign(to_julia_int(x), to_julia_int(y)))
+Base.flipsign(x::T, y::T) where {T <: CxxSigned} = reinterpret(T, flipsign(to_julia_int(x), to_julia_int(y)))
 
 # Trait type to indicate a type is a C++-wrapped type
 struct IsCxxType end
@@ -808,7 +830,7 @@ using .CxxWrapCore: CxxBaseRef, argument_overloads, SafeCFunction, reference_typ
 
 export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx,
 ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,
-CppEnum, ConstArray, CxxBool, CxxLong, CxxULong, CxxChar, CxxUChar,
+CppEnum, ConstArray, CxxBool, CxxLong, CxxULong, CxxChar, CxxWchar, CxxUChar, CxxSignedChar, CxxLongLong, CxxULongLong,
 ptrunion, gcprotect, gcunprotect, isnull
 
 using .StdLib: StdVector, StdString, StdWString, StdValArray
