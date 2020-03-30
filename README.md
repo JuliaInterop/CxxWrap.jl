@@ -463,6 +463,38 @@ For example, to allow passing an `Int64` where a `UInt64` is normally expected, 
 CxxWrap.argument_overloads(t::Type{UInt64}) = [Int64]
 ```
 
+## Integer types
+
+Due to the fact that built-in integer types don't have an imposed size, they can't be mapped to Julia integer types in the same way on every platform. For CxxWrap, we take the following approach:
+* Fixed-size types such as `int32_t` are mapped directly to their Julia equivalents
+* Built-in types are mapped to a named type, e.g. the C++ type `long` becomes `CxxLong` in Julia. If in the given C++ implementation we have `long == int64_t`, then in Julia `CxxLong` will be an alias for `Int64`, otherwise it is its own bits type.
+
+The following table gives an overview of the mapping, where some of the `Cxx*` types may actually be aliases for a Julia type:
+
+| C++                | Julia              | 
+| -------------------|--------------------| 
+|`int8_t`            |`Int8`              |
+|`uint8_t`           |`UInt8`             |
+|`int16_t`           |`Int16`             |
+|`uint16_t`          |`UInt16`            |
+|`int32_t`           |`Int32`             |
+|`uint32_t`          |`UInt32`            |
+|`int64_t`           |`Int64`             |
+|`uint64_t`          |`UInt64`            |
+|`bool`              |`CxxBool`           |
+|`char`              |`CxxChar`           |
+|`wchar_t`           |`CxxWchar`          |
+|`signed char`       |`CxxSignedChar`     |
+|`unsigned char`     |`CxxUChar`          |
+|`short`             |`CxxShort`          |
+|`unsigned short`    |`CxxUShort`         |
+|`int`               |`CxxInt`            |
+|`unsigned int`      |`CxxUInt`           |
+|`long`              |`CxxLong`           |
+|`unsigned long`     |`CxxULong`          |
+|`long long`         |`CxxLongLong`       |
+|`unsigned long long`|`CxxULongLong`      |
+
 ## Pointers and references
 
 Simple pointers and references are treated the same way, and wrapped in a struct with as a single member the pointer to the C++ object.
@@ -859,3 +891,7 @@ template<> struct IsMirroredType<Foo> : std::false_type { };
 * Use `Ref(CxxPtr(x))` for pointer or reference to pointer
 * Use `CxxPtr{MyData}(C_NULL)` instead of `nullptr(MyData)`
 * Defining a C++ supertype in C++ must now be done using the `jlcxx::julia_base_type<T>()` function instead of `jlcxx::julia_type<T>()`
+
+## Breaking changes in v0.10
+* Requires Julia 1.3 for the use of JLL packages
+* Reorganized integer types so the fixed-size types always map to built-in Julia types
