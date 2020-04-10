@@ -1,16 +1,14 @@
 name = "CxxWrap"
 uuid = "1f15a43c-97ca-5a2a-ae31-89f07a497df4"
 authors = ["Bart Janssens <bart@bartjanssens.org>"]
-version = "0.9.0"
+version = "0.10.0"
 
 [deps]
-BinaryProvider = "b99e7846-7c00-51b0-8f62-c81ae34c0232"
 Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
 MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 libcxxwrap_julia_jll = "3eaa8342-bff7-56a5-9981-c04077f7cee7"
 
 [compat]
-BinaryProvider = "0.5"
 MacroTools = "0.5.3"
 libcxxwrap_julia_jll = "0.7"
 julia = "1.3"
