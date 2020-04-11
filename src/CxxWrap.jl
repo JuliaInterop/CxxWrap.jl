@@ -24,7 +24,7 @@ for libname in ["jlcxx_containers", "except", "extended", "functions", "hello", 
   @eval const $(Symbol(symname)) = $libpath
 end
 
-prefix_path() = dirname(dirname(libcxxwrap_julia))
+prefix_path() = dirname(dirname(libcxxwrap_julia_jll.libcxxwrap_julia_path))
 
 function checkversion()
   jlcxxversion = VersionNumber(unsafe_string(ccall((:cxxwrap_version_string,libcxxwrap_julia), Cstring, ())))
