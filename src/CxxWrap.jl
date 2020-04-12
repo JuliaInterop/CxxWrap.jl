@@ -658,16 +658,6 @@ end
 
 # Wrap functions from the cpp module to the passed julia module
 function wrap_functions(functions, julia_mod)
-  basenames = Set([
-    :getindex,
-    :setindex!,
-    :convert,
-    :deepcopy_internal,
-    :+,
-    :*,
-    :(==)
-  ])
-
   @assert isempty(julia_mod.__cxxwrap_pointers)
   precompiling = true
 
