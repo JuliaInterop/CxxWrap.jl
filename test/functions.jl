@@ -180,6 +180,8 @@ cppdref[] = 1.0
 
 @test CppTestFunctions.process_irrational(π, 2) == 2*π
 
+@test CppTestFunctions.open("foo") == "foo"
+
 end
 
 # Performance tests

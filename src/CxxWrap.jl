@@ -446,23 +446,22 @@ function gcunprotect(x)
   ccall((:gcunprotect,libcxxwrap_julia), Cvoid, (Any,), x)
 end
 
-process_fname(fn::Symbol) = fn
-process_fname(fn::Tuple{<:Any,Module}) = process_fname(fn[1])
-function process_fname(fn::Tuple{Symbol,Module})
+process_fname(fn::Tuple{<:Any,Module}, julia_mod) = process_fname(fn[1])
+function process_fname(fn::Tuple{Symbol,Module}, julia_mod)
   (fname, mod) = fn
-  if isdefined(mod, fname) # Adding a method (possibly in a different module)
+  if mod != julia_mod # Adding a method to a function from another module
     return :($mod.$fname)
   end
-  return fname # defining a new function
+  return fname # defining a new function in the wrapped module, or adding a method to it
 end
 process_fname(fn::ConstructorFname) = :(::$(Type{fn._type}))
 function process_fname(fn::CallOpOverload)
   return :(arg1::$(fn._type))
 end
 
-make_func_declaration(fn, argmap) = :($(process_fname(fn))($(argmap...)))
-function make_func_declaration(fn::Tuple{CallOpOverload,Module}, argmap)
-  return :($(process_fname(fn))($((argmap[2:end])...)))
+make_func_declaration(fn, argmap, julia_mod) = :($(process_fname(fn, julia_mod))($(argmap...)))
+function make_func_declaration(fn::Tuple{CallOpOverload,Module}, argmap, julia_mod)
+  return :($(process_fname(fn, julia_mod))($((argmap[2:end])...)))
 end
 
 # By default, no argument overloading happens
@@ -565,7 +564,7 @@ function cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x::CxxBaseRef, ::Type{IsCxxT
 end
 
 # Build the expression to wrap the given function
-function build_function_expression(func::CppFunctionInfo, funcidx)
+function build_function_expression(func::CppFunctionInfo, funcidx, julia_mod)
   # Arguments and types
   argtypes = func.argument_types
   argsymbols = map((i) -> Symbol(:arg,i[1]), enumerate(argtypes))
@@ -616,7 +615,7 @@ function build_function_expression(func::CppFunctionInfo, funcidx)
     return result
   end
 
-  function_expression = :($(make_func_declaration((func.name,func.override_module), argmap(argtypes)))::$(map_julia_return_type(func.julia_return_type)) = $call_exp)
+  function_expression = :($(make_func_declaration((func.name,func.override_module), argmap(argtypes), julia_mod))::$(map_julia_return_type(func.julia_return_type)) = $call_exp)
   return function_expression
 end
 
@@ -667,7 +666,7 @@ function wrap_functions(functions, julia_mod)
     push!(julia_mod.__cxxwrap_pointers, fptrs)
     funcidx = length(julia_mod.__cxxwrap_pointers)
 
-    Core.eval(julia_mod, build_function_expression(func, funcidx))
+    Core.eval(julia_mod, build_function_expression(func, funcidx, julia_mod))
   end
 end
 
