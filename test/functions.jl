@@ -57,6 +57,8 @@ end
 
 @testset "$(basename(@__FILE__)[1:end-3])" begin
 
+@test CxxWrap.prefix_path() == dirname(dirname(CxxWrap.CxxWrapCore.libcxxwrap_julia_jll.libcxxwrap_julia_path))
+
 # Test functions from the CppHalfFunctions module
 @test CppHalfFunctions.half_d(3) == 1.5
 @show methods(CppHalfFunctions.half_d)
