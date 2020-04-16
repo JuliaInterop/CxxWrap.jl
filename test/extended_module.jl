@@ -3,7 +3,7 @@ module ExtendedTypes
 
 include(joinpath(@__DIR__, "testcommon.jl"))
 
-@readmodule CxxWrap.CxxWrapCore.libextended
+@readmodule CxxWrap.CxxWrapCore.libextended()
 @wraptypes
 @wrapfunctions
 

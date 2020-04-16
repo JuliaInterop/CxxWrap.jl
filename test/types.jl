@@ -6,7 +6,7 @@ module CppTypes
 using CxxWrap
 
 GC.gc()
-@wrapmodule(CxxWrap.CxxWrapCore.libtypes)
+@wrapmodule(CxxWrap.CxxWrapCore.libtypes())
 GC.gc()
 
 function __init__()
@@ -27,7 +27,7 @@ module CppTypes2
 
 using CxxWrap
 
-@wrapmodule CxxWrap.CxxWrapCore.libtypes :define_types2_module
+@wrapmodule CxxWrap.CxxWrapCore.libtypes() :define_types2_module
 
 function __init__()
   @initcxx
@@ -39,7 +39,7 @@ module CppTypes3
 
 using CxxWrap
 
-@wrapmodule CxxWrap.CxxWrapCore.libtypes :define_types3_module
+@wrapmodule CxxWrap.CxxWrapCore.libtypes() :define_types3_module
 
 function __init__()
   @initcxx
