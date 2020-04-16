@@ -8,26 +8,28 @@ import MacroTools
 export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx,
 ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,
 CppEnum, ConstArray, CxxBool, CxxLong, CxxULong, CxxChar, CxxWchar, CxxUChar, CxxSignedChar, CxxLongLong, CxxULongLong,
-ptrunion, gcprotect, gcunprotect, isnull
+ptrunion, gcprotect, gcunprotect, isnull, libcxxwrapversion
 
 const libcxxwrap_version_range = (v"0.7.0",  v"0.8")
 
 using libcxxwrap_julia_jll # for libcxxwrap_julia and libcxxwrap_julia_stl
 
 # These can't be products, since we want to control how and when they are dlopened
-for libname in ["jlcxx_containers", "except", "extended", "functions", "hello", "basic_types", "inheritance", "parametric", "pointer_modification", "types", "cxxwrap_julia_stl"]
+for libname in ["jlcxx_containers", "except", "extended", "functions", "hello", "basic_types", "inheritance", "parametric", "pointer_modification", "types"]
   libcxxwrap_julia_name = basename(libcxxwrap_julia_jll.libcxxwrap_julia_path)
   libprefix = startswith(libcxxwrap_julia_name, "lib") ? "lib" : ""
   libext = libcxxwrap_julia_name[findlast('.', libcxxwrap_julia_name):end]
-  libpath = joinpath(dirname(libcxxwrap_julia_jll.libcxxwrap_julia_path), libprefix * libname * libext)
+  full_libname = libprefix * libname * libext
   symname = "lib"*libname
-  @eval const $(Symbol(symname)) = $libpath
+  @eval $(Symbol(symname))() = joinpath(dirname(libcxxwrap_julia_jll.libcxxwrap_julia_path), $(full_libname))
 end
 
 prefix_path() = dirname(dirname(libcxxwrap_julia_jll.libcxxwrap_julia_path))
 
+libcxxwrapversion() = VersionNumber(unsafe_string(ccall((:cxxwrap_version_string,libcxxwrap_julia), Cstring, ())))
+
 function checkversion()
-  jlcxxversion = VersionNumber(unsafe_string(ccall((:cxxwrap_version_string,libcxxwrap_julia), Cstring, ())))
+  jlcxxversion = libcxxwrapversion()
   if !(libcxxwrap_version_range[1] <= jlcxxversion < libcxxwrap_version_range[2])
     error("This version of CxxWrap requires a libcxxwrap-julia in the range $(libcxxwrap_version_range), but version $jlcxxversion was found")
   end

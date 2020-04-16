@@ -4,7 +4,7 @@ include(joinpath(@__DIR__, "testcommon.jl"))
 module ParametricTypes
 
 using CxxWrap
-@wrapmodule(CxxWrap.CxxWrapCore.libparametric)
+@wrapmodule(CxxWrap.CxxWrapCore.libparametric())
 
 function __init__()
     @initcxx

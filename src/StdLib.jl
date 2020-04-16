@@ -13,7 +13,8 @@ function push_back end
 function resize end
 
 import Libdl
-@wrapmodule(CxxWrapCore.libcxxwrap_julia_stl, :define_cxxwrap_stl_module, Libdl.RTLD_GLOBAL)
+import libcxxwrap_julia_jll
+@wrapmodule(libcxxwrap_julia_jll.libcxxwrap_julia_stl, :define_cxxwrap_stl_module, Libdl.RTLD_GLOBAL)
 
 function __init__()
   @initcxx

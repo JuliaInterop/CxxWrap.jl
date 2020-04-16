@@ -1,7 +1,7 @@
 include(joinpath(@__DIR__, "testcommon.jl"))
 cxx_available = false
 
-const functions_lib_path = CxxWrap.CxxWrapCore.libfunctions
+const functions_lib_path = CxxWrap.CxxWrapCore.libfunctions()
 
 # Wrap the functions defined in C++
 module CppHalfFunctions
@@ -58,7 +58,7 @@ end
 @testset "$(basename(@__FILE__)[1:end-3])" begin
 
 @test isdir(CxxWrap.prefix_path())
-@test isfile(joinpath(CxxWrap.prefix_path(), "lib", "cmake", "JlCxx", "FindJulia.cmake"))
+@test isfile(joinpath(CxxWrap.prefix_path(), "lib", "cmake", "JlCxx", "FindJulia.cmake")) || isfile(joinpath(CxxWrap.prefix_path(), "FindJulia.cmake"))
 
 # Test functions from the CppHalfFunctions module
 @test CppHalfFunctions.half_d(3) == 1.5
@@ -183,7 +183,9 @@ cppdref[] = 1.0
 
 @test CppTestFunctions.process_irrational(π, 2) == 2*π
 
-@test CppTestFunctions.open("foo") == "foo"
+if CxxWrap.libcxxwrapversion() > v"0.7.0"
+  @test CppTestFunctions.open("foo") == "foo"
+end
 
 end
 
