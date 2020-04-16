@@ -786,7 +786,7 @@ end
 include("StdLib.jl")
 
 using .CxxWrapCore
-using .CxxWrapCore: CxxBaseRef, jlcxx_path, argument_overloads, SafeCFunction, reference_type_union, dereference_argument, @cxxdereference
+using .CxxWrapCore: CxxBaseRef, jlcxx_path, argument_overloads, SafeCFunction, reference_type_union, dereference_argument, @cxxdereference, prefix_path
 
 export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx,
 ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,

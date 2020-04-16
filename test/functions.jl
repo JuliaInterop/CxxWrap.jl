@@ -57,6 +57,9 @@ end
 
 @testset "$(basename(@__FILE__)[1:end-3])" begin
 
+@test isdir(CxxWrap.prefix_path())
+@test isfile(joinpath(CxxWrap.prefix_path(), "lib", "cmake", "JlCxx", "FindJulia.cmake"))
+
 # Test functions from the CppHalfFunctions module
 @test CppHalfFunctions.half_d(3) == 1.5
 @show methods(CppHalfFunctions.half_d)
