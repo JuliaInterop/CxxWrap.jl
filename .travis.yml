@@ -7,6 +7,12 @@ julia:
   - 1.4
   - nightly
 
+jobs:
+    # test with latest macOS image
+    - julia: 1.4
+      os: osx
+      osx_image: xcode11.4
+
 before_script:
   julia -e 'using Pkg; pkg"add https://github.com/barche/libcxxwrap_julia_jll.jl.git"'
       
