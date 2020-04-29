@@ -6,7 +6,10 @@ module CppTypes
 using CxxWrap
 
 GC.gc()
-@wrapmodule(CxxWrap.CxxWrapCore.libtypes())
+@readmodule(CxxWrap.CxxWrapCore.libtypes())
+@wraptypes
+CxxWrap.argument_overloads(t::Type{MyEnum}) = [Integer,MyEnum]
+@wrapfunctions
 GC.gc()
 
 function __init__()
@@ -169,6 +172,9 @@ CppTypes.call_testtype_function()
 
 @test CppTypes.enum_to_int(CppTypes.EnumValA) == 0
 @test CppTypes.enum_to_int(CppTypes.EnumValB) == 1
+@test CppTypes.enum_to_int(1) == 1
+@test call_op(CppTypes.EnumValB) == 1
+
 @test CppTypes.get_enum_b() == CppTypes.EnumValB
 @test CppTypes.EnumValA + CppTypes.EnumValB == CppTypes.EnumValB
 @test CppTypes.EnumValA | CppTypes.EnumValB == CppTypes.EnumValB
