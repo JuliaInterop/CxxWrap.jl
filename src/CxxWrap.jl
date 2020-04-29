@@ -126,8 +126,10 @@ struct IsNormalType end
 @inline cpp_trait_type(::Type) = IsNormalType
 
 # Enum type interface
-abstract type CppEnum end
-Base.convert(::Type{Int32}, x::CppEnum) = reinterpret(Int32, x)
+abstract type CppEnum <: Integer end
+Base.convert(::Type{T}, x::CppEnum) where {T <: Integer} = T(reinterpret(Int32, x))
+Base.convert(::Type{T}, x::Integer) where {T <: CppEnum} = reinterpret(T, Int32(x))
+Base.convert(::Type{T}, x::T) where {T <: CppEnum} = x
 import Base: +, |
 +(a::T, b::T) where {T <: CppEnum} = reinterpret(T, convert(Int32,a) + convert(Int32,b))
 |(a::T, b::T) where {T <: CppEnum} = reinterpret(T, convert(Int32,a) | convert(Int32,b))
