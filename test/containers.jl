@@ -26,9 +26,14 @@ cptr = const_ptr()
 @test isbitstype(typeof(cptr))
 @test const_ptr_arg(cptr) == (1., 2., 3.)
 
-cv = const_vector()
-@test size(cv) == (3,)
-@test cv == [1.,2.,3.]
+let cv = const_vector(), n = 1000000
+  @test size(cv) == (3,)
+  result = zeros(3)
+  for i in 1:n
+    result .+= const_vector()
+  end
+  @test result == n*[1.,2.,3.]
+end
 
 cm = const_matrix()
 @test size(cm) == (3,2)
