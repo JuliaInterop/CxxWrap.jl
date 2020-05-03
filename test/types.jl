@@ -51,8 +51,11 @@ end
 end
 
 # Stress test
-for i in 1:1000000
-  global d = CppTypes.DoubleData()
+function testalloc(n)
+  nb_created = 0
+  for i in 1:n
+    nb_created +=  Int(!isnull(CxxRef(CppTypes.DoubleData())))
+  end
 end
 
 function bench_greet()
@@ -246,4 +249,12 @@ let vvec1 = StdVector([StdVector([Int32(3)])]), vvec2 = StdVector([StdVector([Cp
   @show @test CppTypes.greet(CppTypes3.vecvec(vvec2)) == "vvec"
 end
 
+end
+
+let n = 100000
+  GC.gc()
+  @timed testalloc(1)
+  (_, t, _, _, memallocs) = @timed testalloc(n)
+  println("$n allocations took $t s")
+  @test memallocs.poolalloc == n
 end
