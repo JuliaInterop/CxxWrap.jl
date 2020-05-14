@@ -273,6 +273,18 @@ types.add_type<B>("B", jlcxx::julia_base_type<A>());
 ```
 
 The supertype is of type `jl_datatype_t*` and using the template function `jlcxx::julia_base_type` looks up the abstract type associated with `A` here.
+Since the concrete arguments given to `ccall` are the reference types, we need a way to convert `BRef` into `ARef`.
+To allow CxxWrap to figure out the correct static_cast to use, the hierarchy must be defined at compile time as follows:
+
+```c++
+namespace jlcxx
+{
+  template<> struct SuperType<B> { typedef A type; };
+}
+```
+
+
+
 There is also a variant taking a string for the type name and an optional Julia module name as second argument, which is useful for inheriting from a type defined in Julia, e.g.:
 
 ```c++
@@ -284,16 +296,6 @@ The value returned by `add_type` also had a `dt()` method, useful in the case of
 ```c++
 auto multi_vector_base = mod.add_type<Parametric<TypeVar<1>>>("MultiVectorBase");
 auto vector_base = mod.add_type<Parametric<TypeVar<1>>>("VectorBase", multi_vector_base.dt());
-```
-
-Since the concrete arguments given to `ccall` are the reference types, we need a way to convert `BRef` into `ARef`.
-To allow CxxWrap to figure out the correct static_cast to use, the hierarchy must be defined at compile time as follows:
-
-```c++
-namespace jlcxx
-{
-  template<> struct SuperType<B> { typedef A type; };
-}
 ```
 
 See the test at [`examples/inheritance.cpp`](https://github.com/JuliaInterop/libcxxwrap-julia/tree/master/examples/inheritance.cpp) and [`test/inheritance.jl`](test/inheritance.jl).
