@@ -34,6 +34,11 @@ end
 
 @testset "$(basename(@__FILE__)[1:end-3])" begin
 
+let funcs = CxxWrap.CxxWrapCore.get_module_functions(CxxWrap.StdLib)
+  @test CxxWrap.StdLib.__cxxwrap_methodkeys[1] == CxxWrap.CxxWrapCore.methodkey(funcs[1])
+  @test all(CxxWrap.StdLib.__cxxwrap_methodkeys .== CxxWrap.CxxWrapCore.methodkey.(funcs))
+end
+
 let a = BasicTypes.A(2,3)
   @test BasicTypes.f(a) == 5.0
   @test BasicTypes.g(a) == 5.0

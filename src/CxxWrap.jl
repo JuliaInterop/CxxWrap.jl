@@ -318,43 +318,30 @@ mutable struct CallOpOverload
   _type::DataType
 end
 
-_parameter_name(p) = string(p)
-_parameter_name(p::DataType) = _fully_qualified_name(p)
+# Type of the key used in the global function list, used to uniquely identify methods
+const MethodKey = Tuple{Symbol,Symbol,Symbol,UInt}
 
-_type_name(m::Module) = string(nameof(m))
-function _type_name(::Type{T}) where {T}
-  if T isa UnionAll
-    return string(T)
+function _module_name_hash(mod::Module, previous_hash=UInt(0))
+  parent = parentmodule(mod)
+  if parent == mod || parent == Main
+    return hash(nameof(mod), previous_hash)
   end
-  typename = string(nameof(T))
-  if isempty(T.parameters)
-    return typename
-  end
-  return "$typename{$(join(_parameter_name.(T.parameters),","))}"
+  return _module_name_hash(parent, hash(nameof(mod), previous_hash))
 end
 
-function _fully_qualified_name(root, modules=[parentmodule(root)])
-  parent = parentmodule(modules[end])
-  if parent == modules[end] || parent == Main
-    if root == modules[end] || modules[end] == Main
-      pop!(modules)
-      if isempty(modules)
-        return _type_name(root)
-      end
-    end
-    return join(reverse(nameof.(modules)), ".") * "." * _type_name(root)
+_method_name_symbol(funcname::ConstructorFname) = (:constructor, nameof(funcname._type))
+_method_name_symbol(funcname::CallOpOverload) = (:calloperator, nameof(funcname._type))
+_method_name_symbol(funcname::Symbol) = (:function, funcname)
+
+# Return a unique key for the given function, not taking into account the pointer values. This key has to be stable between Julia runs.
+function methodkey(f::CppFunctionInfo)
+  mhash = UInt(0)
+  for arg in f.argument_types
+    mhash = hash(arg, mhash)
   end
-  push!(modules, parent)
-  return _fully_qualified_name(root, modules)
-end
-
-# Provide globally unique names for each distinct method signature
-_method_name_string(funcname::ConstructorFname, mod) = "(::$(_fully_qualified_name(funcname._type)))"
-_method_name_string(funcname::CallOpOverload, mod) = "(callable::$(_fully_qualified_name(funcname._type)))"
-_method_name_string(funcname::Symbol, mod) = "$(_fully_qualified_name(mod)).$funcname"
-
-function Base.print(io::IO, f::CppFunctionInfo)
-  print(io, "$(_method_name_string(f.name, f.override_module))($(join(_fully_qualified_name.(f.argument_types), ", ")))::$(_fully_qualified_name(f.julia_return_type))")
+  mhash = hash(f.julia_return_type, mhash)
+  mhash = hash(_module_name_hash(f.override_module), mhash)
+  return (_method_name_symbol(f.name)..., nameof(f.override_module), mhash)
 end
 
 # Pointers to function and thunk
@@ -365,26 +352,26 @@ const FunctionPointers = Tuple{Ptr{Cvoid},Ptr{Cvoid},Bool}
 # how many times and in which module a method will be defined
 # This map is used to update a per-module vector of pointers upon module initialization, so it doesn't slow
 # down each function call
-const __global_method_map = Dict{String, FunctionPointers}()
+const __global_method_map = Dict{MethodKey, FunctionPointers}()
 
 function _register_function_pointers(func, precompiling)
-  fstring = string(func)
+  mkey = methodkey(func)
   fptrs = (func.function_pointer, func.thunk_pointer, precompiling)
-  if haskey(__global_method_map, fstring)
-    existing = __global_method_map[fstring]
+  if haskey(__global_method_map, mkey)
+    existing = __global_method_map[mkey]
     if existing[3] == precompiling
-      error("Double registration for method $fstring")
+      error("Double registration for method $mkey")
     end
   end
-  __global_method_map[fstring] = fptrs
-  return (fstring, fptrs)
+  __global_method_map[mkey] = fptrs
+  return (mkey, fptrs)
 end
 
-function _get_function_pointer(fstr)
-  if !haskey(__global_method_map, fstr)
-    error("Method $fstr is undefined, maybe you need to precompile the Julia module?")
+function _get_function_pointer(mkey)
+  if !haskey(__global_method_map, mkey)
+    error("Unregistered method with key $mkey requested, maybe you need to precompile the Julia module?")
   end
-  return __global_method_map[fstr]
+  return __global_method_map[mkey]
 end
 
 function initialize_cxx_lib()
@@ -419,8 +406,8 @@ function initialize_julia_module(mod::Module)
   for func in funcs
     _register_function_pointers(func, precompiling)
   end
-  for (fidx,fstr) in enumerate(mod.__cxxwrap_methodnames)    
-    mod.__cxxwrap_pointers[fidx] = _get_function_pointer(fstr)
+  for (fidx,mkey) in enumerate(mod.__cxxwrap_methodkeys)    
+    mod.__cxxwrap_pointers[fidx] = _get_function_pointer(mkey)
   end
 end
 
@@ -665,8 +652,8 @@ function wrap_functions(functions, julia_mod)
   precompiling = true
 
   for func in functions
-    (fstring,fptrs) = _register_function_pointers(func, precompiling)
-    push!(julia_mod.__cxxwrap_methodnames, fstring)
+    (mkey,fptrs) = _register_function_pointers(func, precompiling)
+    push!(julia_mod.__cxxwrap_methodkeys, mkey)
     push!(julia_mod.__cxxwrap_pointers, fptrs)
     funcidx = length(julia_mod.__cxxwrap_pointers)
 
@@ -694,7 +681,7 @@ function readmodule(so_path::AbstractString, funcname, m::Module, flags)
   if flags === nothing
     flags = Libdl.RTLD_LAZY | Libdl.RTLD_DEEPBIND
   end
-  Core.eval(m, :(const __cxxwrap_methodnames = String[]))
+  Core.eval(m, :(const __cxxwrap_methodkeys = $(MethodKey)[]))
   Core.eval(m, :(const __cxxwrap_pointers = $(FunctionPointers)[]))
   Core.eval(m, :(const __cxxwrap_sopath = $so_path))
   Core.eval(m, :(const __cxxwrap_wrapfunc = $(QuoteNode(funcname))))
