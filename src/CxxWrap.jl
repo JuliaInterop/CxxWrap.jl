@@ -352,7 +352,7 @@ end
 const FunctionPointers = Tuple{Ptr{Cvoid},Ptr{Cvoid},Bool}
 
 # Store a unique map between methods and their pointer, filled whenever a method is created in a module
-# This solves a problem with e.g. vectors of vectors ov vectors of... where it is impossible to predict
+# This solves a problem with e.g. vectors of vectors of vectors of... where it is impossible to predict
 # how many times and in which module a method will be defined
 # This map is used to update a per-module vector of pointers upon module initialization, so it doesn't slow
 # down each function call
