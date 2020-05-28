@@ -14,6 +14,10 @@ const libcxxwrap_version_range = (v"0.7.0",  v"0.8")
 
 using libcxxwrap_julia_jll # for libcxxwrap_julia and libcxxwrap_julia_stl
 
+if !isdefined(libcxxwrap_julia_jll, :libcxxwrap_julia_path)
+    error("libcxxwrap_julia_jll not available on this platform")
+end
+
 # These can't be products, since we want to control how and when they are dlopened
 for libname in ["jlcxx_containers", "except", "extended", "functions", "hello", "basic_types", "inheritance", "parametric", "pointer_modification", "types"]
   libcxxwrap_julia_name = basename(libcxxwrap_julia_jll.libcxxwrap_julia_path)
