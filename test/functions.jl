@@ -187,7 +187,17 @@ if CxxWrap.libcxxwrapversion() > v"0.7.0"
   @test CppTestFunctions.open("foo") == "foo"
 end
 
+if CxxWrap.libcxxwrapversion() > v"0.7.1"
+  let bref = Ref{Cuchar}(0)
+    @test bref[] == false
+    CppTestFunctions.boolref(bref)
+    @test bref[] == true
+    CppTestFunctions.boolref(bref)
+    @test bref[] == false
+  end
 end
+
+end # testset end
 
 # Performance tests
 const test_size = Sys.ARCH == :armv7l ? 1000000 : 50000000

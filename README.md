@@ -523,6 +523,26 @@ writepointerref(Ref(d))
 Note that this modifies `d` itself, so `d` must be a `MyDataAllocated`.
 More details are in the `pointer_modification` example.
 
+### Reference to `bool`
+
+In the Julia C calling convention, a boolean is a `Cuchar`, so to pass a reference to a boolean to C++ you need:
+
+```julia
+bref = Ref{Cuchar}(0)
+boolref(bref)
+```
+
+Where `boolref` on the C++ side is:
+
+```c++
+mod.method("boolref", [] (bool& b)
+{
+  b = !b;
+});
+```
+
+Strictly speaking, the representation of `bool` in C++ is implementation-defined, so this conversion relies on undefined behavior. Passing references to boolean is therefore not recommended, it is better to sidestep this by writing e.g. a wrapper function in C++ that returns a boolean by value.
+
 ### Smart pointers
 
 Currently, `std::shared_ptr`, `std::unique_ptr` and `std::weak_ptr` are supported transparently.
