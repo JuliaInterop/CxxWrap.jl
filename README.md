@@ -11,6 +11,9 @@ This dynamic library is then loaded into Julia, where the Julia part of this pac
 The functions are passed to Julia either as raw function pointers (for regular C++ functions that  don't need argument or return type conversion) or std::functions (for lambda expressions and automatic conversion of arguments and return types).
 The Julia side of this package wraps all this into Julia methods automatically.
 
+For this to work, the user must have a C++ compiler installed which supports C++17
+(e.g. GCC 7, clang 5; for macOS users that means Xcode 9.3).
+
 ## What's the difference with Cxx.jl?
 With [Cxx.jl](https://github.com/Keno/Cxx.jl/) it is possible to directly access C++ using the `@cxx` macro from Julia.
 So when facing the task of wrapping a C++ library in a Julia package, authors now have two options:
