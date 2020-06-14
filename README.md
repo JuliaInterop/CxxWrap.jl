@@ -27,7 +27,7 @@ Boost.Python also uses the latter (C++-only) approach, so translating existing P
 * Classes with single inheritance, using abstract base classes on the Julia side
 * Trivial C++ classes can be converted to a Julia isbits immutable
 * Template classes map to parametric types, for the instantiations listed in the wrapper
-* Automatic wrapping of default and copy constructor (mapped to deepcopy) if defined on the wrapped C++ class
+* Automatic wrapping of default and copy constructor (mapped to `copy`) if defined on the wrapped C++ class
 * Facilitate calling Julia functions from C++
 
 ## Installation
@@ -231,9 +231,6 @@ It is possible to add methods directly to e.g. the Julia `Base` module, using `s
 After calling this, all methods will be added to the specified module.
 To revert to the default behavior of adding methods to the current module, call `unset_override_module`.
 
-Current _deprecated_ behavior is to add the functions `getindex, setindex!, convert, deepcopy_internal, +, *, ==` to `Base` automatically.
-This default will change, and it can already be overridden by using `set_override_module`:
-
 ```c++
 mod.add_type<A>("A", jlcxx::julia_type("AbstractFloat", "Base"))
     .constructor<double>();
@@ -400,6 +397,15 @@ jlcxx::create<Class>(constructor_arg1, ...);
 ```
 
 This will return the new C++ object wrapped in a `jl_value_t*` that has a finalizer.
+
+### Copy contructor
+
+The copy constructor is mapped to Julia's standard `copy` function. Using the `.`-notation it can be used to easily create a Julia arrays from the elements of e.g. an `std::vector`:
+
+```julia
+wvec = cpp_function_returning_vector()
+julia_array = copy.(wvec)
+```
 
 ## Call operator overload
 
