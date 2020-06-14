@@ -136,12 +136,12 @@ w = CppTypes.World("constructed")
 @test CppTypes.greet(w) == "constructed"
 
 w_assigned = w
-w_deep = deepcopy(w)
+w_copy = copy(w)
 
 @test w_assigned == w
-@test w_deep != w
+@test w_copy != w
 
-# Destroy w: w and w_assigned should be dead, w_deep alive
+# Destroy w: w and w_assigned should be dead, w_copy alive
 finalize(w)
 println("finalized w")
 if !(Sys.iswindows() && Sys.WORD_SIZE == 32)
@@ -150,8 +150,8 @@ if !(Sys.iswindows() && Sys.WORD_SIZE == 32)
   @test_throws ErrorException CppTypes.greet(w_assigned)
   println("throw test 2 passed")
 end
-@test CppTypes.greet(w_deep) == "constructed"
-println("completed deepcopy test")
+@test CppTypes.greet(w_copy) == "constructed"
+println("completed copy test")
 
 wnum = CppTypes.World(1)
 @test CppTypes.greet(wnum) == "NumberedWorld"
@@ -159,8 +159,7 @@ finalize(wnum)
 @test CppTypes.greet(wnum) == "NumberedWorld"
 
 noncopyable = CppTypes.NonCopyable()
-other_noncopyable = deepcopy(noncopyable)
-@test other_noncopyable.cpp_object == noncopyable.cpp_object
+@test_throws MethodError other_noncopyable = copy(noncopyable)
 
 @test CppTypes.value(CppTypes.value(CppTypes.ReturnConstRef())) == 42
 
@@ -202,6 +201,11 @@ wvec2 = StdVector(warr2)
 for (i,(w1,w2)) in enumerate(zip(wvec1,wvec2))
   @test CppTypes.greet(w1) == "world$i"
   @test CppTypes.greet(w2) == "worldalloc$i"
+end
+
+let wvec_copy = copy.(wvec2)
+  @test typeof(wvec_copy) == Vector{CppTypes.WorldAllocated}
+  @test typeof(wvec_copy[1]) == CppTypes.WorldAllocated
 end
 
 @test CppTypes.greet_vector(wvec1) == string(("world$i " for i in 1:5)...)[1:end-1]
@@ -256,5 +260,5 @@ let n = 100000
   @timed testalloc(1)
   (_, t, _, _, memallocs) = @timed testalloc(n)
   println("$n allocations took $t s")
-  @test memallocs.poolalloc == n
+  @test memallocs.poolalloc <= (n+4)
 end
