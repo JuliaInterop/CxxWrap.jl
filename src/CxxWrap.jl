@@ -638,7 +638,10 @@ function wrap_reference_converters(julia_mod)
   boxtypes = box_types(julia_mod)
   for bt in boxtypes
     st = supertype(bt)
-    Core.eval(julia_mod, :(@inline $(@__MODULE__).cpp_trait_type(::Type{<:$st}) = $(@__MODULE__).IsCxxType))
+    stname = nameof(st)
+    if Base.invokelatest(cpp_trait_type, Core.eval(parentmodule(st), stname)) != IsCxxType
+      Core.eval(julia_mod, :(@inline $(@__MODULE__).cpp_trait_type(::Type{<:$stname}) = $(@__MODULE__).IsCxxType))
+    end
     Core.eval(julia_mod, :(Base.convert(t::Type{$st}, x::T) where {T <: $st} = $(cxxupcast)($st,x)))
     Core.eval(julia_mod, :($(@__MODULE__).allocated_type(::Type{$st}) = $bt))
     reftype = makereftype(st, julia_mod)
@@ -764,7 +767,7 @@ isnull(x::CxxBaseRef) = (x.cpp_object == C_NULL)
 
 reference_type_union(::Type{T}) where {T} = reference_type_union(T, Base.invokelatest(cpp_trait_type, T))
 reference_type_union(::Type{T}, ::Type{IsNormalType}) where {T} = T
-reference_type_union(::Type{T}, ::Type{IsCxxType}) where {T} = Union{T, CxxBaseRef{T}, SmartPointer{T}}
+reference_type_union(::Type{T}, ::Type{IsCxxType}) where {T} = Union{T, CxxBaseRef{<:T}, SmartPointer{<:T}}
 reference_type_union(t::TypeVar) = t
 
 dereference_argument(x) = x

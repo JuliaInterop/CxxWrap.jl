@@ -10,6 +10,8 @@ function __init__()
     @initcxx
 end
 
+@cxxdereference dereftemplate1(x::TemplateType) = get_first(x)
+
 end
 
 import .ParametricTypes.TemplateType, .ParametricTypes.NonTypeParam
@@ -26,6 +28,9 @@ dump(p1)
 @test ParametricTypes.get_second(p2) == 1
 @test typeof(ParametricTypes.get_first(p1)) == Int32
 @test typeof(ParametricTypes.get_second(p2)) == Int32
+
+@test ParametricTypes.dereftemplate1(p1) == 1
+@test ParametricTypes.dereftemplate1(CxxRef(p1)) == 1
 
 @test ParametricTypes.get_first(CxxRef(p1)) == 1
 @test ParametricTypes.get_first(CxxRef(p1)[]) == 1
