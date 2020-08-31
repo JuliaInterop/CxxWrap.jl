@@ -638,9 +638,9 @@ function wrap_reference_converters(julia_mod)
   boxtypes = box_types(julia_mod)
   for bt in boxtypes
     st = supertype(bt)
-    stuinionall = st.name.wrapper
-    if Base.invokelatest(cpp_trait_type, stuinionall) != IsCxxType
-      Core.eval(julia_mod, :(@inline $(@__MODULE__).cpp_trait_type(::Type{<:$stuinionall}) = $(@__MODULE__).IsCxxType))
+    stunionall = st.name.wrapper
+    if Base.invokelatest(cpp_trait_type, stunionall) != IsCxxType
+      Core.eval(julia_mod, :(@inline $(@__MODULE__).cpp_trait_type(::Type{<:$stunionall}) = $(@__MODULE__).IsCxxType))
     end
     Core.eval(julia_mod, :(Base.convert(t::Type{$st}, x::T) where {T <: $st} = $(cxxupcast)($st,x)))
     Core.eval(julia_mod, :($(@__MODULE__).allocated_type(::Type{$st}) = $bt))
