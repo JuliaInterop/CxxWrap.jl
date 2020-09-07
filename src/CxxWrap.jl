@@ -269,7 +269,6 @@ Base.cconvert(::Type{RT}, p::SmartPointer{T}) where {T, RT <: CxxBaseRef{T}} = p
 function Base.convert(::Type{T1}, p::SmartPointer{DerivedT}) where {BaseT,T1 <: BaseT, DerivedT <: BaseT}
   return cxxupcast(T1, p[])[]
 end
-Base.convert(to_type::Type{Any}, x::CxxWrapCore.SmartPointer{DerivedT}) where {DerivedT} = x
 function Base.convert(to_type::Type{<:Ref{T1}}, p::T2) where {BaseT,DerivedT, T1 <: BaseT, T2 <: SmartPointer{DerivedT}}
   return to_type(convert(T1,p))
 end
