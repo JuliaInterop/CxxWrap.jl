@@ -775,6 +775,7 @@ shows:
  2.0  5.0
  3.0  6.0
 ```
+An extra file has to be included to have constant array functionality: `#include "jlcxx/const_array.hpp"`.
 
 ### Mutable arrays
 
