@@ -13,7 +13,7 @@ if get(ENV, "CXXWRAP_DISABLE_GC", "0") == "1"
 end
 
 @testset "CxxWrap tests" begin
-  for f in filter(fname -> fname ∉ excluded, readdir())
+  for f in filter(fname -> fname ∉ excluded, readdir(@__DIR__))
     println("Running tests from $f...")
     include(f)
   end
