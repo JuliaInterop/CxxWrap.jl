@@ -802,7 +802,7 @@ Internally, the arguments and return value are boxed, making this method conveni
 
 ### Safe `cfunction`
 
-The function `CxxWrap.safe_cfunction` provides a wrapper around `Base.cfunction` that checks the type of the function pointer.
+The macro `CxxWrap.@safe_cfunction` provides a wrapper around `Base.@cfunction` that checks the type of the function pointer.
 Example C++ function:
 
 ```c++
@@ -819,14 +819,14 @@ Use from Julia:
 
 ```julia
 testf(x,y) = x+y
-c_func = safe_cfunction(testf, Float64, (Float64,Float64))
+c_func = @safe_cfunction(testf, Float64, (Float64,Float64))
 MyModule.call_safe_function(c_func)
 ```
 
 Using types different from the expected function pointer call will result in an error.
 This check incurs a runtime overhead, so the idea here is that the function is converted only once and then applied many times on the C++ side.
 
-If the result of `safe_cfunction` needs to be stored before the calling signature is known, direct conversion of the created structure (type `SafeCFunction`) is also possible.
+If the result of `@safe_cfunction` needs to be stored before the calling signature is known, direct conversion of the created structure (type `SafeCFunction`) is also possible.
 It can then be converted later using `jlcxx::make_function_pointer`:
 
 ```c++
