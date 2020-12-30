@@ -66,7 +66,9 @@ end
 @test CppHalfFunctions.half_i(-2) == -1
 @test CppHalfFunctions.half_u(3) == 1
 @test CppHalfFunctions.half_lambda(2.) == 1.
-if get(ENV, "APPVEYOR", "") == "" # Disabled on Windows CI due to https://github.com/JuliaLang/julia/issues/28325
+if Sys.iswindows() && get(ENV, "CI", "false") == "true" # Disabled on Windows CI due to https://github.com/JuliaLang/julia/issues/28325
+  @warn @show CppHalfFunctions.strict_half(3.) == 1.5
+else
   @test CppHalfFunctions.strict_half(3.) == 1.5
 end
 @test_throws MethodError CppHalfFunctions.strict_half(3)

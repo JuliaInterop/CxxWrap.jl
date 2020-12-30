@@ -177,6 +177,13 @@ end
 
 struct StrictlyTypedNumber{NumberT}
   value::NumberT
+  @static if Sys.iswindows()
+    StrictlyTypedNumber{T}(x) where {T} = new(x)
+    function StrictlyTypedNumber{Float64}(x)
+      @warn "Using StrictlyTypedNumber{Float64} on Windows may give unpredictable results, see https://github.com/JuliaPackaging/BinaryBuilder.jl/issues/315. Run test CxxWrap in pkg mode to see if you are affected."
+      return new(x)
+    end
+  end
 end
 function Base.convert(t::Type{<:StrictlyTypedNumber}, n::Number)
   @assert t == StrictlyTypedNumber{typeof(n)}
