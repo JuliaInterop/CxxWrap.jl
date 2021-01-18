@@ -112,6 +112,12 @@ c_func = @safe_cfunction(testf, Float64, (Float64,Float64))
 CppTestFunctions.test_safe_cfunction(c_func)
 CppTestFunctions.test_safe_cfunction2(c_func)
 
+function local_testf()
+  testf_private(x,y) = x + y
+  return @safe_cfunction($testf_private, Float64, (Float64,Float64))
+end
+CppTestFunctions.test_safe_cfunction(local_testf())
+
 Base.show(io::IO, x::CppTestFunctions.BoxedNumber) = show(io, CppTestFunctions.getnumber(x))
 
 let boxed_num_val = Ref{Int32}(0)
