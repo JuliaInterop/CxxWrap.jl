@@ -759,14 +759,25 @@ macro initcxx()
   return :(initialize_julia_module($__module__))
 end
 
+# This struct is mirrored in C++, with always a pointer in the first field
 struct SafeCFunction
   fptr::Ptr{Cvoid}
   return_type::Type
   argtypes::Array{Type,1}
 end
 
+# Helper struct that can store a Base.CFunction
+struct _SafeCFunction
+  fptr::Union{Ptr{Cvoid},Base.CFunction}
+  return_type::Type
+  argtypes::Array{Type,1}
+end
+
+Base.convert(::Type{SafeCFunction}, f::_SafeCFunction) = SafeCFunction(Base.unsafe_convert(Ptr{Cvoid}, f.fptr), f.return_type, f.argtypes)
+map_julia_arg_type(x::Type{SafeCFunction}) = _SafeCFunction
+
 macro safe_cfunction(f, rt, args)
-  return esc(:($(@__MODULE__).SafeCFunction(@cfunction($f, $rt, $args), $rt, [$(args.args...)])))
+  return esc(:($(@__MODULE__)._SafeCFunction(@cfunction($f, $rt, $args), $rt, [$(args.args...)])))
 end
 
 isnull(x::CxxBaseRef) = (x.cpp_object == C_NULL)
