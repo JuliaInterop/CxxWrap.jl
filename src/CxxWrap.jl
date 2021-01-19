@@ -447,6 +447,27 @@ function gcunprotect(x)
   ccall((:gcunprotect,libcxxwrap_julia), Cvoid, (Any,), x)
 end
 
+# This struct is mirrored in C++, with always a pointer in the first field
+struct _SafeCFunction
+  fptr::Ptr{Cvoid}
+  return_type::Type
+  argtypes::Array{Type,1}
+end
+
+# Helper struct that can store a Base.CFunction
+struct SafeCFunction
+  fptr::Union{Ptr{Cvoid},Base.CFunction}
+  return_type::Type
+  argtypes::Array{Type,1}
+end
+
+Base.cconvert(::Type{_SafeCFunction}, f::SafeCFunction) = f
+Base.unsafe_convert(::Type{_SafeCFunction}, f::SafeCFunction) = _SafeCFunction(Base.unsafe_convert(Ptr{Cvoid}, f.fptr), f.return_type, f.argtypes)
+
+macro safe_cfunction(f, rt, args)
+  return esc(:($(@__MODULE__).SafeCFunction(@cfunction($f, $rt, $args), $rt, [$(args.args...)])))
+end
+
 process_fname(fn::Tuple{<:Any,Module}, julia_mod) = process_fname(fn[1])
 function process_fname(fn::Tuple{Symbol,Module}, julia_mod)
   (fname, mod) = fn
@@ -576,6 +597,7 @@ function build_function_expression(func::CppFunctionInfo, funcidx, julia_mod)
   map_c_arg_type(::Type{T}) where {T <: Tuple} = Any
   map_c_arg_type(::Type{ConstArray{T,N}}) where {T,N} = Any
   map_c_arg_type(::Type{T}) where {T<:Union{CxxSigned,CxxUnsigned}} = julia_int_type(T)
+  map_c_arg_type(::Type{SafeCFunction}) = _SafeCFunction
 
   # Builds the return type passed to ccall
   map_c_return_type(t) = t
@@ -757,27 +779,6 @@ Initialize the C++ pointer tables in a precompiled module using CxxWrap. Must be
 """
 macro initcxx()
   return :(initialize_julia_module($__module__))
-end
-
-# This struct is mirrored in C++, with always a pointer in the first field
-struct SafeCFunction
-  fptr::Ptr{Cvoid}
-  return_type::Type
-  argtypes::Array{Type,1}
-end
-
-# Helper struct that can store a Base.CFunction
-struct _SafeCFunction
-  fptr::Union{Ptr{Cvoid},Base.CFunction}
-  return_type::Type
-  argtypes::Array{Type,1}
-end
-
-Base.convert(::Type{SafeCFunction}, f::_SafeCFunction) = SafeCFunction(Base.unsafe_convert(Ptr{Cvoid}, f.fptr), f.return_type, f.argtypes)
-map_julia_arg_type(x::Type{SafeCFunction}) = _SafeCFunction
-
-macro safe_cfunction(f, rt, args)
-  return esc(:($(@__MODULE__)._SafeCFunction(@cfunction($f, $rt, $args), $rt, [$(args.args...)])))
 end
 
 isnull(x::CxxBaseRef) = (x.cpp_object == C_NULL)
