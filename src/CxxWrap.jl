@@ -617,9 +617,9 @@ function build_function_expression(func::CppFunctionInfo, funcidx, julia_mod)
   # Build the final call expression
   call_exp = quote end
   if func.thunk_pointer == C_NULL
-    push!(call_exp.args, :(ccall(__cxxwrap_pointers[$funcidx][1], $c_return_type, ($(c_arg_types...),), $(argsymbols...)))) # Direct pointer call
+    push!(call_exp.args, :(@inbounds ccall(__cxxwrap_pointers[$funcidx][1], $c_return_type, ($(c_arg_types...),), $(argsymbols...)))) # Direct pointer call
   else
-    push!(call_exp.args, :(ccall(__cxxwrap_pointers[$funcidx][1], $c_return_type, (Ptr{Cvoid}, $(c_arg_types...)), __cxxwrap_pointers[$funcidx][2], $(argsymbols...)))) # use thunk (= std::function)
+    push!(call_exp.args, :(@inbounds ccall(__cxxwrap_pointers[$funcidx][1], $c_return_type, (Ptr{Cvoid}, $(c_arg_types...)), __cxxwrap_pointers[$funcidx][2], $(argsymbols...)))) # use thunk (= std::function)
   end
 
   function map_julia_arg_type_named(fname, t)
