@@ -76,7 +76,6 @@ The code for this example can be found in [`hello.cpp`] in the [examples directo
 Note that the `__init__` function is necessary to support precompilation, which is on by default since Julia 1.0.
 
 ## Compiling the C++ code
-
 The recommended way to compile the C++ code is to use CMake to discover `libcxxwrap-julia` and the Julia libraries.
 A full example is in the [`testlib` directory of `libcxxwrap-julia`](https://github.com/JuliaInterop/libcxxwrap-julia/tree/master/testlib-builder/src/testlib).
 The following sequence of commands can be used to build:
@@ -95,7 +94,7 @@ julia> CxxWrap.prefix_path()
 ```
 
 ### Windows and MSVC
-the default binaries installed with CxxWrap are cross-compiled using GCC, and thus incompatible with Visual Studio C++ (MSVC).
+The default binaries installed with CxxWrap are cross-compiled using GCC, and thus incompatible with Visual Studio C++ (MSVC).
 In MSVC 2019, it is easy to check out `libcxxwrap-julia` from git, and then build it and the wrapper module from source.
 Details are provided in the [README](https://github.com/JuliaInterop/libcxxwrap-julia#building-on-windows).
 
@@ -928,5 +927,5 @@ template<> struct IsMirroredType<Foo> : std::false_type { };
 * Reorganized integer types so the fixed-size types always map to built-in Julia types
 
 ## References
-[JuliaCon 2020 Talk: Julia and C++: a technical overview of CxxWrap.jl](https://live.juliacon.org/talk/XGHSWW)
-[JuliaCon 2020 Workshop: Wrapping a C++ library using CxxWrap.jl](https://live.juliacon.org/talk/NNVQQF)
+* [JuliaCon 2020 Talk: Julia and C++: a technical overview of CxxWrap.jl](https://live.juliacon.org/talk/XGHSWW)
+* [JuliaCon 2020 Workshop: Wrapping a C++ library using CxxWrap.jl](https://live.juliacon.org/talk/NNVQQF)
