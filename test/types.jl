@@ -225,8 +225,11 @@ _, _, _, _, memallocs = @timed bench_greet()
 
 if isdefined(CppTypes, :IntDerived)
   Base.promote_rule(::Type{<:CppTypes.IntDerived}, ::Type{<:Number}) = Int
-  @test CppTypes.IntDerived() == CppTypes.IntDerived()
-  @test CppTypes.IntDerived() == 42
+  intd = CppTypes.IntDerived()
+  @test intd == CppTypes.IntDerived()
+  @test intd == 42
+  intdref = CxxRef(intd)
+  @test intdref[] == intdref
 end
 
 let weq = CppTypes.World()
