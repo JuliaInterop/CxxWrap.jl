@@ -1,0 +1,35 @@
+name: testjll
+on:
+  - push
+    
+defaults:
+  run:
+    shell: bash
+    
+jobs:
+  buildjll:
+    name: Build JLL
+    runs-on: ubuntu-latest
+    steps:
+      - uses: julia-actions/setup-julia@latest
+        with:
+          version: '1.6'
+          arch: x64
+      - name: Set up Yggdrasil
+        run: |
+          git clone https://github.com/JuliaPackaging/Yggdrasil.git
+          cd Yggdrasil/L/libcxxwrap_julia/
+          julia --project=../../.ci -e "using Pkg; Pkg.instantiate()"
+      - name: Build JLLs
+        run: |
+          cd Yggdrasil/L/libcxxwrap_julia/
+          BINARYBUILDER_AUTOMATIC_APPLE=true BUILD_BUILDNUMBER=1 julia --project=../../.ci build_tarballs.jl --deploy=local x86_64-linux-gnu-cxx11,x86_64-w64-mingw32-cxx11,x86_64-apple-darwin14
+      - uses: actions/upload-artifact@v2
+        with:
+          name: libcxxwrap-jll-binaries
+          path: products
+      - uses: actions/upload-artifact@v2
+        with:
+          name: libcxxwrap-jll-package
+          path: '~/.julia/dev/libcxxwrap_julia_jll'
+
