@@ -928,5 +928,5 @@ template<> struct IsMirroredType<Foo> : std::false_type { };
 * Reorganized integer types so the fixed-size types always map to built-in Julia types
 
 ## References
-[JuliaCon 2020 Talk: Julia and C++: a technical overview of CxxWrap.jl](https://live.juliacon.org/talk/XGHSWW)
-[JuliaCon 2020 Workshop: Wrapping a C++ library using CxxWrap.jl](https://live.juliacon.org/talk/NNVQQF)
+[JuliaCon 2020 Talk: Julia and C++: a technical overview of CxxWrap.jl](https://www.youtube.com/watch?v=u7IaXwKSUU0)
+[JuliaCon 2020 Workshop: Wrapping a C++ library using CxxWrap.jl](https://www.youtube.com/watch?v=VoXmXtqLhdo)
