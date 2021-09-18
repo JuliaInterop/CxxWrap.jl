@@ -655,13 +655,13 @@ The behavior of the macro can be customized by adding methods to `CxxWrap.refere
 ## Exceptions
 
 When directly adding a regular free C++ function as a method, it will be called directly using `ccall` and any exception will abort the Julia program.
-To avoid this, you can force wrapping it in an `std::functor` to intercept the exception automatically by setting the `force_convert` argument to `method` to true:
+To avoid this, you can force wrapping it in an `std::function` to intercept the exception automatically by setting the `force_convert` argument to `method` to true:
 
 ```c++
 mod.method("test_exception", test_exception, true);
 ```
 
-Member functions and lambdas are automatically wrapped in an `std::functor` and so any exceptions thrown there are always intercepted and converted to a Julia exception.
+Member functions and lambdas are automatically wrapped in an `std::function` and so any exceptions thrown there are always intercepted and converted to a Julia exception.
 
 ## Tuples
 
