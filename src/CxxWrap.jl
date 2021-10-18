@@ -833,13 +833,13 @@ include("StdLib.jl")
 using .CxxWrapCore
 using .CxxWrapCore: CxxBaseRef, argument_overloads, SafeCFunction, reference_type_union, dereference_argument, prefix_path
 
-export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx,
+export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx, @cxxdereference
 ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,
 CppEnum, ConstArray, CxxBool, CxxLong, CxxULong, CxxChar, CxxWchar, CxxUChar, CxxSignedChar, CxxLongLong, CxxULongLong,
 ptrunion, gcprotect, gcunprotect, isnull
 
-using .StdLib: StdVector, StdString, StdWString, StdValArray
+using .StdLib: StdVector, StdString, StdWString, StdValArray, StdThread
 
-export StdVector, StdString, StdWString, StdValArray, @cxxdereference
+export StdLib, StdVector, StdString, StdWString, StdValArray, StdThread
 
 end # module

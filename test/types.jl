@@ -246,6 +246,10 @@ let weq = CppTypes.World()
   @test d[weqref1[]] == 4
 end
 
+let singleton = CppTypes.singleton_instance()
+  @test CppTypes.alive(singleton) == 1
+end
+
 let vvec1 = StdVector([StdVector([Int32(3)])]), vvec2 = StdVector([StdVector([CppTypes.World("vvec")])])
   @test CppTypes2.vecvec(vvec1) == 3
   @test CppTypes3.vecvec(vvec1) == 6
