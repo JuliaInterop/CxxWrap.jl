@@ -10,7 +10,7 @@ ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,
 CppEnum, ConstArray, CxxBool, CxxLong, CxxULong, CxxChar, CxxWchar, CxxUChar, CxxSignedChar, CxxLongLong, CxxULongLong,
 ptrunion, gcprotect, gcunprotect, isnull, libcxxwrapversion
 
-const libcxxwrap_version_range = (v"0.8.0",  v"0.9")
+const libcxxwrap_version_range = (v"0.9.0",  v"0.10")
 
 using libcxxwrap_julia_jll # for libcxxwrap_julia and libcxxwrap_julia_stl
 
@@ -833,7 +833,7 @@ include("StdLib.jl")
 using .CxxWrapCore
 using .CxxWrapCore: CxxBaseRef, argument_overloads, SafeCFunction, reference_type_union, dereference_argument, prefix_path
 
-export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx, @cxxdereference
+export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx, @cxxdereference,
 ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,
 CppEnum, ConstArray, CxxBool, CxxLong, CxxULong, CxxChar, CxxWchar, CxxUChar, CxxSignedChar, CxxLongLong, CxxULongLong,
 ptrunion, gcprotect, gcunprotect, isnull
