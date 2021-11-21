@@ -141,16 +141,16 @@ w_copy = copy(w)
 @test w_assigned == w
 @test w_copy != w
 
-w_lambda = CppTypes.World("Hi", "Lambda")
-@test CppTypes.greet(w_lambda) == "Hi Lambda"
+#w_lambda = CppTypes.World("Hi", "Lambda")
+#@test CppTypes.greet(w_lambda) == "Hi Lambda"
 
 # Destroy w: w and w_assigned should be dead, w_copy alive
 finalize(w)
-finalize(w_lambda)
+#finalize(w_lambda)
 if !(Sys.iswindows() && Sys.WORD_SIZE == 32)
   @test_throws ErrorException CppTypes.greet(w)
   @test_throws ErrorException CppTypes.greet(w_assigned)
-  @test_throws ErrorException CppTypes.greet(w_lambda)
+  #@test_throws ErrorException CppTypes.greet(w_lambda)
 end
 @test CppTypes.greet(w_copy) == "constructed"
 println("completed copy test")
