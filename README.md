@@ -654,13 +654,13 @@ The behavior of the macro can be customized by adding methods to `CxxWrap.refere
 ## Exceptions
 
 When directly adding a regular free C++ function as a method, it will be called directly using `ccall` and any exception will abort the Julia program.
-To avoid this, you can force wrapping it in an `std::functor` to intercept the exception automatically by setting the `force_convert` argument to `method` to true:
+To avoid this, you can force wrapping it in an `std::function` to intercept the exception automatically by setting the `force_convert` argument to `method` to true:
 
 ```c++
 mod.method("test_exception", test_exception, true);
 ```
 
-Member functions and lambdas are automatically wrapped in an `std::functor` and so any exceptions thrown there are always intercepted and converted to a Julia exception.
+Member functions and lambdas are automatically wrapped in an `std::function` and so any exceptions thrown there are always intercepted and converted to a Julia exception.
 
 ## Tuples
 
@@ -927,5 +927,5 @@ template<> struct IsMirroredType<Foo> : std::false_type { };
 * Reorganized integer types so the fixed-size types always map to built-in Julia types
 
 ## References
-* [JuliaCon 2020 Talk: Julia and C++: a technical overview of CxxWrap.jl](https://live.juliacon.org/talk/XGHSWW)
-* [JuliaCon 2020 Workshop: Wrapping a C++ library using CxxWrap.jl](https://live.juliacon.org/talk/NNVQQF)
+* [JuliaCon 2020 Talk: Julia and C++: a technical overview of CxxWrap.jl](https://www.youtube.com/watch?v=u7IaXwKSUU0)
+* [JuliaCon 2020 Workshop: Wrapping a C++ library using CxxWrap.jl](https://www.youtube.com/watch?v=VoXmXtqLhdo)

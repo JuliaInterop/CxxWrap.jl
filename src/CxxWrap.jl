@@ -10,7 +10,7 @@ ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,
 CppEnum, ConstArray, CxxBool, CxxLong, CxxULong, CxxChar, CxxWchar, CxxUChar, CxxSignedChar, CxxLongLong, CxxULongLong,
 ptrunion, gcprotect, gcunprotect, isnull, libcxxwrapversion
 
-const libcxxwrap_version_range = (v"0.8.0",  v"0.9")
+const libcxxwrap_version_range = (v"0.9.0",  v"0.10")
 
 using libcxxwrap_julia_jll # for libcxxwrap_julia and libcxxwrap_julia_stl
 
@@ -617,9 +617,9 @@ function build_function_expression(func::CppFunctionInfo, funcidx, julia_mod)
   # Build the final call expression
   call_exp = quote end
   if func.thunk_pointer == C_NULL
-    push!(call_exp.args, :(ccall(__cxxwrap_pointers[$funcidx][1], $c_return_type, ($(c_arg_types...),), $(argsymbols...)))) # Direct pointer call
+    push!(call_exp.args, :(@inbounds ccall(__cxxwrap_pointers[$funcidx][1], $c_return_type, ($(c_arg_types...),), $(argsymbols...)))) # Direct pointer call
   else
-    push!(call_exp.args, :(ccall(__cxxwrap_pointers[$funcidx][1], $c_return_type, (Ptr{Cvoid}, $(c_arg_types...)), __cxxwrap_pointers[$funcidx][2], $(argsymbols...)))) # use thunk (= std::function)
+    push!(call_exp.args, :(@inbounds ccall(__cxxwrap_pointers[$funcidx][1], $c_return_type, (Ptr{Cvoid}, $(c_arg_types...)), __cxxwrap_pointers[$funcidx][2], $(argsymbols...)))) # use thunk (= std::function)
   end
 
   function map_julia_arg_type_named(fname, t)
@@ -833,13 +833,13 @@ include("StdLib.jl")
 using .CxxWrapCore
 using .CxxWrapCore: CxxBaseRef, argument_overloads, SafeCFunction, reference_type_union, dereference_argument, prefix_path
 
-export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx,
+export @wrapmodule, @readmodule, @wraptypes, @wrapfunctions, @safe_cfunction, @initcxx, @cxxdereference,
 ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,
 CppEnum, ConstArray, CxxBool, CxxLong, CxxULong, CxxChar, CxxWchar, CxxUChar, CxxSignedChar, CxxLongLong, CxxULongLong,
 ptrunion, gcprotect, gcunprotect, isnull
 
-using .StdLib: StdVector, StdString, StdWString, StdValArray
+using .StdLib: StdVector, StdString, StdWString, StdValArray, StdThread
 
-export StdVector, StdString, StdWString, StdValArray, @cxxdereference
+export StdLib, StdVector, StdString, StdWString, StdValArray, StdThread
 
 end # module

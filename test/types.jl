@@ -141,14 +141,16 @@ w_copy = copy(w)
 @test w_assigned == w
 @test w_copy != w
 
+#w_lambda = CppTypes.World("Hi", "Lambda")
+#@test CppTypes.greet(w_lambda) == "Hi Lambda"
+
 # Destroy w: w and w_assigned should be dead, w_copy alive
 finalize(w)
-println("finalized w")
+#finalize(w_lambda)
 if !(Sys.iswindows() && Sys.WORD_SIZE == 32)
   @test_throws ErrorException CppTypes.greet(w)
-  println("throw test 1 passed")
   @test_throws ErrorException CppTypes.greet(w_assigned)
-  println("throw test 2 passed")
+  #@test_throws ErrorException CppTypes.greet(w_lambda)
 end
 @test CppTypes.greet(w_copy) == "constructed"
 println("completed copy test")
@@ -244,6 +246,10 @@ let weq = CppTypes.World()
   d[weqptr2[]] += 1
   @test length(d) == 1
   @test d[weqref1[]] == 4
+end
+
+let singleton = CppTypes.singleton_instance()
+  @test CppTypes.alive(singleton) == 1
 end
 
 let vvec1 = StdVector([StdVector([Int32(3)])]), vvec2 = StdVector([StdVector([CppTypes.World("vvec")])])
