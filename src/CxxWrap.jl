@@ -279,6 +279,7 @@ end
 function Base.convert(to_type::Type{<:Ref{T1}}, p::T2) where {BaseT,DerivedT, T1 <: BaseT, T2 <: SmartPointer{DerivedT}}
   return to_type(convert(T1,p))
 end
+Base.convert(::Type{Any}, x::SmartPointer{DerivedT}) where {BaseT, DerivedT<:BaseT} = x
 
 Base.unsafe_convert(to_type::Type{<:CxxBaseRef}, x) = to_type(x.cpp_object)
 
