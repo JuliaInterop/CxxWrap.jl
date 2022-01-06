@@ -1,12 +1,8 @@
-name: test
+name: test-prerelease
 on:
   push:
-    branches-ignore:
+    branches:
       - prerelease
-  pull_request:
-    branches-ignore:
-      - prerelease
-
 defaults:
   run:
     shell: bash
@@ -28,13 +24,17 @@ jobs:
           - ubuntu-latest
         arch:
           - x64
+          - x86
+        exclude:
+          - os: macOS-latest
+            arch: x86
+          - os: ubuntu-latest
+            arch: x86
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@latest
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
-      - run: julia -e "using Pkg; Pkg.status(); Pkg.Registry.add(RegistrySpec(url = \"https://github.com/barche/CxxWrapTestRegistry.git\"))"
       - uses: julia-actions/julia-buildpkg@latest
       - uses: julia-actions/julia-runtest@latest
-
