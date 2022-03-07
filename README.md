@@ -909,12 +909,12 @@ Linking wrappers using STL support requires adding `JlCxx::cxxwrap_julia_stl` to
 * No automatic dereference of const ref
 * `ArrayRef` no longer supports boxed values
 * Custom smart pointer: use `jlcxx::add_smart_pointer<MySmartPointer>(module, "MySmartPointer")`
-* `IsMirroredType` instead of `IsImmutable` and `IsBits`, added using map_type.
+* `IsMirroredType` instead of `IsImmutable` and `IsBits`, added using `map_type`.
   By default, `IsMirroredType` is true for trivial standard layout types, so if you want to wrap these normally
   (i.e. you get an unexpected error `Mirrored types (marked with IsMirroredType) can't be added using add_type, map them directly to a struct instead and use map_type`) then you have to explicitly disable the mirroring for that type:
-```c++
-template<> struct IsMirroredType<Foo> : std::false_type { };
-```
+   ```c++
+   template<> struct IsMirroredType<Foo> : std::false_type { };
+   ```
 * `box` C++ function takes an explicit template argument
 * Introduction of specific integer types, such as `CxxBool`, that map to the C++ equivalent (should be transparent except for template parameters)
 * Defining `SuperType` on the C++ side is now necessary for any kind of casting to base class, because the previous implementation was wrong in the case of multiple inheritance.
