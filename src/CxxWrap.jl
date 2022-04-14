@@ -594,7 +594,7 @@ function build_function_expression(func::CppFunctionInfo, funcidx, julia_mod)
 
   map_c_arg_type(t::Type) = t
   map_c_arg_type(::Type{Array{T,1}}) where {T <: AbstractString} = Any
-  map_c_arg_type(::Type{Type}) = Any
+  map_c_arg_type(::Type{Type{T}}) where {T} = Any
   map_c_arg_type(::Type{T}) where {T <: Tuple} = Any
   map_c_arg_type(::Type{ConstArray{T,N}}) where {T,N} = Any
   map_c_arg_type(::Type{T}) where {T<:Union{CxxSigned,CxxUnsigned}} = julia_int_type(T)
