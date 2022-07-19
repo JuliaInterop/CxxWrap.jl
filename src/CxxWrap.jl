@@ -163,15 +163,12 @@ end
 Base.convert(::Type{T}, p::T) where {PT,T <: SmartPointer{PT}} = p
 
 # Construct from a related pointer, e.g. a std::weak_ptr from std::shared_ptr
-function Base.convert(::Type{T1}, p::T2) where {T, T1 <: SmartPointer{T}, T2 <: SmartPointer{T}}
+function Base.convert(::Type{T1}, p::SmartPointer{T}) where {T, T1 <: SmartPointer{T}}
   return __cxxwrap_smartptr_construct_from_other(T1, p)
 end
 
 # upcast to base class
-function Base.convert(::Type{T1}, p::T2) where {BaseT,DerivedT, T1 <: SmartPointer{BaseT}, T2 <: SmartPointer{DerivedT}}
-  if !(DerivedT <: BaseT)
-    error("$DerivedT does not inherit from $BaseT in smart pointer convert")
-  end
+function Base.convert(::Type{T1}, p::SmartPointer{<:BaseT}) where {BaseT, T1 <: SmartPointer{BaseT}}
   # First convert to base type
   base_p = __cxxwrap_smartptr_cast_to_base(p)
   return convert(T1, base_p)
@@ -275,13 +272,13 @@ Base.setindex!(x::CxxBaseRef, val, i::Int) = Base.setindex!(x[], val, i)
 
 Base.convert(::Type{RT}, p::SmartPointer{T}) where {T, RT <: CxxBaseRef{T}} = p[]
 Base.cconvert(::Type{RT}, p::SmartPointer{T}) where {T, RT <: CxxBaseRef{T}} = p[]
-function Base.convert(::Type{T1}, p::SmartPointer{DerivedT}) where {BaseT,T1 <: BaseT, DerivedT <: BaseT}
+function Base.convert(::Type{T1}, p::SmartPointer) where {T1}
   return cxxupcast(T1, p[])[]
 end
-function Base.convert(to_type::Type{<:Ref{T1}}, p::T2) where {BaseT,DerivedT, T1 <: BaseT, T2 <: SmartPointer{DerivedT}}
+function Base.convert(to_type::Type{<:Ref{T1}}, p::SmartPointer) where {T1}
   return to_type(convert(T1,p))
 end
-Base.convert(::Type{Any}, x::SmartPointer{DerivedT}) where {BaseT, DerivedT<:BaseT} = x
+Base.convert(::Type{Any}, x::SmartPointer) = x
 
 Base.unsafe_convert(to_type::Type{<:CxxBaseRef}, x) = to_type(x.cpp_object)
 
