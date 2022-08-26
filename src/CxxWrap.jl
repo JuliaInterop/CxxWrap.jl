@@ -649,8 +649,11 @@ function makereftype(::Type{T}, mod) where {T}
   params = (T.parameters...,)
   if isempty(params)
     # If the type is non-parametric, this should be hit only once
-    @assert !isdefined(mod, refname)
     @assert mod == tmod
+    if isdefined(mod, refname)
+      println("Warning: skipping redefinition of $(string(refname)). This is harmless if you are using Revise")
+      return Core.eval(mod, :($refname))
+    end
     return Core.eval(mod, :(struct $refname <: $T cpp_object::Ptr{Cvoid} end; $refname))
   end
   if !isdefined(tmod, refname)
@@ -683,7 +686,10 @@ end
 
 # Wrap functions from the cpp module to the passed julia module
 function wrap_functions(functions, julia_mod)
-  @assert isempty(julia_mod.__cxxwrap_pointers)
+  if !isempty(julia_mod.__cxxwrap_pointers)
+    empty!(julia_mod.__cxxwrap_methodkeys)
+    empty!(julia_mod.__cxxwrap_pointers)
+  end
   precompiling = true
 
   for func in functions
@@ -713,6 +719,9 @@ function wrapfunctions(jlmod)
 end
 
 function readmodule(so_path::AbstractString, funcname, m::Module, flags)
+  if isdefined(m, :__cxxwrap_methodkeys)
+    return
+  end
   if flags === nothing
     flags = Libdl.RTLD_LAZY | Libdl.RTLD_DEEPBIND
   end
