@@ -272,7 +272,7 @@ Base.setindex!(x::CxxBaseRef, val, i::Int) = Base.setindex!(x[], val, i)
 
 Base.convert(::Type{RT}, p::SmartPointer{T}) where {T, RT <: CxxBaseRef{T}} = p[]
 Base.cconvert(::Type{RT}, p::SmartPointer{T}) where {T, RT <: CxxBaseRef{T}} = p[]
-function Base.convert(::Type{T1}, p::SmartPointer) where {T1}
+function Base.convert(::Type{T1}, p::SmartPointer{T2}) where {T1, T2 <: T1}
   return cxxupcast(T1, p[])[]
 end
 function Base.convert(to_type::Type{<:Ref{T1}}, p::SmartPointer) where {T1}

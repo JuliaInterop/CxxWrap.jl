@@ -271,3 +271,19 @@ let n = 100000
   println("$n allocations took $t s")
   @test memallocs.poolalloc <= (n+4)
 end
+
+using Observables
+
+let w = CppTypes.World(), shared_w = CppTypes.shared_world_factory()
+  o1 = Observable(w)
+  @test o1[] === w
+  
+  os1 = Observable(shared_w)
+  @test os1[] === shared_w
+
+  o2 = convert(typeof(o1), w)
+  @test o2[] === w
+
+  os2 = convert(typeof(os1), shared_w)
+  @test os2[] === shared_w
+end

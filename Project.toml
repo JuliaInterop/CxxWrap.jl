@@ -15,7 +15,8 @@ libcxxwrap_julia_jll = "0.9.1"
 
 [extras]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+Observables = "510215fc-4207-5dde-b226-833fc4488ee2"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test", "BenchmarkTools"]
+test = ["Test", "BenchmarkTools", "Observables"]
