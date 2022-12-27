@@ -115,13 +115,12 @@ Base.promote_rule(::Type{T}, ::Type{T}) where {T<:CxxNumber} = Base.promote_type
 Base.promote_rule(::Type{T1}, ::Type{T2}) where {T1<:CxxNumber, T2<:CxxNumber} = Base.promote_rule(julia_int_type(T1), julia_int_type(T2))
 Base.AbstractFloat(x::CxxNumber) = Base.AbstractFloat(to_julia_int(x))
 
-# Conversion to and from the equivalent Julia type
-Base.convert(::Type{T}, x::Number) where {T<:CxxNumber} = reinterpret(T, convert(julia_int_type(T), x))
-Base.convert(::Type{JT}, x::CT) where {JT<:Number,CT<:CxxNumber} = convert(JT,reinterpret(julia_int_type(CT), x))
-Base.convert(::Type{T}, x::CT) where {T <: CxxNumber, CT <: CxxNumber}  = convert(T,reinterpret(julia_int_type(CT), x))
-
 # Convenience constructors
-(::Type{T})(x) where {T<:CxxNumber} = convert(T,x)
+(::Type{T})(x::Number) where {T<:CxxNumber} = reinterpret(T, convert(julia_int_type(T), x))
+(::Type{T1})(x::T2) where {T1<:Number, T2<:CxxNumber} = T1(reinterpret(julia_int_type(T2), x))::T1
+(::Type{T1})(x::T2) where {T1<:CxxNumber, T2<:CxxNumber} = T1(reinterpret(julia_int_type(T2), x))::T1
+Base.Bool(x::T) where {T<:CxxNumber} = Bool(reinterpret(julia_int_type(T), x))::Bool
+(::Type{T})(x::T) where {T<:CxxNumber} = x
 
 Base.flipsign(x::T, y::T) where {T <: CxxSigned} = reinterpret(T, flipsign(to_julia_int(x), to_julia_int(y)))
 
@@ -133,9 +132,9 @@ struct IsNormalType end
 
 # Enum type interface
 abstract type CppEnum <: Integer end
-Base.convert(::Type{T}, x::CppEnum) where {T <: Integer} = T(reinterpret(Int32, x))
-Base.convert(::Type{T}, x::Integer) where {T <: CppEnum} = reinterpret(T, Int32(x))
-Base.convert(::Type{T}, x::T) where {T <: CppEnum} = x
+(::Type{T})(x::CppEnum) where {T <: Integer} = T(reinterpret(Int32, x))::T
+(::Type{T})(x::Integer) where {T <: CppEnum} = reinterpret(T, Int32(x))
+(::Type{T})(x::T) where {T <: CppEnum} = x
 import Base: +, |
 +(a::T, b::T) where {T <: CppEnum} = reinterpret(T, convert(Int32,a) + convert(Int32,b))
 |(a::T, b::T) where {T <: CppEnum} = reinterpret(T, convert(Int32,a) | convert(Int32,b))
