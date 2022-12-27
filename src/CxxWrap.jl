@@ -47,6 +47,7 @@ checkversion()
 
 abstract type CxxSigned <: Signed end
 abstract type CxxUnsigned <: Unsigned end
+const CxxNumber = Union{CxxSigned,CxxUnsigned}
 
 
 primitive type CxxBool <: CxxUnsigned 8*sizeof(Cuchar) end
@@ -99,9 +100,8 @@ end
 @generated julia_int_type(::Type{T}) where {T<:CxxSigned} = Symbol(:Int, 8*sizeof(T))
 @generated julia_int_type(::Type{T}) where {T<:CxxUnsigned} = Symbol(:UInt, 8*sizeof(T))
 
-to_julia_int(x::Union{CxxSigned,CxxUnsigned}) = reinterpret(julia_int_type(typeof(x)),x)
+to_julia_int(x::CxxNumber) = reinterpret(julia_int_type(typeof(x)),x)
 
-const CxxNumber = Union{CxxSigned,CxxUnsigned}
 Base.show(io::IO, n::CxxNumber) = show(io, to_julia_int(n))
 Base.show(io::IO, b::CxxBool) = show(io, Bool(b))
 function Base.promote_rule(::Type{CT}, ::Type{JT}) where {CT <: CxxNumber, JT <: Number}
@@ -116,12 +116,12 @@ Base.promote_rule(::Type{T1}, ::Type{T2}) where {T1<:CxxNumber, T2<:CxxNumber} =
 Base.AbstractFloat(x::CxxNumber) = Base.AbstractFloat(to_julia_int(x))
 
 # Conversion to and from the equivalent Julia type
-Base.convert(::Type{T}, x::Number) where {T<:Union{CxxSigned,CxxUnsigned}} = reinterpret(T, convert(julia_int_type(T), x))
-Base.convert(::Type{JT}, x::CT) where {JT<:Number,CT<:Union{CxxSigned,CxxUnsigned}} = convert(JT,reinterpret(julia_int_type(CT), x))
-Base.convert(::Type{T}, x::CT) where {T <: Union{CxxWrapCore.CxxSigned, CxxWrapCore.CxxUnsigned}, CT <: Union{CxxWrapCore.CxxSigned, CxxWrapCore.CxxUnsigned}}  = convert(T,reinterpret(julia_int_type(CT), x))
+Base.convert(::Type{T}, x::Number) where {T<:CxxNumber} = reinterpret(T, convert(julia_int_type(T), x))
+Base.convert(::Type{JT}, x::CT) where {JT<:Number,CT<:CxxNumber} = convert(JT,reinterpret(julia_int_type(CT), x))
+Base.convert(::Type{T}, x::CT) where {T <: CxxNumber, CT <: CxxNumber}  = convert(T,reinterpret(julia_int_type(CT), x))
 
 # Convenience constructors
-(::Type{T})(x) where {T<:Union{CxxWrapCore.CxxSigned,CxxWrapCore.CxxUnsigned}} = convert(T,x)
+(::Type{T})(x) where {T<:CxxNumber} = convert(T,x)
 
 Base.flipsign(x::T, y::T) where {T <: CxxSigned} = reinterpret(T, flipsign(to_julia_int(x), to_julia_int(y)))
 
@@ -232,7 +232,7 @@ ConstCxxPtr(x) = _make_ref(ConstCxxPtr,x)
 CxxRef(x) = _make_ref(CxxRef,x)
 ConstCxxRef(x) = _make_ref(ConstCxxRef,x)
 
-Base.convert(t::Type{<:CxxBaseRef{T}}, x::Ptr{NT}) where {T <: Union{CxxUnsigned, CxxSigned}, NT <: Integer} = t(reinterpret(Ptr{T}, x))
+Base.convert(t::Type{<:CxxBaseRef{T}}, x::Ptr{NT}) where {T <: CxxNumber, NT <: Integer} = t(reinterpret(Ptr{T}, x))
 
 Base.:(==)(a::Union{CxxPtr,ConstCxxPtr}, b::Union{CxxPtr,ConstCxxPtr}) = (a.cpp_object == b.cpp_object)
 Base.:(==)(a::CxxBaseRef, b::Ptr) = (a.cpp_object == b)
@@ -537,10 +537,10 @@ map_julia_arg_type(t::Type{ConstCxxPtr{T}}, ::Type{IsNormalType}) where {T} = Un
 map_julia_arg_type(t::Type{CxxRef{T}}, ::Type{IsNormalType}) where {T} = PtrTypes{T}
 map_julia_arg_type(t::Type{CxxPtr{T}}, ::Type{IsNormalType}) where {T} = Union{PtrTypes{T},Ptr{Cvoid}}
 
-map_julia_arg_type(t::Type{ConstCxxRef{T}}, ::Type{IsNormalType}) where {T<:Union{CxxSigned,CxxUnsigned}} = Union{ConstPtrTypes{julia_int_type(T)},map_julia_arg_type(T)}
-map_julia_arg_type(t::Type{ConstCxxPtr{T}}, ::Type{IsNormalType}) where {T<:Union{CxxSigned,CxxUnsigned}} = Union{ConstPtrTypes{julia_int_type(T)},Ptr{Cvoid}}
-map_julia_arg_type(t::Type{CxxRef{T}}, ::Type{IsNormalType}) where {T<:Union{CxxSigned,CxxUnsigned}} = PtrTypes{julia_int_type(T)}
-map_julia_arg_type(t::Type{CxxPtr{T}}, ::Type{IsNormalType}) where {T<:Union{CxxSigned,CxxUnsigned}} = Union{PtrTypes{julia_int_type(T)},Ptr{Cvoid}}
+map_julia_arg_type(t::Type{ConstCxxRef{T}}, ::Type{IsNormalType}) where {T<:CxxNumber} = Union{ConstPtrTypes{julia_int_type(T)},map_julia_arg_type(T)}
+map_julia_arg_type(t::Type{ConstCxxPtr{T}}, ::Type{IsNormalType}) where {T<:CxxNumber} = Union{ConstPtrTypes{julia_int_type(T)},Ptr{Cvoid}}
+map_julia_arg_type(t::Type{CxxRef{T}}, ::Type{IsNormalType}) where {T<:CxxNumber} = PtrTypes{julia_int_type(T)}
+map_julia_arg_type(t::Type{CxxPtr{T}}, ::Type{IsNormalType}) where {T<:CxxNumber} = Union{PtrTypes{julia_int_type(T)},Ptr{Cvoid}}
 
 map_julia_arg_type(t::Type{ConstCxxRef{T}}, ::Type{IsCxxType}) where {T} = Union{map_julia_arg_type(T),ConstCxxRef{<:T},CxxRef{<:T}}
 map_julia_arg_type(t::Type{ConstCxxPtr{T}}, ::Type{IsCxxType}) where {T} = Union{CxxPtr{<:T},ConstCxxPtr{<:T}, Ptr{Cvoid}}
@@ -548,8 +548,8 @@ map_julia_arg_type(t::Type{CxxRef{T}}, ::Type{IsCxxType}) where {T} = Union{map_
 map_julia_arg_type(t::Type{CxxPtr{T}}, ::Type{IsCxxType}) where {T} = Union{CxxPtr{<:T},Ptr{Cvoid}}
 
 map_julia_arg_type(t::Type{CxxPtr{CxxChar}}) = Union{PtrTypes{Cchar}, String}
-map_julia_arg_type(t::Type{<:Array{T}}) where {T <: Union{CxxSigned,CxxUnsigned}} = Union{t, Array{julia_int_type(T)}}
-map_julia_arg_type(t::Type{<:Array{Ptr{T}}}) where {T <: Union{CxxSigned,CxxUnsigned}} = Union{t, Array{Ptr{julia_int_type(T)}}}
+map_julia_arg_type(t::Type{<:Array{T}}) where {T <: CxxNumber} = Union{t, Array{julia_int_type(T)}}
+map_julia_arg_type(t::Type{<:Array{Ptr{T}}}) where {T <: CxxNumber} = Union{t, Array{Ptr{julia_int_type(T)}}}
 map_julia_arg_type(t::Type{ConstCxxPtr{CxxChar}}) = Union{ConstPtrTypes{Cchar}, String}
 
 # names excluded from julia type mapping
@@ -596,14 +596,14 @@ function build_function_expression(func::CppFunctionInfo, funcidx, julia_mod)
   map_c_arg_type(::Type{Type{T}}) where {T} = Any
   map_c_arg_type(::Type{T}) where {T <: Tuple} = Any
   map_c_arg_type(::Type{ConstArray{T,N}}) where {T,N} = Any
-  map_c_arg_type(::Type{T}) where {T<:Union{CxxSigned,CxxUnsigned}} = julia_int_type(T)
+  map_c_arg_type(::Type{T}) where {T<:CxxNumber} = julia_int_type(T)
   map_c_arg_type(::Type{SafeCFunction}) = _SafeCFunction
 
   # Builds the return type passed to ccall
   map_c_return_type(t) = t
   map_c_return_type(::Type{T}) where {T <: Tuple} = Any
   map_c_return_type(::Type{ConstArray{T,N}}) where {T,N} = Any
-  map_c_return_type(::Type{T}) where {T<:Union{CxxSigned,CxxUnsigned}} = map_c_arg_type(T)
+  map_c_return_type(::Type{T}) where {T<:CxxNumber} = map_c_arg_type(T)
 
   # Build the types for the ccall argument list
   c_arg_types = map_c_arg_type.(func.argument_types)
@@ -611,7 +611,7 @@ function build_function_expression(func::CppFunctionInfo, funcidx, julia_mod)
 
   # Builds the return-type annotation for the Julia function
   map_julia_return_type(t) = t
-  map_julia_return_type(::Type{T}) where {T<:Union{CxxSigned,CxxUnsigned}} = map_c_arg_type(T)
+  map_julia_return_type(::Type{T}) where {T<:CxxNumber} = map_c_arg_type(T)
   map_julia_return_type(::Type{CxxBool}) = Bool
 
   # Build the final call expression
