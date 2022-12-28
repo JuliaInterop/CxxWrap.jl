@@ -7,7 +7,7 @@ let s = StdString("test")
   println("This prints a test string: ", s)
   @test s == "test"
   stref = CxxRef(s)
-  @test stref == s
+  @test stref[] == s
   @test stref == stref
 end
 
@@ -32,7 +32,7 @@ end
 let s = StdString("foo")
   @test String(s) == "foo"
   sref = CxxRef(s)
-  @test sref == "foo"
+  @test sref[] == "foo"
   @test String(sref) == "foo"
   @test unsafe_string(CxxWrap.StdLib.c_str(s)) == "foo"
   @test unsafe_string(CxxWrap.StdLib.c_str(s),2) == "fo"

@@ -237,9 +237,6 @@ Base.convert(t::Type{<:CxxBaseRef{T}}, x::Ptr{NT}) where {T <: CxxNumber, NT <: 
 Base.:(==)(a::Union{CxxPtr,ConstCxxPtr}, b::Union{CxxPtr,ConstCxxPtr}) = (a.cpp_object == b.cpp_object)
 Base.:(==)(a::CxxBaseRef, b::Ptr) = (a.cpp_object == b)
 Base.:(==)(a::Ptr, b::CxxBaseRef) = (b == a)
-Base.:(==)(a::Union{CxxRef,ConstCxxRef}, b) = (a[] == b)
-Base.:(==)(a, b::Union{CxxRef,ConstCxxRef}) = (b == a)
-Base.:(==)(a::Union{CxxRef,ConstCxxRef}, b::Union{CxxRef,ConstCxxRef}) = (a[] == b[])
 
 _deref(p::CxxBaseRef, ::Type) = unsafe_load(p.cpp_object)
 _deref(p::CxxBaseRef{T}, ::Type{IsCxxType}) where {T} = dereferenced_type(T)(p.cpp_object)
@@ -272,13 +269,6 @@ Base.setindex!(x::CxxBaseRef, val, i::Int) = Base.setindex!(x[], val, i)
 
 Base.convert(::Type{RT}, p::SmartPointer{T}) where {T, RT <: CxxBaseRef{T}} = p[]
 Base.cconvert(::Type{RT}, p::SmartPointer{T}) where {T, RT <: CxxBaseRef{T}} = p[]
-function Base.convert(::Type{T1}, p::SmartPointer) where {T1}
-  return cxxupcast(T1, p[])[]
-end
-function Base.convert(to_type::Type{<:Ref{T1}}, p::SmartPointer) where {T1}
-  return to_type(convert(T1,p))
-end
-Base.convert(::Type{Any}, x::SmartPointer) = x
 
 Base.unsafe_convert(to_type::Type{<:CxxBaseRef}, x) = to_type(x.cpp_object)
 

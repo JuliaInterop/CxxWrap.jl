@@ -239,7 +239,6 @@ let weq = CppTypes.World()
   weqptr2 = CxxPtr(weq)
   @test weqptr1 == weqptr2
   @test weqref1 == weqref2
-  @test weq == weqref1
   @test weq == weqref1[]
   @test weqref2[] == weqptr1[]
   d = Dict{CppTypes.World, Int}()
