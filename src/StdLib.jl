@@ -103,7 +103,7 @@ Base.cmp(a::String, b::CppBasicString) = cmp(a,String(b))
 
 # Make sure functions taking a C++ string as argument can also take a Julia string
 CxxWrapCore.map_julia_arg_type(x::Type{<:StdString}) = AbstractString
-Base.convert(::Type{T}, x::String) where {T<:StdString} = StdString(x)
+StdLib.StdStringAllocated(x::String) = StdString(x)
 Base.cconvert(::Type{CxxWrapCore.ConstCxxRef{StdString}}, x::String) = StdString(x)
 Base.unsafe_convert(::Type{CxxWrapCore.ConstCxxRef{StdString}}, x::StdString) = ConstCxxRef(x)
 
