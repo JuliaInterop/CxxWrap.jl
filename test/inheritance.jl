@@ -53,9 +53,9 @@ d_ptr = shared_d()
 @test shared_ptr_message(c_ptr) == "C"
 @test shared_ptr_message(d_ptr) == "D"
 
-@test message(b_ptr) == "B"
-@test message(c_ptr) == "C"
-@test message(d_ptr) == "D"
+@test message(b_ptr[]) == "B"
+@test message(c_ptr[]) == "C"
+@test message(d_ptr[]) == "D"
 
 @test weak_ptr_message_b(b_ptr) == "B"
 @test weak_ptr_message_a(b_ptr) == "B"

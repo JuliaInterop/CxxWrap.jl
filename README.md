@@ -566,12 +566,6 @@ The shared pointer can then be used in a function taking an object of type `Worl
 
 ```julia
 swf = CppTypes.shared_world_factory()
-CppTypes.greet(swf)
-```
-
-Explicit dereferencing is also supported, using the `[]` operator:
-
-```julia
 CppTypes.greet(swf[])
 ```
 
