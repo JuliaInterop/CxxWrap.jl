@@ -396,7 +396,7 @@ jlcxx::create<Class>(constructor_arg1, ...);
 
 This will return the new C++ object wrapped in a `jl_value_t*` that has a finalizer.
 
-### Copy contructor
+### Copy constructor
 
 The copy constructor is mapped to Julia's standard `copy` function. Using the `.`-notation it can be used to easily create a Julia arrays from the elements of e.g. an `std::vector`:
 
