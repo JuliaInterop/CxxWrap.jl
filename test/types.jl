@@ -8,7 +8,6 @@ using CxxWrap
 GC.gc()
 @readmodule(CxxWrap.CxxWrapCore.libtypes())
 @wraptypes
-CxxWrap.argument_overloads(t::Type{MyEnum}) = [Integer,MyEnum]
 @wrapfunctions
 GC.gc()
 
@@ -178,6 +177,10 @@ CppTypes.call_testtype_function()
 @test CppTypes.enum_to_int(CppTypes.EnumValB) == 1
 @test CppTypes.enum_to_int(1) == 1
 @test call_op(CppTypes.EnumValB) == 1
+
+let d = Dict(Int32(0)=>1)
+  @test d[CppTypes.EnumValA] == 1
+end
 
 @test CppTypes.get_enum_b() == CppTypes.EnumValB
 @test CppTypes.EnumValA + CppTypes.EnumValB == CppTypes.EnumValB
