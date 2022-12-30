@@ -138,6 +138,7 @@ abstract type CppEnum <: Integer end
 import Base: +, |
 +(a::T, b::T) where {T <: CppEnum} = reinterpret(T, convert(Int32,a) + convert(Int32,b))
 |(a::T, b::T) where {T <: CppEnum} = reinterpret(T, convert(Int32,a) | convert(Int32,b))
+Base.promote_rule(::Type{E}, ::Type{T}) where {E <: CppEnum, T <: Integer} = Int32
 
 """
 Base class for smart pointers
