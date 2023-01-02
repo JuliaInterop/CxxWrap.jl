@@ -920,6 +920,9 @@ Linking wrappers using STL support requires adding `JlCxx::cxxwrap_julia_stl` to
 * Requires Julia 1.3 for the use of JLL packages
 * Reorganized integer types so the fixed-size types always map to built-in Julia types
 
+## Breaking changes in v0.13
+* Automatic dereferencing of smart pointers was removed, so some code may require adding the dereferencing operator `[]` explicitly. See [PR #338](https://github.com/JuliaInterop/CxxWrap.jl/pull/338).
+
 ## References
 * [JuliaCon 2020 Talk: Julia and C++: a technical overview of CxxWrap.jl](https://www.youtube.com/watch?v=u7IaXwKSUU0)
 * [JuliaCon 2020 Workshop: Wrapping a C++ library using CxxWrap.jl](https://www.youtube.com/watch?v=VoXmXtqLhdo)
