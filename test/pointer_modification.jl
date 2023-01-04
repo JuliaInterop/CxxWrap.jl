@@ -40,16 +40,16 @@ end
 # Simulation of the Issue #133 use case
 let a = PtrModif.MyData(9), b = PtrModif.MyData(2)
   (q,r) = PtrModif.divrem(a,b)
-  @test PtrModif.value.((q,r[])) == (4,1)
+  @test PtrModif.value.((q[],r[])) == (4,1)
   PtrModif.delete(r)
   (q,r) = PtrModif.divrem(q[],b)
-  @test PtrModif.value(q) == 2
+  @test PtrModif.value(q[]) == 2
   @test isnull(r)
 end
 
 let a = PtrModif.MyData(9), b = PtrModif.MyData(2)
   (q,r) = PtrModif.prettydivrem(CxxPtr(a), CxxPtr(b))
-  @test PtrModif.value.((q,r)) == (4,1)
+  @test PtrModif.value.((q[],r)) == (4,1)
 end
 
 end

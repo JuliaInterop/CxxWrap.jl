@@ -101,19 +101,17 @@ swf = CppTypes.shared_world_factory()
 @test CppTypes.greet_shared(swf) == "shared factory hello"
 @test CppTypes.greet_shared_const(swf) == "shared factory hello"
 @test CppTypes.greet(swf[]) == "shared factory hello" # Explicit dereference
-@test CppTypes.greet(swf) == "shared factory hello" # Automatic conversion
 swf2 = CppTypes.smart_world_factory()
 @test CppTypes.greet_smart(swf2) == "smart factory hello"
 @test CppTypes.greet_smart(swf) == "shared factory hello" # auto-convert between pointers
 @test CppTypes.greet(swf2[]) == "smart factory hello" # Explicit dereference
-@test CppTypes.greet(swf2) == "smart factory hello" # Automatic conversion
 @test CppTypes.greet_weak(swf) == "shared factory hello"
 @test_throws MethodError CppTypes.greet_weak(swf2) == "shared factory hello"
 
 swfr = CppTypes.shared_world_ref()
-@test CppTypes.greet(swfr[]) == "shared factory hello ref"
+@test CppTypes.greet(swfr[][]) == "shared factory hello ref" # One dereference for the reference, the next one for the shared ptr dereference
 CppTypes.reset_shared_world!(swfr, "reset shared pointer")
-@test CppTypes.greet(swfr[]) == "reset shared pointer"
+@test CppTypes.greet(swfr[][]) == "reset shared pointer"
 CppTypes.reset_shared_world!(swfr, "shared factory hello ref")
 
 @test CppTypes.greet(CppTypes.boxed_world_factory()) == "boxed world"
@@ -121,7 +119,7 @@ CppTypes.reset_shared_world!(swfr, "shared factory hello ref")
 @test CppTypes.greet(CppTypes.world_ref_factory()) == "reffed world"
 
 @show uwf = CppTypes.unique_world_factory()
-@test CppTypes.greet(uwf) == "unique factory hello"
+@test CppTypes.greet(uwf[]) == "unique factory hello"
 
 byval = CppTypes.world_by_value()
 @test CppTypes.greet(byval) == "world by value hello"
