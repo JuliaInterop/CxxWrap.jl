@@ -267,9 +267,6 @@ Base.broadcastable(x::CxxBaseRef) = Base.broadcastable(x[])
 Base.getindex(x::CxxBaseRef, i::Int) = Base.getindex(x[], i)
 Base.setindex!(x::CxxBaseRef, val, i::Int) = Base.setindex!(x[], val, i)
 
-Base.convert(::Type{RT}, p::SmartPointer{T}) where {T, RT <: CxxBaseRef{T}} = p[]
-Base.cconvert(::Type{RT}, p::SmartPointer{T}) where {T, RT <: CxxBaseRef{T}} = p[]
-
 Base.unsafe_convert(to_type::Type{<:CxxBaseRef}, x) = to_type(x.cpp_object)
 
 # This is defined on the C++ side for each wrapped type
