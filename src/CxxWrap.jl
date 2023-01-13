@@ -117,6 +117,7 @@ Base.AbstractFloat(x::CxxNumber) = Base.AbstractFloat(to_julia_int(x))
 
 # Convenience constructors
 (::Type{T})(x::Number) where {T<:CxxNumber} = reinterpret(T, convert(julia_int_type(T), x))
+(::Type{T})(x::Rational) where {T<:CxxNumber} = reinterpret(T, convert(julia_int_type(T), x))
 (::Type{T1})(x::T2) where {T1<:Number, T2<:CxxNumber} = T1(reinterpret(julia_int_type(T2), x))::T1
 (::Type{T1})(x::T2) where {T1<:CxxNumber, T2<:CxxNumber} = T1(reinterpret(julia_int_type(T2), x))::T1
 Base.Bool(x::T) where {T<:CxxNumber} = Bool(reinterpret(julia_int_type(T), x))::Bool
