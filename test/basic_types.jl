@@ -182,4 +182,8 @@ let (intnames, inttypes) = BasicTypes.julia_integer_mapping()
   end
 end
 
+let argv = ["one", "two", "three"]
+  @test BasicTypes.test_argv(Cint(length(argv)), argv) == join(argv)
+end
+
 end
