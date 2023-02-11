@@ -872,6 +872,17 @@ mod.method("getSecondaryWorldVector", [](const World* p)->const std::vector<Worl
 
 Linking wrappers using STL support requires adding `JlCxx::cxxwrap_julia_stl` to the `target_link_libraries` command in `CMakeLists.txt`.
 
+## Release procedure
+
+Often, new releases of `CxxWrap` also require a new release of the C++ component `libcxxwrap-julia`, and a rebuild of its JLL package. To make sure everything is tested properly, the following procedure should be followed for each release that requires changing both the Julia and the C++ component:
+
+1. Merge the changes to `CxxWrap` into the `testjll` branch
+2. Create a PR in `libcxxwrap-julia` with the required changes there and make sure it passes all tests. These tests will run using the `CxxWrap#testjll` branch.
+3. Merge the `libcxxwrap-julia` PR. This will build and publish a JLL, available through the [CxxWrapTestRegistry](https://github.com/barche/CxxWrapTestRegistry)
+4. Make a PR in `CxxWrap` to merge `testjll` into `prerelease`. Verify that the tests pass (rerun them if needed, since the first push to `testjll` will have used the old JLL version). Don't merge this PR yet.
+5. Tag the next `libcxxwrap-julia` release and update to this new release in Yggdrasil
+6. Wait for the new JLL to appear in the registry and then merge the PR from point 4. Verify that the tests running on the `prerelease` branch pass, by merging the PR from point 4. The difference with the tests in the `testjll` branch is that the `prerelease` branch tests using the JLL in the Julia General repository.
+7. Merge the CxxWrap `prerelease` branch into `main` and create a new release using Registrator.
 
 ## Breaking changes for CxxWrap 0.7
 
