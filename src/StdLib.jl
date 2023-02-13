@@ -105,6 +105,7 @@ Base.cmp(a::String, b::CppBasicString) = cmp(a,String(b))
 CxxWrapCore.map_julia_arg_type(x::Type{<:StdString}) = AbstractString
 StdLib.StdStringAllocated(x::String) = StdString(x)
 Base.cconvert(::Type{CxxWrapCore.ConstCxxRef{StdString}}, x::String) = StdString(x)
+Base.cconvert(::Type{StdLib.StdStringDereferenced}, x::String) = StdString(x)
 Base.unsafe_convert(::Type{CxxWrapCore.ConstCxxRef{StdString}}, x::StdString) = ConstCxxRef(x)
 
 function StdValArray(v::Vector{T}) where {T}
