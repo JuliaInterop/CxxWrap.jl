@@ -494,7 +494,11 @@ argument_overloads(t::Type{Ptr{T}}) where {T <: Number} = [Array{T,1}]
 Create a Union containing the type and a smart pointer to any type derived from it
 """
 function ptrunion(::Type{T}) where {T}
-  result{T2 <: T} = Union{T2, SmartPointer{T2}}
+  ST = T
+  if T == allocated_type(supertype(T))
+    ST = supertype(T)
+  end
+  result{T2 <: ST} = Union{T2, SmartPointer{T2}}
   return result
 end
 
@@ -583,7 +587,15 @@ function build_function_expression(func::CppFunctionInfo, funcidx, julia_mod)
   argtypes = func.argument_types
   argsymbols = map((i) -> Symbol(:arg,i[1]), enumerate(argtypes))
 
-  map_c_arg_type(t::Type) = t
+  map_c_arg_type(t::Type) = map_c_arg_type(Base.invokelatest(cpp_trait_type, t), t)
+  map_c_arg_type(::Type{IsNormalType}, t::Type) = t
+  function map_c_arg_type(::Type{IsCxxType}, t::Type)
+    ST = supertype(t)
+    if Base.invokelatest(allocated_type, ST) == t
+      return Base.invokelatest(dereferenced_type, ST)
+    end
+    return t
+  end
   map_c_arg_type(::Type{Array{T,1}}) where {T <: AbstractString} = Any
   map_c_arg_type(::Type{Type{T}}) where {T} = Any
   map_c_arg_type(::Type{T}) where {T <: Tuple} = Any
@@ -671,6 +683,8 @@ function wrap_reference_converters(julia_mod)
     Core.eval(julia_mod, :($(@__MODULE__).dereferenced_type(::Type{$st}) = $reftype))
     Core.eval(julia_mod, :(Base.convert(::Type{$st}, x::$bt) = x))
     Core.eval(julia_mod, :(Base.convert(::Type{$st}, x::$reftype) = x))
+    Core.eval(julia_mod, :(Base.cconvert(::Type{$reftype}, x::$bt) = $reftype(x.cpp_object)))
+    Core.eval(julia_mod, :(Base.unsafe_convert(::Type{$reftype}, x::$st) = $reftype(x.cpp_object)))
     Core.eval(julia_mod, :(Base.:(==)(a::Union{CxxRef{<:$st},ConstCxxRef{<:$st},$bt}, b::$reftype) = (a.cpp_object == b.cpp_object)))
     Core.eval(julia_mod, :(Base.:(==)(a::$reftype, b::Union{CxxRef{<:$st},ConstCxxRef{<:$st},$bt}) = (b == a)))
   end
