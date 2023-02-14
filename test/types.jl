@@ -129,6 +129,25 @@ CppTypes.set(w, "hello")
 @test CppTypes.greet(w) == "hello"
 @test CppTypes.greet_lambda(w) == "hello"
 
+if CxxWrap.libcxxwrapversion() > v"0.9.4"
+  wr = CxxRef(w)
+  wcr = ConstCxxRef(w)
+  wp = CxxPtr(w)
+  wcp = ConstCxxPtr(w)
+  @test CppTypes.greet_byvalue(w) == "hello"
+  @test CppTypes.greet_byvalue(wr[]) == "hello"
+  @test CppTypes.greet_overload(w) == "hello_byval"
+  @test CppTypes.greet_overload(wr) == "hello_byref"
+  @test CppTypes.greet_overload(wr[]) == "hello_byval"
+  @test CppTypes.greet_overload(wcr) == "hello_byconstref"
+  @test CppTypes.greet_overload(wcr[]) == "hello_byval"
+  @test CppTypes.greet_overload(wp) == "hello_bypointer"
+  @test CppTypes.greet_overload(wp[]) == "hello_byval"
+  @test CppTypes.greet_overload(wcp) == "hello_byconstpointer"
+  @test CppTypes.greet_overload(wcp[]) == "hello_byval"
+  @test CppTypes.greet_overload(swf) == "shared factory hello_bysharedptr"
+end
+
 w = CppTypes.World("constructed")
 @test CppTypes.greet(w) == "constructed"
 
@@ -137,9 +156,6 @@ w_copy = copy(w)
 
 @test w_assigned == w
 @test w_copy != w
-
-#w_lambda = CppTypes.World("Hi", "Lambda")
-#@test CppTypes.greet(w_lambda) == "Hi Lambda"
 
 # Destroy w: w and w_assigned should be dead, w_copy alive
 finalize(w)

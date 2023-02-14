@@ -191,19 +191,16 @@ cppdref[] = 1.0
 
 @test CppTestFunctions.process_irrational(π, 2) == 2*π
 
-if CxxWrap.libcxxwrapversion() > v"0.7.0"
-  @test CppTestFunctions.open("foo") == "foo"
+@test CppTestFunctions.open("foo") == "foo"
+
+let bref = Ref{Cuchar}(0)
+  @test bref[] == false
+  CppTestFunctions.boolref(bref)
+  @test bref[] == true
+  CppTestFunctions.boolref(bref)
+  @test bref[] == false
 end
 
-if CxxWrap.libcxxwrapversion() > v"0.7.1"
-  let bref = Ref{Cuchar}(0)
-    @test bref[] == false
-    CppTestFunctions.boolref(bref)
-    @test bref[] == true
-    CppTestFunctions.boolref(bref)
-    @test bref[] == false
-  end
-end
 
 end # testset end
 
