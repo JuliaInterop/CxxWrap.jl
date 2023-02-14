@@ -494,24 +494,25 @@ argument_overloads(t::Type{Ptr{T}}) where {T <: Number} = [Array{T,1}]
 Create a Union containing the type and a smart pointer to any type derived from it
 """
 function ptrunion(::Type{T}) where {T}
-  ST = T
-  if T == allocated_type(supertype(T))
-    ST = supertype(T)
-  end
-  result{T2 <: ST} = Union{T2, SmartPointer{T2}}
+  result{T2 <: T} = Union{T2, SmartPointer{T2}}
   return result
 end
 
-smart_pointer_type(t::Type) = smart_pointer_type(cpp_trait_type(t), t)
-smart_pointer_type(::Type{IsNormalType}, t::Type) = t
-smart_pointer_type(::Type{IsCxxType}, x::Type{T}) where {T} = ptrunion(x)
-
-function smart_pointer_type(::Type{<:SmartPointer{T}}) where {T}
+valuetype(t::Type) = valuetype(cpp_trait_type(t), t)
+valuetype(::Type{IsNormalType}, ::Type{T}) where {T} = T
+function valuetype(::Type{IsCxxType}, ::Type{T}) where {T}
+  ST = supertype(T)
+  if T == allocated_type(ST)
+    return ST
+  end
+  return T
+end
+function valuetype(::Type{<:SmartPointer{T}}) where {T}
   result{T2 <: T} = SmartPointer{T2}
   return result
 end
 
-map_julia_arg_type(t::Type) = Union{Base.invokelatest(smart_pointer_type,t),argument_overloads(t)...}
+map_julia_arg_type(t::Type) = Union{Base.invokelatest(valuetype,t),argument_overloads(t)...}
 map_julia_arg_type(a::Type{StrictlyTypedNumber{T}}) where {T} = T
 map_julia_arg_type(a::Type{StrictlyTypedNumber{CxxBool}}) = Union{Bool,CxxBool}
 map_julia_arg_type(x::Type{CxxBool}) = Union{Bool,CxxBool}
