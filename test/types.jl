@@ -135,16 +135,17 @@ if CxxWrap.libcxxwrapversion() > v"0.9.4"
   wp = CxxPtr(w)
   wcp = ConstCxxPtr(w)
   @test CppTypes.greet_byvalue(w) == "hello"
-  @test CppTypes.greet_byvalue(wr[]) == "hello"
-  @test CppTypes.greet_overload(w) == "hello_byval"
+  @test CppTypes.greet_byvalue(wr) == "hello"
+  @test CppTypes.greet_byvalue(wcr) == "hello"
+  @test CppTypes.greet_overload(w) == "hello_byref"
   @test CppTypes.greet_overload(wr) == "hello_byref"
-  @test CppTypes.greet_overload(wr[]) == "hello_byval"
+  @test CppTypes.greet_overload(wr[]) == "hello_byref"
   @test CppTypes.greet_overload(wcr) == "hello_byconstref"
-  @test CppTypes.greet_overload(wcr[]) == "hello_byval"
+  @test CppTypes.greet_overload(wcr[]) == "hello_byref"
   @test CppTypes.greet_overload(wp) == "hello_bypointer"
-  @test CppTypes.greet_overload(wp[]) == "hello_byval"
+  @test CppTypes.greet_overload(wp[]) == "hello_byref"
   @test CppTypes.greet_overload(wcp) == "hello_byconstpointer"
-  @test CppTypes.greet_overload(wcp[]) == "hello_byval"
+  @test CppTypes.greet_overload(wcp[]) == "hello_byref"
   @test CppTypes.greet_overload(swf) == "shared factory hello_bysharedptr"
 end
 

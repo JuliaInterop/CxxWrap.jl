@@ -498,12 +498,12 @@ function ptrunion(::Type{T}) where {T}
   return result
 end
 
-valuetype(t::Type) = valuetype(cpp_trait_type(t), t)
+valuetype(t::Type) = valuetype(Base.invokelatest(cpp_trait_type,t), t)
 valuetype(::Type{IsNormalType}, ::Type{T}) where {T} = T
 function valuetype(::Type{IsCxxType}, ::Type{T}) where {T}
   ST = supertype(T)
-  if T == allocated_type(ST)
-    return ST
+  if T == Base.invokelatest(allocated_type,ST) # Case of a C++ by-value argument
+    return Union{ST, CxxRef{ST}, ConstCxxRef{ST}}
   end
   return T
 end
@@ -512,7 +512,7 @@ function valuetype(::Type{<:SmartPointer{T}}) where {T}
   return result
 end
 
-map_julia_arg_type(t::Type) = Union{Base.invokelatest(valuetype,t),argument_overloads(t)...}
+map_julia_arg_type(t::Type) = Union{valuetype(t), argument_overloads(t)...}
 map_julia_arg_type(a::Type{StrictlyTypedNumber{T}}) where {T} = T
 map_julia_arg_type(a::Type{StrictlyTypedNumber{CxxBool}}) = Union{Bool,CxxBool}
 map_julia_arg_type(x::Type{CxxBool}) = Union{Bool,CxxBool}
@@ -684,7 +684,7 @@ function wrap_reference_converters(julia_mod)
     Core.eval(julia_mod, :($(@__MODULE__).dereferenced_type(::Type{$st}) = $reftype))
     Core.eval(julia_mod, :(Base.convert(::Type{$st}, x::$bt) = x))
     Core.eval(julia_mod, :(Base.convert(::Type{$st}, x::$reftype) = x))
-    Core.eval(julia_mod, :(Base.cconvert(::Type{$reftype}, x::$bt) = $reftype(x.cpp_object)))
+    Core.eval(julia_mod, :(Base.cconvert(::Type{$reftype}, x::Union{CxxRef{<:$st},ConstCxxRef{<:$st},$bt}) = $reftype(x.cpp_object)))
     Core.eval(julia_mod, :(Base.unsafe_convert(::Type{$reftype}, x::$st) = $reftype(x.cpp_object)))
     Core.eval(julia_mod, :(Base.:(==)(a::Union{CxxRef{<:$st},ConstCxxRef{<:$st},$bt}, b::$reftype) = (a.cpp_object == b.cpp_object)))
     Core.eval(julia_mod, :(Base.:(==)(a::$reftype, b::Union{CxxRef{<:$st},ConstCxxRef{<:$st},$bt}) = (b == a)))
