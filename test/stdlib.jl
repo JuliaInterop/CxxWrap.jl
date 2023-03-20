@@ -91,4 +91,17 @@ let
   @test valarr2[2] == 6
 end
 
+
+let
+  @show "test deque"
+  deque1 = StdDeque{Int64}()
+  @test length(deque1) == 0
+  push!(deque1, 7)
+  push!(deque1, 9)
+  @test length(deque1) == 2
+  deque2 = deque1
+  popfirst!(deque2)
+  @test length(deque2) == 1
+end
+
 end
