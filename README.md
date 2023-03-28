@@ -855,6 +855,35 @@ The `@wrapmodule` call works as before, but now the functions and types are defi
 It is also possible to replace the `@wrapmodule` call with a call to `@readmodule` and then separately call `@wraptypes` and `@wrapfunctions`.
 This allows using the types before the functions get called, which is useful for overloading the `argument_overloads` with types defined on the C++ side.
 
+## Overriding finalization behavior
+
+By default, objects that are allocated from Julia are also destroyed through a finalizer that calls `delete`. If you want to override this behavior, you can specialize the `jlcxx::Finalizer` class as follows, for example only doing something special in the case a tye has a `getImpl` function:
+
+```c++
+namespace jlcxx
+{
+  template<typename T>
+  struct Finalizer<T, SpecializedFinalizer>
+  {
+    static void finalize(T* to_delete)
+    {
+      constexpr bool has_getImpl = requires(const T& t) {
+        t.getImpl();
+      };
+
+      if constexpr(has_getImpl) {
+        std::cout << "calling specialized delete" << std::endl;
+        delete to_delete;
+      } else {
+        delete to_delete;
+      }
+    }
+  };
+}
+```
+
+You  can also further specialize on `T` to get specific behavior depending on the concrete type.
+
 ## STL support
 
 Version 0.9 introduces basic support for the C++ standard library, with mappings for `std::vector` (`StdVector`) and `std::string` (`StdString`).

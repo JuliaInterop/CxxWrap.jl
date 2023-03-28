@@ -288,3 +288,12 @@ let n = 100000
   println("$n allocations took $t s")
   @test memallocs.poolalloc <= (n+4)
 end
+
+let cd1 = CppTypes.UseCustomDelete(), cd2 = CppTypes.UseCustomClassDelete()
+  @test CppTypes.get_custom_nb_deletes() == 0
+  @test CppTypes.get_custom_class_nb_deletes() == 0
+  finalize(cd1)
+  @test CppTypes.get_custom_nb_deletes() == 1
+  finalize(cd2)
+  @test CppTypes.get_custom_class_nb_deletes() == 1
+end
