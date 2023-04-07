@@ -603,6 +603,7 @@ function build_function_expression(func::CppFunctionInfo, funcidx, julia_mod)
   map_c_arg_type(::Type{ConstArray{T,N}}) where {T,N} = Any
   map_c_arg_type(::Type{T}) where {T<:CxxNumber} = julia_int_type(T)
   map_c_arg_type(::Type{SafeCFunction}) = _SafeCFunction
+  map_c_arg_type(::Type{Val{T}}) where {T} = Any
 
   # Builds the return type passed to ccall
   map_c_return_type(t) = t

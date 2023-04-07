@@ -177,6 +177,14 @@ cppdref[] = 1.0
 @test CppTestFunctions.test_const_string_return() == "test"
 @test CppTestFunctions.test_datatype_conversion(Float64) == Float64
 
+@test CppTestFunctions.test_val(Val(Cint(1))) == 1
+@test CppTestFunctions.test_val(Val(Cint(2))) == 2
+@test CppTestFunctions.test_val(Val(Cshort(3))) == 3
+@test CppTestFunctions.test_val(Val(Cint(4))) == Val(Cint(4))
+@test CppTestFunctions.test_val(Val(:A)) === :A
+@test CppTestFunctions.test_val(Val(:B)) === :B
+@test CppTestFunctions.test_val(Val(:C)) == Val(:C)
+
 @test typeof(CppTestFunctions.test_double_pointer()) == CxxPtr{Float64}
 @test CppTestFunctions.test_double_pointer() == C_NULL
 @test typeof(CppTestFunctions.test_double2_pointer()) == CxxPtr{CxxPtr{Float64}}
