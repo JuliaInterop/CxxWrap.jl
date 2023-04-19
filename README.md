@@ -859,6 +859,7 @@ This allows using the types before the functions get called, which is useful for
 
 Version 0.9 introduces basic support for the C++ standard library, with mappings for `std::vector` (`StdVector`) and `std::string` (`StdString`).
 To add support for e.g. vectors of your own type `World`, either just add methods that use an `std::vector<World>` as an argument, or manually wrap them using `jlcxx::stl::apply_stl<World>(mod);`.
+For this to work, add `#include "jlcxx/stl.hpp"` to your C++ file.
 
 If the type `World` contains methods that take or return `std::` collections of type `World` or `World*`, however, you must first complete the type, so that CxxWrap can generate the type and the template specializations for the `std::` collections.
 In this case, you can add those methods to your type like this:
