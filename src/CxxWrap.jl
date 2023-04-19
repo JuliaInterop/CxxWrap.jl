@@ -739,6 +739,7 @@ function readmodule(so_path::AbstractString, funcname, m::Module, flags)
   Core.eval(m, :(const __cxxwrap_flags = $flags))
   fptr = Libdl.dlsym(Libdl.dlopen(so_path, flags), funcname)
   register_julia_module(m, fptr)
+  include_dependency(so_path)
 end
 
 function wrapmodule(so_path::AbstractString, funcname, m::Module, flags)
