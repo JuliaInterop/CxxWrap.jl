@@ -4,6 +4,9 @@ using ..CxxWrapCore
 
 abstract type CppBasicString <: AbstractString end
 
+# abstract type for StdIterator
+abstract type StdAbstractIterator end
+
 # These are defined in C++, but the functions need to exist to add methods
 function append end
 function cppsize end
@@ -124,10 +127,17 @@ end
 Base.IndexStyle(::Type{<:StdDeque}) = IndexLinear()
 Base.size(v::StdDeque) = (Int(cppsize(v)),)
 Base.getindex(v::StdDeque, i::Int) = cxxgetindex(v,i)[]
-Base.setindex!(v::StdDeque{T}, val, i::Int) where {T} = cxxsetindex!(v, convert(T,val), i)
-Base.push!(v::StdDeque, x) = push_back!(v, x)
-Base.pushfirst!(v::StdDeque, x) = push_front!(v, x)
-Base.pop!(v::StdDeque) = pop_back!(v)
-Base.popfirst!(v::StdDeque) = pop_front!(v)
-Base.resize!(v::StdDeque, n::Integer) = resize!(v, n)
+Base.setindex!(v::StdDeque{T}, val, i::Int) where {T} = cxxsetindex(v, convert(T,val), i)
+Base.push!(v::StdDeque, x) = push_back(v, x)
+Base.pushfirst!(v::StdDeque, x) = push_front(v, x)
+Base.pop!(v::StdDeque) = pop_back(v)
+Base.popfirst!(v::StdDeque) = pop_front(v)
+Base.resize!(v::StdDeque, n::Integer) = resize(v, n)
 end
+
+# Dqueue iterator
+function StdDequeIterator(d::StdDeque)
+  return StdDequeIterator(d, 0)
+end
+Base.next(d::StdDequeIterator) = iterator_next(d)
+Base.iteratorValue(d::StdDequeIterator) = iterator_value(d)
