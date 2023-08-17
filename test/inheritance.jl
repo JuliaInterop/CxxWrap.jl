@@ -4,7 +4,7 @@ include(joinpath(@__DIR__, "testcommon.jl"))
 module CppInheritance
 
 using CxxWrap
-@wrapmodule(CxxWrap.CxxWrapCore.libinheritance(), :define_types_module)
+@wrapmodule(CxxWrap.CxxWrapCore.libinheritance, :define_types_module)
 
 function __init__()
   @initcxx
@@ -16,7 +16,7 @@ end
 
 module VirtualSolver
   using CxxWrap
-  @wrapmodule(CxxWrap.CxxWrapCore.libinheritance(), :define_vsolver_module)
+  @wrapmodule(CxxWrap.CxxWrapCore.libinheritance, :define_vsolver_module)
   
   function __init__()
     @initcxx

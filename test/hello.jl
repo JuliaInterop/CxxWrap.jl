@@ -1,7 +1,7 @@
 # Wrap the functions defined in C++
 module CppHello
   include(joinpath(@__DIR__, "testcommon.jl"))
-  @wrapmodule CxxWrap.CxxWrapCore.libhello()
+  @wrapmodule CxxWrap.CxxWrapCore.libhello
 
   function __init__()
     @initcxx

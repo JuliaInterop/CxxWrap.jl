@@ -16,7 +16,7 @@ module BasicTypes
     y :: Float32
   end
 
-  @wrapmodule CxxWrap.CxxWrapCore.libbasic_types()
+  @wrapmodule CxxWrap.CxxWrapCore.libbasic_types
 
   function __init__()
     @initcxx
