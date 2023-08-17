@@ -62,7 +62,7 @@ Once this code is compiled into a shared library (say `libhello.so`) it can be u
 # Load the module and generate the functions
 module CppHello
   using CxxWrap
-  @wrapmodule(joinpath("path/to/built/lib","libhello"))
+  @wrapmodule(() -> joinpath("path/to/built/lib","libhello"))
 
   function __init__()
     @initcxx
@@ -120,12 +120,12 @@ In Julia, the name of the entry point must now be specified explicitly:
 ```julia
 module A
   using CxxWrap
-  @wrapmodule("mylib.so",:define_module_a)
+  @wrapmodule(() -> "mylib.so",:define_module_a)
 end
 
 module B
   using CxxWrap
-  @wrapmodule("mylib.so",:define_module_b)
+  @wrapmodule(() -> "mylib.so",:define_module_b)
 end
 ```
 
@@ -133,7 +133,7 @@ In specific cases, it may also be necessary to specify `dlopen` flags such as `R
 These can be supplied in a third, optional argument to `@wrapmodule`, e.g:
 
 ```julia
-@wrapmodule(CxxWrapCore.libcxxwrap_julia_stl, :define_cxxwrap_stl_module, Libdl.RTLD_GLOBAL)
+@wrapmodule(() -> CxxWrapCore.libcxxwrap_julia_stl, :define_cxxwrap_stl_module, Libdl.RTLD_GLOBAL)
 ```
 
 ## More extensive example and function call performance
@@ -677,7 +677,7 @@ using CxxWrap
 using Base.Test
 
 module Containers
-  @wrapmodule(libcontainers)
+  @wrapmodule(() -> libcontainers)
   export test_tuple
 end
 using Containers
@@ -843,7 +843,7 @@ To do this, call the `wrapmodule` method inside an appropriately named Julia mod
 module ExtendedTypes
 
 using CxxWrap
-@wrapmodule("libextended")
+@wrapmodule(() -> "libextended")
 export ExtendedWorld, greet
 
 end

@@ -397,7 +397,7 @@ function initialize_julia_module(mod::Module)
   if has_cxx_module(mod) # Happens when not precompiling
     return
   end
-  fptr = Libdl.dlsym(Libdl.dlopen(mod.__cxxwrap_sopath, mod.__cxxwrap_flags), mod.__cxxwrap_wrapfunc)
+  fptr = Libdl.dlsym(Libdl.dlopen(mod.__cxxwrap_sopath(), mod.__cxxwrap_flags), mod.__cxxwrap_wrapfunc)
   register_julia_module(mod, fptr)
   funcs = get_module_functions(mod)
   precompiling = false
@@ -726,7 +726,7 @@ function wrapfunctions(jlmod)
   wrap_functions(module_functions, jlmod)
 end
 
-function readmodule(so_path::AbstractString, funcname, m::Module, flags)
+function readmodule(so_path_cb::Function, funcname, m::Module, flags)
   if isdefined(m, :__cxxwrap_methodkeys)
     return
   end
@@ -735,38 +735,39 @@ function readmodule(so_path::AbstractString, funcname, m::Module, flags)
   end
   Core.eval(m, :(const __cxxwrap_methodkeys = $(MethodKey)[]))
   Core.eval(m, :(const __cxxwrap_pointers = $(FunctionPointers)[]))
-  Core.eval(m, :(const __cxxwrap_sopath = $so_path))
+  Core.eval(m, :(const __cxxwrap_sopath = $so_path_cb))
   Core.eval(m, :(const __cxxwrap_wrapfunc = $(QuoteNode(funcname))))
   Core.eval(m, :(const __cxxwrap_flags = $flags))
+  so_path = so_path_cb()
   fptr = Libdl.dlsym(Libdl.dlopen(so_path, flags), funcname)
   register_julia_module(m, fptr)
   include_dependency(so_path)
 end
 
-function wrapmodule(so_path::AbstractString, funcname, m::Module, flags)
-  readmodule(so_path, funcname, m, flags)
+function wrapmodule(so_path_cb::Function, funcname, m::Module, flags)
+  readmodule(so_path_cb, funcname, m, flags)
   wraptypes(m)
   wrapfunctions(m)
 end
 
 """
-  @wrapmodule libraryfile [functionname]
+  @wrapmodule libraryfile_cb [functionname]
 
 Place the functions and types from the C++ lib into the module enclosing this macro call
 Calls an entry point named `define_julia_module`, unless another name is specified as
 the second argument.
 """
-macro wrapmodule(libraryfile, register_func=:(:define_julia_module), flags=:(nothing))
-  return :(wrapmodule($(esc(libraryfile)), $(esc(register_func)), $__module__, $(esc(flags))))
+macro wrapmodule(libraryfile_cb, register_func=:(:define_julia_module), flags=:(nothing))
+  return :(wrapmodule($(esc(libraryfile_cb)), $(esc(register_func)), $__module__, $(esc(flags))))
 end
 
 """
-  @readmodule libraryfile [functionname]
+  @readmodule libraryfile_cb [functionname]
 
 Read a C++ module and associate it with the Julia module enclosing the macro call.
 """
-macro readmodule(libraryfile, register_func=:(:define_julia_module), flags=:(nothing))
-  return :(readmodule($(esc(libraryfile)), $(esc(register_func)), $__module__, $(esc(flags))))
+macro readmodule(libraryfile_cb, register_func=:(:define_julia_module), flags=:(nothing))
+  return :(readmodule($(esc(libraryfile_cb)), $(esc(register_func)), $__module__, $(esc(flags))))
 end
 
 """

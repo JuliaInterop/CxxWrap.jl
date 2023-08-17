@@ -14,7 +14,12 @@ function resize end
 
 import Libdl
 import libcxxwrap_julia_jll
-@wrapmodule(libcxxwrap_julia_jll.libcxxwrap_julia_stl, :define_cxxwrap_stl_module, Libdl.RTLD_GLOBAL)
+
+function get_libcxxwrap_julia_stl_path()::AbstractString
+  libcxxwrap_julia_jll.libcxxwrap_julia_stl
+end
+
+@wrapmodule(get_libcxxwrap_julia_stl_path, :define_cxxwrap_stl_module, Libdl.RTLD_GLOBAL)
 
 function __init__()
   @initcxx
