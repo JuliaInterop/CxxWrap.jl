@@ -1,13 +1,11 @@
 include(joinpath(@__DIR__, "testcommon.jl"))
 cxx_available = false
 
-const functions_lib_path = CxxWrap.CxxWrapCore.libfunctions()
-
 # Wrap the functions defined in C++
 module CppHalfFunctions
   using CxxWrap
 
-  @wrapmodule(Main.functions_lib_path, :init_half_module)
+  @wrapmodule(CxxWrap.CxxWrapCore.libfunctions, :init_half_module)
 
   function __init__()
     @initcxx
@@ -17,7 +15,7 @@ end
 module CppTestFunctions
 
 using CxxWrap
-@wrapmodule(Main.functions_lib_path, :init_test_module)
+@wrapmodule(CxxWrap.CxxWrapCore.libfunctions, :init_test_module)
 
 function __init__()
     @initcxx
@@ -235,7 +233,7 @@ end
 half_julia(d::Float64) = d*0.5
 
 # C version
-half_c(d::Float64) = ccall((:half_c, functions_lib_path), Cdouble, (Cdouble,), d)
+half_c(d::Float64) = ccall((:half_c, CxxWrap.CxxWrapCore.libfunctions), Cdouble, (Cdouble,), d)
 
 # Bring C++ versions into scope
 using .CppHalfFunctions: half_d, half_lambda, half_loop_cpp!, half_loop_jlcall!, half_loop_cfunc!

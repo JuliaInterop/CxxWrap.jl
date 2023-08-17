@@ -8,7 +8,7 @@ end
 
 module Containers
   include(joinpath(@__DIR__, "testcommon.jl"))
-  @wrapmodule CxxWrap.CxxWrapCore.libjlcxx_containers()
+  @wrapmodule CxxWrap.CxxWrapCore.libjlcxx_containers
 
   function __init__()
     @initcxx
