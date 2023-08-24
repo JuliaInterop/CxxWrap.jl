@@ -726,6 +726,11 @@ function wrapfunctions(jlmod)
   wrap_functions(module_functions, jlmod)
 end
 
+function readmodule(so_path::String, funcname, m::Module, flags)
+  Base.depwarn("Calling `@readmodule` with the path of the library to load is deprecated. Pass the name of a function returning the path instead, e.g. use `libfoo_jll.get_libfoo_path` instead of `libfoo_jll.libfoo`.", :readmodule; force=true)
+  readmodule(() -> so_path, funcname, m, flags)
+end
+
 function readmodule(so_path_cb::Function, funcname, m::Module, flags)
   if isdefined(m, :__cxxwrap_methodkeys)
     return
@@ -744,6 +749,11 @@ function readmodule(so_path_cb::Function, funcname, m::Module, flags)
   include_dependency(so_path)
 end
 
+function wrapmodule(so_path::String, funcname, m::Module, flags)
+  Base.depwarn("Calling `@wrapmodule` with the path of the library to load is deprecated. Pass the name of a function returning the path instead, e.g. use `libfoo_jll.get_libfoo_path` instead of `libfoo_jll.libfoo`.", :wrapmodule; force=true)
+  wrapmodule(() -> so_path, funcname, m, flags)
+end
+
 function wrapmodule(so_path_cb::Function, funcname, m::Module, flags)
   readmodule(so_path_cb, funcname, m, flags)
   wraptypes(m)
@@ -756,6 +766,10 @@ end
 Place the functions and types from the C++ lib into the module enclosing this macro call
 Calls an entry point named `define_julia_module`, unless another name is specified as
 the second argument.
+
+`libraryfile_cb` is a
+function that returns the shared library file to load as a string. In case of a JLL exporting `libfoo.so`
+it is possible to use `foo_jll.get_libfoo_path()`
 """
 macro wrapmodule(libraryfile_cb, register_func=:(:define_julia_module), flags=:(nothing))
   return :(wrapmodule($(esc(libraryfile_cb)), $(esc(register_func)), $__module__, $(esc(flags))))
@@ -764,7 +778,9 @@ end
 """
   @readmodule libraryfile_cb [functionname]
 
-Read a C++ module and associate it with the Julia module enclosing the macro call.
+Read a C++ module and associate it with the Julia module enclosing the macro call. `libraryfile_cb` is a
+function that returns the shared library file to load as a string. In case of a JLL exporting `libfoo.so`
+it is possible to use `foo_jll.get_libfoo_path()`
 """
 macro readmodule(libraryfile_cb, register_func=:(:define_julia_module), flags=:(nothing))
   return :(readmodule($(esc(libraryfile_cb)), $(esc(register_func)), $__module__, $(esc(flags))))
