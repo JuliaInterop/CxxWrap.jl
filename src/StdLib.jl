@@ -50,6 +50,9 @@ function StdWString(s::String)
 end
 
 function StdVector(v::Vector{T}) where {T}
+  if isempty(v)
+    return StdVector{T}()
+  end
   if (CxxWrapCore.cpp_trait_type(T) == CxxWrapCore.IsCxxType)
     return StdVector(CxxRef.(v))
   end
