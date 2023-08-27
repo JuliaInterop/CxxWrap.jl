@@ -35,7 +35,7 @@ append(v::StdVector{T}, a::Vector{<:T}) where {T} = _append_dispatch(v,a,CxxWrap
 Base.ncodeunits(s::CppBasicString)::Int = cppsize(s)
 Base.codeunit(s::StdString) = UInt8
 Base.codeunit(s::StdWString) = Cwchar_t == Int32 ? UInt32 : UInt16
-Base.codeunit(s::CppBasicString, i::Integer) = reinterpret(codeunit(s), s[i])
+Base.codeunit(s::CppBasicString, i::Integer) = reinterpret(codeunit(s), cxxgetindex(s,i))
 Base.isvalid(s::CppBasicString, i::Integer) = (0 < i <= ncodeunits(s))
 function Base.iterate(s::CppBasicString, i::Integer=1)
   if !isvalid(s,i)
@@ -43,6 +43,7 @@ function Base.iterate(s::CppBasicString, i::Integer=1)
   end
   return(convert(Char,codeunit(s,i)),i+1)
 end
+Base.getindex(s::CppBasicString, i::Int) = Char(cxxgetindex(s,i))
 
 function StdWString(s::String)
   char_arr = transcode(Cwchar_t, s)
