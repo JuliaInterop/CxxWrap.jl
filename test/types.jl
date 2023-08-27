@@ -229,6 +229,8 @@ let wvec_copy = copy.(wvec2)
 end
 
 @test CppTypes.greet_vector(wvec1) == string(("world$i " for i in 1:5)...)[1:end-1]
+empty!(warr1)
+@test supertype(typeof(StdVector(warr1))) == StdVector{CppTypes.World}
 
 @test CppTypes.test_unbox() == fill(true,7)
 
