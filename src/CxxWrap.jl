@@ -726,9 +726,12 @@ function wrapfunctions(jlmod)
   wrap_functions(module_functions, jlmod)
 end
 
+__stringsoname_error(fname) = @error """Calling `@$fname` with the path of the library to load is no longer supported. 
+Pass the name of a function returning the path instead, e.g. use `libfoo_jll.get_libfoo_path` instead of `libfoo_jll.libfoo`."""
+
 function readmodule(so_path::String, funcname, m::Module, flags)
-  Base.depwarn("Calling `@readmodule` with the path of the library to load is deprecated. Pass the name of a function returning the path instead, e.g. use `libfoo_jll.get_libfoo_path` instead of `libfoo_jll.libfoo`.", :readmodule; force=true)
   readmodule(() -> so_path, funcname, m, flags)
+  __stringsoname_error("readmodule")
 end
 
 function readmodule(so_path_cb::Function, funcname, m::Module, flags)
@@ -750,8 +753,8 @@ function readmodule(so_path_cb::Function, funcname, m::Module, flags)
 end
 
 function wrapmodule(so_path::String, funcname, m::Module, flags)
-  Base.depwarn("Calling `@wrapmodule` with the path of the library to load is deprecated. Pass the name of a function returning the path instead, e.g. use `libfoo_jll.get_libfoo_path` instead of `libfoo_jll.libfoo`.", :wrapmodule; force=true)
   wrapmodule(() -> so_path, funcname, m, flags)
+  __stringsoname_error("wrapmodule")
 end
 
 function wrapmodule(so_path_cb::Function, funcname, m::Module, flags)
