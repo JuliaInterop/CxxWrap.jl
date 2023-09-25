@@ -126,8 +126,8 @@ Base.size(v::StdValArray) = (Int(cppsize(v)),)
 Base.getindex(v::StdValArray, i::Int) = cxxgetindex(v,i)[]
 Base.setindex!(v::StdValArray{T}, val, i::Int) where {T} = cxxsetindex!(v, convert(T,val), i)
 
-function StdDeque(v::Vector{T}) where {T}
-  return StdDeque{T}(v, length(v))
+function StdDeque() where {T}
+  return StdDeque{T}()
 end
 
 Base.IndexStyle(::Type{<:StdDeque}) = IndexLinear()
@@ -140,3 +140,24 @@ Base.pop!(v::StdDeque) = pop_back!(v)
 Base.popfirst!(v::StdDeque) = pop_front!(v)
 Base.resize!(v::StdDeque, n::Integer) = resize!(v, n)
 end
+
+Base.IndexStyle(::Type{<:StdDeque}) = IndexLinear()
+Base.size(d::StdDeque) = (Int(cppsize(d)),)
+Base.resize!(d::StdDeque, n::Integer) = resize(d, n)
+Base.getindex(d::StdDeque, i::Int) = cxxgetindex(d, i)[]
+Base.setindex!(d::StdDeque{T}, val, i::Int) where {T} = cxxsetindex(d, convert(T, val), i)
+#TODO: edit the cxx part to enable push to get more than two arguments
+Base.push!(d::StdDeque, x) = push_back(d, x)
+Base.pushfirst!(d::StdDeque, x) = push_front(d, x)
+Base.pop!(d::StdDeque) = pop_back(d)
+Base.popfirst!(d::StdDeque) = pop_front(d)
+Base.isempty(d::StdDeque) = isEmpty(d)
+Base.empty!(d::StdDeque) = clear(d)
+
+# Iteration utilities
+Base.:(==)(a::StdIterator, b::StdIterator) = iterator_is_equal(a, b)
+_deque_iteration_tuple(d::StdDeque, state::StdIterator) = (state == iteratorend(d)) ? nothing : (iterator_value(state), state)
+Base.iterate(d::StdDeque) = _deque_iteration_tuple(d, iteratorbegin(d))
+Base.iterate(d::StdDeque, state::StdIterator) = (state != iteratorend(d)) ? _deque_iteration_tuple(d, iterator_next(state)) : nothing
+#TODO:remove the iterator_value method from the cxx part, since it is not needed
+end # module
