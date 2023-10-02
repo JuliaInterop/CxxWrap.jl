@@ -38,6 +38,14 @@ let s = StdString("foo")
   @test unsafe_string(CxxWrap.StdLib.c_str(s),2) == "fo"
 end
 
+let s = "\x01\x00\x02"
+    @test length(StdString) == 1
+    @test length(StdString(s, length(s))) == 3
+
+    @test String(StdString(s)) != s
+    @test String(StdString(s, length(s))) == s
+end
+
 stvec = StdVector(Int32[1,2,3])
 @test all(stvec .== [1,2,3])
 push!(stvec,1)

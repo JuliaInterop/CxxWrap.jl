@@ -101,7 +101,7 @@ end
   return v
 end
 
-@cxxdereference Base.String(s::StdString) = unsafe_string(reinterpret(Ptr{Cchar},c_str(s).cpp_object))
+@cxxdereference Base.String(s::StdString) = unsafe_string(reinterpret(Ptr{Cchar},c_str(s).cpp_object), cppsize(s))
 @cxxdereference function Base.String(s::StdWString)
   chars = unsafe_wrap(Vector{Cwchar_t}, reinterpret(Ptr{Cwchar_t},c_str(s).cpp_object), (cppsize(s),))
   return transcode(String, chars)
