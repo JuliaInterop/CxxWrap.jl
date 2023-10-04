@@ -39,10 +39,10 @@ let s = StdString("foo")
 end
 
 let s = "\x01\x00\x02"
-    @test length(StdString(s)) == 1
+    @test length(StdString(s)) == 3
     @test length(StdString(s, length(s))) == 3
 
-    @test String(StdString(s)) != s
+    @test String(StdString(s)) == s
     @test String(StdString(s, length(s))) == s
 end
 
