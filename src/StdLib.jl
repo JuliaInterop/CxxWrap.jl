@@ -47,7 +47,7 @@ end
 
 function Base.iterate(s::StdString, i::Integer=firstindex(s))
   i > ncodeunits(s) && return nothing
-  j = nextind(s, i)
+  j = isvalid(s, i) ? nextind(s, i) : i + 1
   u = UInt32(codeunit(s, i)) << 24
   (i += 1) < j || @goto ret
   u |= UInt32(codeunit(s, i)) << 16

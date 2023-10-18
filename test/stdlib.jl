@@ -1,14 +1,9 @@
 using CxxWrap
 using Test
 
-function malformed_char(s::String)
-  ncodeunits(s) <= 4 || throw(ArgumentError("String cannot be converted to a Char"))
-  u = UInt32(0)
-  for i in 1:ncodeunits(s)
-    u |= UInt32(codeunit(s, i)) << (8 * (3 - i + 1))
-  end
-  return reinterpret(Char, u)
-end
+# Can use invalid character literals (e.g. '\xa8') as of Julia 1.9:
+# https://github.com/JuliaLang/julia/pull/44989
+malformed_char(x) = reinterpret(Char, UInt32(x) << 24)
 
 @testset "$(basename(@__FILE__)[1:end-3])" begin
 
@@ -94,9 +89,9 @@ end
     s = StdString("𨉟")
     @test iterate(s) == ('𨉟', 5)
     @test iterate(s, firstindex(s)) == ('𨉟', 5)
-    @test iterate(s, 2) == (malformed_char("\xa8\x89\x9f"), 5)
-    @test iterate(s, 3) == (malformed_char("\x89\x9f"), 5)
-    @test iterate(s, 4) == (malformed_char("\x9f"), 5)
+    @test iterate(s, 2) == (malformed_char(0xa8), 3)
+    @test iterate(s, 3) == (malformed_char(0x89), 4)
+    @test iterate(s, 4) == (malformed_char(0x9f), 5)
     @test iterate(s, 5) === nothing
     @test iterate(s, typemax(Int)) === nothing
   end
