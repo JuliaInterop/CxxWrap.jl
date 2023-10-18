@@ -100,18 +100,18 @@ end
 
 @testset "StdWString" begin
   @testset "iterate" begin
-    s = StdWString("😄")
-    @show codeunits(s) ncodeunits(s)
-    @show collect(s) length(s)
-    @test iterate(s) == ('😄', 2)
-    @test iterate(s, firstindex(s)) == ('😄', 2)
+    char = codeunit(StdWString()) == UInt32 ? '😄' : 'α'
+    s = StdWString(string(char))
+    @test iterate(s) == (char, 2)
+    @test iterate(s, firstindex(s)) == (char, 2)
     @test iterate(s, 2) === nothing
     @test iterate(s, typemax(Int)) === nothing
   end
 
   @testset "getindex" begin
-    s = StdWString("😄")
-    @test getindex(s, firstindex(s)) == '😄'
+    char = codeunit(StdWString()) == UInt32 ? '😄' : 'α'
+    s = StdWString(string(char))
+    @test getindex(s, firstindex(s)) == char
     @test_throws BoundsError getindex(s, 2)
   end
 end
