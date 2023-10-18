@@ -101,6 +101,8 @@ end
 @testset "StdWString" begin
   @testset "iterate" begin
     s = StdWString("😄")
+    @show codeunits(s) ncodeunits(s)
+    @show collect(s) length(s)
     @test iterate(s) == ('😄', 2)
     @test iterate(s, firstindex(s)) == ('😄', 2)
     @test iterate(s, 2) === nothing
