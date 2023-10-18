@@ -36,15 +36,13 @@ Base.ncodeunits(s::CppBasicString)::Int = cppsize(s)
 Base.codeunit(s::StdString) = UInt8
 Base.codeunit(s::StdWString) = Cwchar_t == Int32 ? UInt32 : UInt16
 Base.codeunit(s::CppBasicString, i::Integer) = reinterpret(codeunit(s), cxxgetindex(s,i))
-Base.isvalid(s::CppBasicString, i::Integer) = 0 < i <= ncodeunits(s)
-Base.isvalid(s::StdString, i::Int) = checkbounds(Bool, s, i) && thisind(s, i) == i
-
-Base.thisind(s::StdString, i::Int) = Base._thisind_str(s, i)
-Base.nextind(s::StdString, i::Int) = Base._nextind_str(s, i)
+Base.isvalid(s::CppBasicString, i::Int) = checkbounds(Bool, s, i) && thisind(s, i) == i
+Base.thisind(s::CppBasicString, i::Int) = Base._thisind_str(s, i)
+Base.nextind(s::CppBasicString, i::Int) = Base._nextind_str(s, i)
 
 function Base.iterate(s::CppBasicString, i::Integer=firstindex(s))
-  isvalid(s, i) || return nothing
-  return convert(Char, codeunit(s, i)), i+1
+  i > ncodeunits(s) && return nothing
+  return convert(Char, codeunit(s, i)), nextind(s, i)
 end
 
 function Base.iterate(s::StdString, i::Integer=firstindex(s))
@@ -61,9 +59,7 @@ function Base.iterate(s::StdString, i::Integer=firstindex(s))
   return reinterpret(Char, u), j
 end
 
-Base.getindex(s::CppBasicString, i::Int) = Char(cxxgetindex(s,i))
-
-function Base.getindex(s::StdString, i::Int)
+function Base.getindex(s::CppBasicString, i::Int)
   checkbounds(s, i)
   isvalid(s, i) || Base.string_index_err(s, i)
   c, i = iterate(s, i)

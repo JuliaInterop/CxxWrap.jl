@@ -98,6 +98,22 @@ end
   end
 end
 
+@testset "StdWString" begin
+  @testset "iterate" begin
+    s = StdWString("😄")
+    @test iterate(s) == ('😄', 2)
+    @test iterate(s, firstindex(s)) == ('😄', 2)
+    @test iterate(s, 2) === nothing
+    @test iterate(s, typemax(Int)) === nothing
+  end
+
+  @testset "getindex" begin
+    s = StdWString("😄")
+    @test getindex(s, firstindex(s)) == '😄'
+    @test_throws BoundsError getindex(s, 2)
+  end
+end
+
 stvec = StdVector(Int32[1,2,3])
 @test all(stvec .== [1,2,3])
 push!(stvec,1)
