@@ -38,12 +38,64 @@ let s = StdString("foo")
   @test unsafe_string(CxxWrap.StdLib.c_str(s),2) == "fo"
 end
 
-let s = "\x01\x00\x02"
-    @test length(StdString(s)) == 3
-    @test length(StdString(s, length(s))) == 3
+let str = "\x01\x00\x02"
+  std_str = StdString(str)
+  @test length(std_str) == 1
+  @test collect(std_str) == ['\x01']
+  @test ncodeunits(std_str) == 1
+  @test codeunits(std_str) == b"\x01"
 
-    @test String(StdString(s)) == s
-    @test String(StdString(s, length(s))) == s
+  std_str = StdString(str , ncodeunits(str))
+  @test length(std_str) == 3
+  @test collect(std_str) == ['\x01', '\x00', '\x02']
+  @test ncodeunits(std_str) == 3
+  @test codeunits(std_str) == b"\x01\x00\x02"
+
+  std_str = convert(StdString, str)
+  @test length(std_str) == 3
+  @test collect(std_str) == ['\x01', '\x00', '\x02']
+  @test ncodeunits(std_str) == 3
+  @test codeunits(std_str) == b"\x01\x00\x02"
+  @test convert(String, std_str) == str
+end
+
+let str = "α\0β"
+  std_str = StdString(str)
+  @test length(std_str) == 1
+  @test collect(std_str) == ['α']
+  @test ncodeunits(std_str) == 2
+  @test codeunits(std_str) == b"α"
+
+  std_str = StdString(str, ncodeunits(str))
+  @test length(std_str) == 3
+  @test collect(std_str) == ['α', '\0', 'β']
+  @test ncodeunits(std_str) == 5
+  @test codeunits(std_str) == b"α\0β"
+
+  std_str = convert(StdString, str)
+  @test length(std_str) == 3
+  @test collect(std_str) == ['α', '\0', 'β']
+  @test ncodeunits(std_str) == 5
+  @test codeunits(std_str) == b"α\0β"
+  @test convert(String, std_str) == str
+end
+
+@testset "StdString" begin
+  @testset "iterate" begin
+    s = StdString("α")
+    @test iterate(s) == ('α', 3)
+    @test iterate(s, firstindex(s)) == ('α', 3)
+    @test iterate(s, 2) == ('\xb1', 3)
+    @test iterate(s, 3) === nothing
+    @test iterate(s, typemax(Int)) === nothing
+  end
+
+  @testset "getindex" begin
+    s = StdString("α")
+    @test getindex(s, firstindex(s)) == 'α'
+    @test_throws StringIndexError getindex(s, 2)
+    @test_throws BoundsError getindex(s, 3)
+  end
 end
 
 stvec = StdVector(Int32[1,2,3])

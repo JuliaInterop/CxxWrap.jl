@@ -36,14 +36,39 @@ Base.ncodeunits(s::CppBasicString)::Int = cppsize(s)
 Base.codeunit(s::StdString) = UInt8
 Base.codeunit(s::StdWString) = Cwchar_t == Int32 ? UInt32 : UInt16
 Base.codeunit(s::CppBasicString, i::Integer) = reinterpret(codeunit(s), cxxgetindex(s,i))
-Base.isvalid(s::CppBasicString, i::Integer) = (0 < i <= ncodeunits(s))
-function Base.iterate(s::CppBasicString, i::Integer=1)
-  if !isvalid(s,i)
-    return nothing
-  end
-  return(convert(Char,codeunit(s,i)),i+1)
+Base.isvalid(s::CppBasicString, i::Integer) = 0 < i <= ncodeunits(s)
+Base.isvalid(s::StdString, i::Int) = checkbounds(Bool, s, i) && thisind(s, i) == i
+
+Base.thisind(s::StdString, i::Int) = Base._thisind_str(s, i)
+Base.nextind(s::StdString, i::Int) = Base._nextind_str(s, i)
+
+function Base.iterate(s::CppBasicString, i::Integer=firstindex(s))
+  isvalid(s, i) || return nothing
+  return convert(Char, codeunit(s, i)), i+1
 end
+
+function Base.iterate(s::StdString, i::Integer=firstindex(s))
+  i > ncodeunits(s) && return nothing
+  j = nextind(s, i)
+  u = UInt32(codeunit(s, i)) << 24
+  (i += 1) < j || @goto ret
+  u |= UInt32(codeunit(s, i)) << 16
+  (i += 1) < j || @goto ret
+  u |= UInt32(codeunit(s, i)) << 8
+  (i += 1) < j || @goto ret
+  u |= UInt32(codeunit(s, i))
+  @label ret
+  return reinterpret(Char, u), j
+end
+
 Base.getindex(s::CppBasicString, i::Int) = Char(cxxgetindex(s,i))
+
+function Base.getindex(s::StdString, i::Int)
+  checkbounds(s, i)
+  isvalid(s, i) || Base.string_index_err(s, i)
+  c, i = iterate(s, i)
+  return c
+end
 
 function StdWString(s::String)
   char_arr = transcode(Cwchar_t, s)
@@ -112,11 +137,10 @@ Base.cmp(a::String, b::CppBasicString) = cmp(a,String(b))
 
 # Make sure functions taking a C++ string as argument can also take a Julia string
 CxxWrapCore.map_julia_arg_type(x::Type{<:StdString}) = AbstractString
-StdString(x::String) = StdString(x,ncodeunits(x))
-StdLib.StdStringAllocated(x::String) = StdString(x,ncodeunits(x))
-Base.cconvert(::Type{CxxWrapCore.ConstCxxRef{StdString}}, x::String) = StdString(x,ncodeunits(x))
-Base.cconvert(::Type{StdLib.StdStringDereferenced}, x::String) = StdString(x,ncodeunits(x))
+Base.cconvert(::Type{CxxWrapCore.ConstCxxRef{StdString}}, x::String) = StdString(x, ncodeunits(x))
+Base.cconvert(::Type{StdLib.StdStringDereferenced}, x::String) = StdString(x, ncodeunits(x))
 Base.unsafe_convert(::Type{CxxWrapCore.ConstCxxRef{StdString}}, x::StdString) = ConstCxxRef(x)
+Base.convert(::Type{StdString}, str::AbstractString) = StdString(str, ncodeunits(str))
 
 function StdValArray(v::Vector{T}) where {T}
   return StdValArray{T}(v, length(v))
