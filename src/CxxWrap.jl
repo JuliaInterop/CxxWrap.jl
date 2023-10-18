@@ -843,7 +843,7 @@ macro cxxdereference(f)
   fdict[:kwargs] .= maparg.(fdict[:kwargs])
 
   # Dereference the arguments
-  deref_expr = quote end
+  deref_expr = Expr(:block)
   for arg in vcat(fdict[:args], fdict[:kwargs])
     (argname, _, slurp, _) = MacroTools.splitarg(arg)
     if argname === nothing
