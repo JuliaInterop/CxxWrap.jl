@@ -1,6 +1,15 @@
 using CxxWrap
 using Test
 
+function malformed_char(s::String)
+  ncodeunits(s) <= 4 || throw(ArgumentError("String cannot be converted to a Char"))
+  u = UInt32(0)
+  for i in 1:ncodeunits(s)
+    u |= UInt32(codeunit(s, i)) << (8 * (3 - i + 1))
+  end
+  return reinterpret(Char, u)
+end
+
 @testset "$(basename(@__FILE__)[1:end-3])" begin
 
 let s = StdString("test")
@@ -82,11 +91,13 @@ end
 
 @testset "StdString" begin
   @testset "iterate" begin
-    s = StdString("α")
-    @test iterate(s) == ('α', 3)
-    @test iterate(s, firstindex(s)) == ('α', 3)
-    @test iterate(s, 2) == (first("\xb1"), 3)
-    @test iterate(s, 3) === nothing
+    s = StdString("𨉟")
+    @test iterate(s) == ('𨉟', 5)
+    @test iterate(s, firstindex(s)) == ('𨉟', 5)
+    @test iterate(s, 2) == (malformed_char("\xa8\x89\x9f"), 5)
+    @test iterate(s, 3) == (malformed_char("\x89\x9f"), 5)
+    @test iterate(s, 4) == (malformed_char("\x9f"), 5)
+    @test iterate(s, 5) === nothing
     @test iterate(s, typemax(Int)) === nothing
   end
 
