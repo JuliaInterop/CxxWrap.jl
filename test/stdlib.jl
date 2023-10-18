@@ -85,7 +85,7 @@ end
     s = StdString("α")
     @test iterate(s) == ('α', 3)
     @test iterate(s, firstindex(s)) == ('α', 3)
-    @test iterate(s, 2) == ('\xb1', 3)
+    @test iterate(s, 2) == (first("\xb1"), 3)
     @test iterate(s, 3) === nothing
     @test iterate(s, typemax(Int)) === nothing
   end
