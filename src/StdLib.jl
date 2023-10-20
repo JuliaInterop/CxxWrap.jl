@@ -133,10 +133,36 @@ Base.cmp(a::String, b::CppBasicString) = cmp(a,String(b))
 
 # Make sure functions taking a C++ string as argument can also take a Julia string
 CxxWrapCore.map_julia_arg_type(x::Type{<:StdString}) = AbstractString
+
+"""
+    StdString(str::String)
+
+Create a new `StdString` from the contents of the string. Any null-characters will be
+included in the string such that `ncodeunits(str) == ncodeunits(StdString(str))`.
+"""
+StdString(x::String) = StdString(x, ncodeunits(x))
+
+"""
+    StdString(str::Union{Cstring, Base.CodeUnits, Vector{UInt8}, Ref{Int8}, Array{Int8}})
+
+Create a new `StdString` from the null-terminated character sequence.
+
+## Examples
+
+```julia
+julia> StdString(b"visible\0hidden")
+"visible"
+```
+"""
+StdString(::Union{Cstring, Base.CodeUnits, Vector{UInt8}, Ref{Int8}, Array{Int8}})
+
+StdString(x::Cstring) = StdString(convert(Ptr{Int8}, x))
+StdString(x::Base.CodeUnits) = StdString(collect(x))
+StdString(x::Vector{UInt8}) = StdString(collect(reinterpret(Int8, x)))
+
 Base.cconvert(::Type{CxxWrapCore.ConstCxxRef{StdString}}, x::String) = StdString(x, ncodeunits(x))
 Base.cconvert(::Type{StdLib.StdStringDereferenced}, x::String) = StdString(x, ncodeunits(x))
 Base.unsafe_convert(::Type{CxxWrapCore.ConstCxxRef{StdString}}, x::StdString) = ConstCxxRef(x)
-Base.convert(::Type{StdString}, str::AbstractString) = StdString(str, ncodeunits(str))
 
 function StdValArray(v::Vector{T}) where {T}
   return StdValArray{T}(v, length(v))

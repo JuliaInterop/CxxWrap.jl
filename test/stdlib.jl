@@ -43,13 +43,13 @@ let s = StdString("foo")
 end
 
 let str = "\x01\x00\x02"
-  std_str = StdString(str)
+  std_str = StdString(codeunits(str))
   @test length(std_str) == 1
   @test collect(std_str) == ['\x01']
   @test ncodeunits(std_str) == 1
   @test codeunits(std_str) == b"\x01"
 
-  std_str = StdString(str , ncodeunits(str))
+  std_str = StdString(str)
   @test length(std_str) == 3
   @test collect(std_str) == ['\x01', '\x00', '\x02']
   @test ncodeunits(std_str) == 3
@@ -64,13 +64,13 @@ let str = "\x01\x00\x02"
 end
 
 let str = "α\0β"
-  std_str = StdString(str)
+  std_str = StdString(codeunits(str))
   @test length(std_str) == 1
   @test collect(std_str) == ['α']
   @test ncodeunits(std_str) == 2
   @test codeunits(std_str) == b"α"
 
-  std_str = StdString(str, ncodeunits(str))
+  std_str = StdString(str)
   @test length(std_str) == 3
   @test collect(std_str) == ['α', '\0', 'β']
   @test ncodeunits(std_str) == 5
@@ -85,6 +85,13 @@ let str = "α\0β"
 end
 
 @testset "StdString" begin
+  @testset "null-terminated constructors" begin
+    c_str = Cstring(Base.unsafe_convert(Ptr{Cchar}, "visible\0hidden"))
+    @test StdString(c_str) == "visible"
+    @test StdString(b"visible\0hidden") == "visible"
+    @test StdString(UInt8[0xff, 0x00, 0xff]) == "\xff"
+  end
+
   @testset "iterate" begin
     s = StdString("𨉟")
     @test iterate(s) == ('𨉟', 5)
