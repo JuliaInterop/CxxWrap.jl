@@ -45,6 +45,9 @@ function Base.iterate(s::CppBasicString, i::Integer=firstindex(s))
   return convert(Char, codeunit(s, i)), nextind(s, i)
 end
 
+# Since the Julia base string iteration is `String` specific we need to implement our own.
+# This implementation is based around a functioning `nextind` which allows us to convert the
+# UTF-8 codeunits into their big-endian encoding.
 function Base.iterate(s::StdString, i::Integer=firstindex(s))
   i > ncodeunits(s) && return nothing
   j = isvalid(s, i) ? nextind(s, i) : i + 1
