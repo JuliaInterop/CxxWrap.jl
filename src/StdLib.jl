@@ -140,7 +140,7 @@ CxxWrapCore.map_julia_arg_type(x::Type{<:StdString}) = AbstractString
 """
     StdString(str::String)
 
-Create a new `StdString` from the contents of the string. Any null-characters will be
+Create a `StdString` from the contents of the string. Any null-characters ('\\0') will be
 included in the string such that `ncodeunits(str) == ncodeunits(StdString(str))`.
 """
 StdString(x::String) = StdString(x, ncodeunits(x))
@@ -148,12 +148,15 @@ StdString(x::String) = StdString(x, ncodeunits(x))
 """
     StdString(str::Union{Cstring, Base.CodeUnits, Vector{UInt8}, Ref{Int8}, Array{Int8}})
 
-Create a new `StdString` from the null-terminated character sequence.
+Create a `StdString` from the null-terminated character sequence.
+
+If you want to  construct a `StdString` that includes the null-character ('\\0') either use
+[`StdString(::String)`](@ref) or [`StdString(::Any, ::Int)`](@ref).
 
 ## Examples
 
 ```julia
-julia> StdString(b"visible\0hidden")
+julia> StdString(b"visible\\0hidden")
 "visible"
 ```
 """
@@ -162,6 +165,20 @@ StdString(::Union{Cstring, Base.CodeUnits, Vector{UInt8}, Ref{Int8}, Array{Int8}
 StdString(x::Cstring) = StdString(convert(Ptr{Int8}, x))
 StdString(x::Base.CodeUnits) = StdString(collect(x))
 StdString(x::Vector{UInt8}) = StdString(collect(reinterpret(Int8, x)))
+
+"""
+    StdString(str, n::Integer)
+
+Create a `StdString` from the first `n` code units of `str` (including null-characters).
+
+## Examples
+
+```julia
+julia> StdString("visible\\0hidden", 10)
+"visible\\0hi"
+```
+"""
+StdString(::Any, ::Integer)
 
 Base.cconvert(::Type{CxxWrapCore.ConstCxxRef{StdString}}, x::String) = StdString(x, ncodeunits(x))
 Base.cconvert(::Type{StdLib.StdStringDereferenced}, x::String) = StdString(x, ncodeunits(x))
