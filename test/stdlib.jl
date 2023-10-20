@@ -55,6 +55,12 @@ let str = "\x01\x00\x02"
   @test ncodeunits(std_str) == 3
   @test codeunits(std_str) == b"\x01\x00\x02"
 
+  std_str = StdString(str, 2)
+  @test length(std_str) == 2
+  @test collect(std_str) == ['\x01', '\x00']
+  @test ncodeunits(std_str) == 2
+  @test codeunits(std_str) == b"\x01\x00"
+
   std_str = convert(StdString, str)
   @test length(std_str) == 3
   @test collect(std_str) == ['\x01', '\x00', '\x02']
@@ -75,6 +81,12 @@ let str = "α\0β"
   @test collect(std_str) == ['α', '\0', 'β']
   @test ncodeunits(std_str) == 5
   @test codeunits(std_str) == b"α\0β"
+
+  std_str = StdString(str, 4)
+  @test length(std_str) == 3
+  @test collect(std_str) == ['α', '\0', '\xce']
+  @test ncodeunits(std_str) == 4
+  @test codeunits(std_str) == b"α\0\xce"
 
   std_str = convert(StdString, str)
   @test length(std_str) == 3
