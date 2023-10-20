@@ -84,7 +84,7 @@ let str = "α\0β"
 
   std_str = StdString(str, 4)
   @test length(std_str) == 3
-  @test collect(std_str) == ['α', '\0', '\xce']
+  @test collect(std_str) == ['α', '\0', malformed_char(0xce)]
   @test ncodeunits(std_str) == 4
   @test codeunits(std_str) == b"α\0\xce"
 
