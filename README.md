@@ -904,8 +904,7 @@ Linking wrappers using STL support requires adding `JlCxx::cxxwrap_julia_stl` to
 
 ### Working with `StdString`
 
-The `StdString` implements the Julia string interface and interprets `std::string` data as UTF-8 data. 
-Since C++ strings do not require the use of the null-character to denote the end of a string the `StdString` constructors usually rely on the `ncodeunits` to determin the size of the string. When constructing a `StdString` from a `Cstring`, `Base.CodeUnits`, or `Vector{UInt8}` the first null-character present will denote the end of the string.
+The `StdString` implements the Julia string interface and interprets `std::string` data as UTF-8 data. Since C++ strings do not require the use of the null-character to denote the end of a string the `StdString` constructors usually rely on the `ncodeunits` to determin the size of the string. When constructing a `StdString` from a `Cstring`, `Base.CodeUnits`, or `Vector{UInt8}` the first null-character present will denote the end of the string.
 
 ## Release procedure
 
