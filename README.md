@@ -902,6 +902,10 @@ mod.method("getSecondaryWorldVector", [](const World* p)->const std::vector<Worl
 
 Linking wrappers using STL support requires adding `JlCxx::cxxwrap_julia_stl` to the `target_link_libraries` command in `CMakeLists.txt`.
 
+### Working with `StdString`
+
+The `StdString` implements the Julia string interface and interprets `std::string` data as UTF-8 data. Since C++ strings do not require the use of the null-character to denote the end of a string the `StdString` constructors usually rely on the `ncodeunits` to determin the size of the string. When constructing a `StdString` from a `Cstring`, `Base.CodeUnits`, or `Vector{UInt8}` the first null-character present will denote the end of the string.
+
 ## Release procedure
 
 Often, new releases of `CxxWrap` also require a new release of the C++ component `libcxxwrap-julia`, and a rebuild of its JLL package. To make sure everything is tested properly, the following procedure should be followed for each release that requires changing both the Julia and the C++ component:

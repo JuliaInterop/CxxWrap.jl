@@ -1,6 +1,10 @@
 using CxxWrap
 using Test
 
+# Can use invalid character literals (e.g. '\xa8') as of Julia 1.9:
+# https://github.com/JuliaLang/julia/pull/44989
+malformed_char(x) = reinterpret(Char, UInt32(x) << 24)
+
 @testset "$(basename(@__FILE__)[1:end-3])" begin
 
 let s = StdString("test")
@@ -38,12 +42,103 @@ let s = StdString("foo")
   @test unsafe_string(CxxWrap.StdLib.c_str(s),2) == "fo"
 end
 
-let s = "\x01\x00\x02"
-    @test length(StdString(s)) == 3
-    @test length(StdString(s, length(s))) == 3
+let str = "\x01\x00\x02"
+  std_str = StdString(codeunits(str))
+  @test length(std_str) == 1
+  @test collect(std_str) == ['\x01']
+  @test ncodeunits(std_str) == 1
+  @test codeunits(std_str) == b"\x01"
 
-    @test String(StdString(s)) == s
-    @test String(StdString(s, length(s))) == s
+  std_str = StdString(str)
+  @test length(std_str) == 3
+  @test collect(std_str) == ['\x01', '\x00', '\x02']
+  @test ncodeunits(std_str) == 3
+  @test codeunits(std_str) == b"\x01\x00\x02"
+
+  std_str = StdString(str, 2)
+  @test length(std_str) == 2
+  @test collect(std_str) == ['\x01', '\x00']
+  @test ncodeunits(std_str) == 2
+  @test codeunits(std_str) == b"\x01\x00"
+
+  std_str = convert(StdString, str)
+  @test length(std_str) == 3
+  @test collect(std_str) == ['\x01', '\x00', '\x02']
+  @test ncodeunits(std_str) == 3
+  @test codeunits(std_str) == b"\x01\x00\x02"
+  @test convert(String, std_str) == str
+end
+
+let str = "α\0β"
+  std_str = StdString(codeunits(str))
+  @test length(std_str) == 1
+  @test collect(std_str) == ['α']
+  @test ncodeunits(std_str) == 2
+  @test codeunits(std_str) == b"α"
+
+  std_str = StdString(str)
+  @test length(std_str) == 3
+  @test collect(std_str) == ['α', '\0', 'β']
+  @test ncodeunits(std_str) == 5
+  @test codeunits(std_str) == b"α\0β"
+
+  std_str = StdString(str, 4)
+  @test length(std_str) == 3
+  @test collect(std_str) == ['α', '\0', malformed_char(0xce)]
+  @test ncodeunits(std_str) == 4
+  @test codeunits(std_str) == b"α\0\xce"
+
+  std_str = convert(StdString, str)
+  @test length(std_str) == 3
+  @test collect(std_str) == ['α', '\0', 'β']
+  @test ncodeunits(std_str) == 5
+  @test codeunits(std_str) == b"α\0β"
+  @test convert(String, std_str) == str
+end
+
+@testset "StdString" begin
+  @testset "null-terminated constructors" begin
+    c_str = Cstring(Base.unsafe_convert(Ptr{Cchar}, "visible\0hidden"))
+    @test StdString(c_str) == "visible"
+    @test StdString(b"visible\0hidden") == "visible"
+    @test StdString(UInt8[0xff, 0x00, 0xff]) == "\xff"
+  end
+
+  @testset "iterate" begin
+    s = StdString("𨉟")
+    @test iterate(s) == ('𨉟', 5)
+    @test iterate(s, firstindex(s)) == ('𨉟', 5)
+    @test iterate(s, 2) == (malformed_char(0xa8), 3)
+    @test iterate(s, 3) == (malformed_char(0x89), 4)
+    @test iterate(s, 4) == (malformed_char(0x9f), 5)
+    @test iterate(s, 5) === nothing
+    @test iterate(s, typemax(Int)) === nothing
+  end
+
+  @testset "getindex" begin
+    s = StdString("α")
+    @test getindex(s, firstindex(s)) == 'α'
+    @test_throws StringIndexError getindex(s, 2)
+    @test_throws BoundsError getindex(s, 3)
+  end
+end
+
+@testset "StdWString" begin
+  @testset "iterate" begin
+    char = codeunit(StdWString()) == UInt32 ? '😄' : 'α'
+    s = StdWString(string(char))
+    @test iterate(s) == (char, 2)
+    @test iterate(s, firstindex(s)) == (char, 2)
+    @test iterate(s, 2) === nothing
+    @test iterate(s, typemax(Int)) === nothing
+  end
+
+  @testset "getindex" begin
+    char = codeunit(StdWString()) == UInt32 ? '😄' : 'α'
+    s = StdWString(string(char))
+    @test getindex(s, firstindex(s)) == char
+    @test_throws BoundsError getindex(s, 2)
+  end
 end
 
 stvec = StdVector(Int32[1,2,3])
