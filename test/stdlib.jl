@@ -167,18 +167,24 @@ end
     @test vec isa StdVector{StdString}
     @test vec == ["a", "b", "c"]
 
-    str_refs = CxxRef.(StdString["a", "b", "c"])
-    vec = StdVector{StdString}(str_refs)
+    svec_alloc = StdString.(["a", "b", "c"])::Vector{CxxWrap.StdLib.StdStringAllocated}
+    vec = StdVector{StdString}(svec_alloc)
     @test vec isa StdVector{StdString}
     @test vec == ["a", "b", "c"]
 
-    vec = StdVector{StdString}(getindex.(str_refs))
+    svec_ref = CxxRef.(StdString["a", "b", "c"])
+    vec = StdVector{StdString}(svec_ref)
+    @test vec isa StdVector{StdString}
+    @test vec == ["a", "b", "c"]
+
+    svec_deref = getindex.(svec_ref)::Vector{CxxWrap.StdLib.StdStringDereferenced}
+    vec = StdVector{StdString}(svec_deref)
     @test vec isa StdVector{StdString}
     @test vec == ["a", "b", "c"]
 
     @test_throws MethodError StdVector{Bool}([true])
-    @test_throws MethodError StdVector{CxxWrap.StdLib.StdStringAllocated}(StdString["a"])
-    @test_throws MethodError StdVector{CxxWrap.StdLib.StdStringDereferenced}(getindex.(str_refs))
+    @test_throws MethodError StdVector{typeof(svec_alloc)}(svec_alloc)
+    @test_throws MethodError StdVector{typeof(svec_deref)}(svec_deref)
   end
 
   @testset "constructors" begin
@@ -204,14 +210,22 @@ end
     @test vec isa StdVector{StdString}
     @test vec == ["a", "b", "c"]
 
-    str_refs = CxxRef.(StdString["a", "b", "c"])
-    vec = StdVector(str_refs)
+    svec_alloc = StdString.(["a", "b", "c"])::Vector{CxxWrap.StdLib.StdStringAllocated}
+    vec = StdVector(svec_alloc)
     @test vec isa StdVector{StdString}
     @test vec == ["a", "b", "c"]
 
-    vec = StdVector(getindex.(str_refs))
+    svec_ref = CxxRef.(StdString["a", "b", "c"])
+    vec = StdVector(svec_ref)
     @test vec isa StdVector{StdString}
     @test vec == ["a", "b", "c"]
+
+    svec_deref = getindex.(svec_ref)::Vector{CxxWrap.StdLib.StdStringDereferenced}
+    vec = StdVector(svec_deref)
+    @test vec isa StdVector{StdString}
+    @test vec == ["a", "b", "c"]
+
+    @test_throws MethodError StdVector(["a", "b", "c"])
   end
 
   @testset "mutating with integer" begin
