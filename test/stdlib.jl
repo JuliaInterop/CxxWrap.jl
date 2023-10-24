@@ -147,6 +147,14 @@ end
     @test vec isa StdVector{Int}
     @test isempty(vec)
 
+    vec = StdVector{Int}([])
+    @test vec isa StdVector{Int}
+    @test isempty(vec)
+
+    vec = StdVector{Any}([])
+    @test vec isa StdVector{Any}
+    @test isempty(vec)
+
     vec = StdVector{Int}([1,2,3])
     @test vec isa StdVector{Int}
     @test vec == [1,2,3]
@@ -189,6 +197,14 @@ end
 
   @testset "constructors" begin
     @test_throws MethodError StdVector()
+
+    vec = StdVector(Int[])
+    @test vec isa StdVector{Int}
+    @test isempty(vec)
+
+    vec = StdVector(Any[])
+    @test vec isa StdVector{Any}
+    @test isempty(vec)
 
     vec = StdVector([1,2,3])
     @test vec isa StdVector{Int}
