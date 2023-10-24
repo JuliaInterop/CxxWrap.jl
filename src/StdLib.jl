@@ -88,8 +88,8 @@ function StdVector(v::Vector{CxxRef{T}}) where {T}
 end
 
 function StdVector(v::Vector{T}) where {T}
-    S = if CxxWrapCore.cpp_trait_type(T) == CxxWrapCore.IsCxxType
-      isconcretetype(T) ? supertype(T) : T
+    S = if isconcretetype(T) && CxxWrapCore.cpp_trait_type(T) == CxxWrapCore.IsCxxType
+      supertype(T)
     else
       T
     end
