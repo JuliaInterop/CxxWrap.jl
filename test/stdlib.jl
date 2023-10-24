@@ -142,10 +142,68 @@ end
 end
 
 @testset "StdVector" begin
+  @testset "parameterized constructors" begin
+    vec = StdVector{Int}()
+    @test vec isa StdVector{Int}
+    @test isempty(vec)
+
+    vec = StdVector{Int}([1,2,3])
+    @test vec isa StdVector{Int}
+    @test vec == [1,2,3]
+
+    vec = StdVector{Float64}([1,2,3])
+    @test vec isa StdVector{Float64}
+    @test vec == [1.0,2.0,3.0]
+
+    vec = StdVector{CxxBool}([true, false, true])
+    @test vec isa StdVector{CxxBool}
+    @test vec == [true, false, true]
+
+    vec = StdVector{StdString}(["a", "b", "c"])
+    @test vec isa StdVector{StdString}
+    @test vec == ["a", "b", "c"]
+
+    str_refs = CxxRef.(StdString["a", "b", "c"])
+    vec = StdVector{StdString}(str_refs)
+    @test vec isa StdVector{StdString}
+    @test vec == ["a", "b", "c"]
+
+    vec = StdVector{StdString}(getindex.(str_refs))
+    @test vec isa StdVector{StdString}
+    @test vec == ["a", "b", "c"]
+
+    @test_throws MethodError StdVector{Bool}([true])
+    @test_throws MethodError StdVector{CxxWrap.StdLib.StdStringAllocated}(StdString["a"])
+    @test_throws MethodError StdVector{CxxWrap.StdLib.StdStringDereferenced}(getindex.(str_refs))
+  end
+
   @testset "constructors" begin
-    @test StdVector([1,2,3]) == [1,2,3]
-    @test StdVector([1.0, 2.0, 3.0]) == [1,2,3]
-    @test StdVector([true, false, true]) == [true, false, true]
+    @test_throws MethodError StdVector()
+
+    vec = StdVector([1,2,3])
+    @test vec isa StdVector{Int}
+    @test vec == [1,2,3]
+
+    vec = StdVector([1.0, 2.0, 3.0])
+    @test vec isa StdVector{Float64}
+    @test vec == [1,2,3]
+
+    vec = StdVector([true, false, true])
+    @test vec isa StdVector{CxxBool}
+    @test vec == [true, false, true]
+
+    vec = StdVector(StdString["a", "b", "c"])
+    @test vec isa StdVector{StdString}
+    @test vec == ["a", "b", "c"]
+
+    str_refs = CxxRef.(StdString["a", "b", "c"])
+    vec = StdVector(str_refs)
+    @test vec isa StdVector{StdString}
+    @test vec == ["a", "b", "c"]
+
+    vec = StdVector(getindex.(str_refs))
+    @test vec isa StdVector{StdString}
+    @test vec == ["a", "b", "c"]
   end
 
   @testset "mutating with integer" begin

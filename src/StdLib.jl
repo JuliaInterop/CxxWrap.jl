@@ -74,29 +74,29 @@ function StdWString(s::String)
   StdWString(char_arr, length(char_arr))
 end
 
-function StdVector(v::Vector{T}) where {T}
-  if isempty(v)
-    return StdVector{T}()
-  end
-  if (CxxWrapCore.cpp_trait_type(T) == CxxWrapCore.IsCxxType)
-    return StdVector(CxxRef.(v))
-  end
+function StdVector{T}(v::Union{Vector{<:T},Vector{CxxRef{T}}}) where {T}
   result = StdVector{T}()
-  append(result, v)
+  isempty(v) || append(result, v)
   return result
 end
+
+StdVector{T}(v::Vector) where {T} = StdVector{T}(convert(Vector{T}, v))
 
 function StdVector(v::Vector{CxxRef{T}}) where {T}
-  result = isconcretetype(T) ? StdVector{supertype(T)}() : StdVector{T}()
-  append(result, v)
-  return result
+    S = isconcretetype(T) ? supertype(T) : T
+    return StdVector{S}(v)
 end
 
-function StdVector(v::Vector{Bool})
-  result = StdVector{CxxBool}()
-  append(result, convert(Vector{CxxBool}, v))
-  return result
+function StdVector(v::Vector{T}) where {T}
+    S = if CxxWrapCore.cpp_trait_type(T) == CxxWrapCore.IsCxxType
+      isconcretetype(T) ? supertype(T) : T
+    else
+      T
+    end
+    return StdVector{S}(v)
 end
+
+StdVector(v::Vector{Bool}) = StdVector{CxxBool}(v)
 
 Base.IndexStyle(::Type{<:StdVector}) = IndexLinear()
 Base.size(v::StdVector) = (Int(cppsize(v)),)
