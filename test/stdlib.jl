@@ -151,6 +151,10 @@ end
     @test vec isa StdVector{Int}
     @test vec == [1,2,3]
 
+    vec = StdVector{Any}([1,2,3])
+    @test vec isa StdVector{Any}
+    @test vec == [1,2,3]
+
     vec = StdVector{Float64}([1,2,3])
     @test vec isa StdVector{Float64}
     @test vec == [1.0,2.0,3.0]
@@ -182,6 +186,10 @@ end
 
     vec = StdVector([1,2,3])
     @test vec isa StdVector{Int}
+    @test vec == [1,2,3]
+
+    vec = StdVector(Any[1,2,3])
+    @test vec isa StdVector{Any}
     @test vec == [1,2,3]
 
     vec = StdVector([1.0, 2.0, 3.0])

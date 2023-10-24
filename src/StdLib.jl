@@ -74,7 +74,7 @@ function StdWString(s::String)
   StdWString(char_arr, length(char_arr))
 end
 
-function StdVector{T}(v::Union{Vector{<:T},Vector{CxxRef{T}}}) where {T}
+function StdVector{T}(v::Union{Vector{T},Vector{CxxRef{T}}}) where {T}
   result = StdVector{T}()
   isempty(v) || append(result, v)
   return result
