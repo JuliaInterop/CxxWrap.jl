@@ -191,8 +191,8 @@ end
     @test vec == ["a", "b", "c"]
 
     @test_throws MethodError StdVector{Bool}([true])
-    @test_throws MethodError StdVector{typeof(svec_alloc)}(svec_alloc)
-    @test_throws MethodError StdVector{typeof(svec_deref)}(svec_deref)
+    @test_throws MethodError StdVector{eltype(svec_alloc)}(svec_alloc)
+    @test_throws MethodError StdVector{eltype(svec_deref)}(svec_deref)
   end
 
   @testset "constructors" begin
