@@ -141,34 +141,141 @@ end
   end
 end
 
-stvec = StdVector(Int32[1,2,3])
-@test all(stvec .== [1,2,3])
-push!(stvec,1)
-@test all(stvec .== [1,2,3,1])
-resize!(stvec,2)
-@test all(stvec .== [1,2])
-append!(stvec,Int32[2,1])
-@test all(stvec .== [1,2,2,1])
-empty!(stvec)
-@test isempty(stvec)
+@testset "StdVector" begin
+  @testset "parameterized constructors" begin
+    vec = StdVector{Int}()
+    @test vec isa StdVector{Int}
+    @test isempty(vec)
 
-@test all(StdVector([1,2,3]) .== [1,2,3])
-@test all(StdVector([1.0,2.0,3.0]) .== [1,2,3])
-@test all(StdVector([true, false, true]) .== [true, false, true])
-bvec = StdVector([true, false, true])
-append!(bvec, [true])
-@test all(bvec .== [true, false, true, true])
+    vec = StdVector{Int}([])
+    @test vec isa StdVector{Int}
+    @test isempty(vec)
 
-cxxstrings = StdString["one", "two", "three"]
-svec = StdVector(CxxRef.(cxxstrings))
-@test all(svec .== ["one", "two", "three"])
-push!(svec, StdString("four"))
-@test all(svec .== ["one", "two", "three", "four"])
-cxxappstrings = StdString["five", "six"]
-append!(svec, CxxRef.(cxxappstrings))
-@test all(svec .== ["one", "two", "three", "four", "five", "six"])
-empty!(svec)
-@test isempty(svec)
+    vec = StdVector{Any}([])
+    @test vec isa StdVector{Any}
+    @test isempty(vec)
+
+    vec = StdVector{Int}([1,2,3])
+    @test vec isa StdVector{Int}
+    @test vec == [1,2,3]
+
+    vec = StdVector{Any}([1,2,3])
+    @test vec isa StdVector{Any}
+    @test vec == [1,2,3]
+
+    vec = StdVector{Float64}([1,2,3])
+    @test vec isa StdVector{Float64}
+    @test vec == [1.0,2.0,3.0]
+
+    vec = StdVector{CxxBool}([true, false, true])
+    @test vec isa StdVector{CxxBool}
+    @test vec == [true, false, true]
+
+    vec = StdVector{StdString}(["a", "b", "c"])
+    @test vec isa StdVector{StdString}
+    @test vec == ["a", "b", "c"]
+
+    svec_alloc = StdString.(["a", "b", "c"])::Vector{CxxWrap.StdLib.StdStringAllocated}
+    vec = StdVector{StdString}(svec_alloc)
+    @test vec isa StdVector{StdString}
+    @test vec == ["a", "b", "c"]
+
+    svec_ref = CxxRef.(StdString["a", "b", "c"])
+    vec = StdVector{StdString}(svec_ref)
+    @test vec isa StdVector{StdString}
+    @test vec == ["a", "b", "c"]
+
+    svec_deref = getindex.(svec_ref)::Vector{CxxWrap.StdLib.StdStringDereferenced}
+    vec = StdVector{StdString}(svec_deref)
+    @test vec isa StdVector{StdString}
+    @test vec == ["a", "b", "c"]
+
+    @test_throws MethodError StdVector{Bool}([true])
+    @test_throws MethodError StdVector{eltype(svec_alloc)}(svec_alloc)
+    @test_throws MethodError StdVector{eltype(svec_deref)}(svec_deref)
+  end
+
+  @testset "constructors" begin
+    @test_throws MethodError StdVector()
+
+    vec = StdVector(Int[])
+    @test vec isa StdVector{Int}
+    @test isempty(vec)
+
+    vec = StdVector(Any[])
+    @test vec isa StdVector{Any}
+    @test isempty(vec)
+
+    vec = StdVector([1,2,3])
+    @test vec isa StdVector{Int}
+    @test vec == [1,2,3]
+
+    vec = StdVector(Any[1,2,3])
+    @test vec isa StdVector{Any}
+    @test vec == [1,2,3]
+
+    vec = StdVector([1.0, 2.0, 3.0])
+    @test vec isa StdVector{Float64}
+    @test vec == [1,2,3]
+
+    vec = StdVector([true, false, true])
+    @test vec isa StdVector{CxxBool}
+    @test vec == [true, false, true]
+
+    vec = StdVector(StdString["a", "b", "c"])
+    @test vec isa StdVector{StdString}
+    @test vec == ["a", "b", "c"]
+
+    svec_alloc = StdString.(["a", "b", "c"])::Vector{CxxWrap.StdLib.StdStringAllocated}
+    vec = StdVector(svec_alloc)
+    @test vec isa StdVector{StdString}
+    @test vec == ["a", "b", "c"]
+
+    svec_ref = CxxRef.(StdString["a", "b", "c"])
+    vec = StdVector(svec_ref)
+    @test vec isa StdVector{StdString}
+    @test vec == ["a", "b", "c"]
+
+    svec_deref = getindex.(svec_ref)::Vector{CxxWrap.StdLib.StdStringDereferenced}
+    vec = StdVector(svec_deref)
+    @test vec isa StdVector{StdString}
+    @test vec == ["a", "b", "c"]
+
+    @test_throws MethodError StdVector(["a", "b", "c"])
+  end
+
+  @testset "mutating with integer" begin
+    stvec = StdVector(Int32[1,2,3])
+    @test stvec == [1,2,3]
+    push!(stvec,1)
+    @test stvec == [1,2,3,1]
+    resize!(stvec, 2)
+    @test stvec == [1,2]
+    append!(stvec, Int32[2,1])
+    @test stvec == [1,2,2,1]
+    empty!(stvec)
+    @test isempty(stvec)
+  end
+
+  @testset "mutating with bool" begin
+    bvec = StdVector([true, false, true])
+    append!(bvec, [true])
+    @test bvec == [true, false, true, true]
+  end
+
+  @testset "mutating with StdString" begin
+    cxxstrings = StdString["one", "two", "three"]
+    svec = StdVector(CxxRef.(cxxstrings))
+    @test svec == ["one", "two", "three"]
+    push!(svec, StdString("four"))
+    @test svec == ["one", "two", "three", "four"]
+    cxxappstrings = StdString["five", "six"]
+    append!(svec, CxxRef.(cxxappstrings))
+    @test svec == ["one", "two", "three", "four", "five", "six"]
+    empty!(svec)
+    @test isempty(svec)
+  end
+end
 
 stvec = StdVector(Int32[1,2,3])
 for vref in (CxxRef(stvec), CxxPtr(stvec))
