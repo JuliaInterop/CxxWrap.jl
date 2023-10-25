@@ -1,6 +1,6 @@
 # CxxWrap
 
-![test](https://github.com/JuliaInterop/CxxWrap.jl/workflows/test/badge.svg)
+[![test](https://github.com/JuliaInterop/CxxWrap.jl/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/JuliaInterop/CxxWrap.jl/actions/workflows/test.yml?query=branch%3Amain)
 
 This package aims to provide a Boost.Python-like wrapping for C++ types and functions to Julia.
 The idea is to write the code for the Julia wrapper in C++, and then use a one-liner on the Julia side to make the wrapped C++ library available there.
