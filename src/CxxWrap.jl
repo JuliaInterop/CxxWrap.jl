@@ -568,6 +568,7 @@ Base.unsafe_convert(to_type::Type{<:CxxBaseRef}, v::Base.RefValue) = to_type(poi
 
 Base.cconvert(::Type{CxxPtr{CxxPtr{CxxChar}}}, v::Vector{String}) = Base.cconvert(Ptr{Ptr{Cchar}}, v)
 Base.unsafe_convert(to_type::Type{CxxPtr{CxxPtr{CxxChar}}}, a::Base.RefArray{Ptr{Int8}, Vector{Ptr{Int8}}, Any}) = to_type(Base.unsafe_convert(Ptr{Ptr{Cchar}}, a))
+Base.unsafe_convert(to_type::Type{CxxPtr{CxxPtr{CxxChar}}}, a::Base.RefArray{Ptr{Int8}, Vector{Ptr{Int8}}, Vector{Any}}) = to_type(Base.unsafe_convert(Ptr{Ptr{Cchar}}, a))
 
 cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x, ::Type{IsNormalType}) where {T} = Ref{T}(convert(T,x))
 cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x::Base.RefValue, ::Type{IsNormalType}) where {T} = x
