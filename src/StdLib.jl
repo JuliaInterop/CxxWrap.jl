@@ -37,6 +37,7 @@ Base.codeunit(s::StdString) = UInt8
 Base.codeunit(s::StdWString) = Cwchar_t == Int32 ? UInt32 : UInt16
 Base.codeunit(s::CppBasicString, i::Integer) = reinterpret(codeunit(s), cxxgetindex(s,i))
 Base.isvalid(s::CppBasicString, i::Int) = checkbounds(Bool, s, i) && thisind(s, i) == i
+@inline Base.between(b::T1, lo::T2, hi::T2) where {T1<:Integer,T2<:Integer} = (lo ≤ b) & (b ≤ hi)
 Base.thisind(s::CppBasicString, i::Int) = Base._thisind_str(s, i)
 Base.nextind(s::CppBasicString, i::Int) = Base._nextind_str(s, i)
 
