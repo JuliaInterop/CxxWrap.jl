@@ -304,6 +304,7 @@ mutable struct CppFunctionInfo
   function_pointer::Ptr{Cvoid}
   thunk_pointer::Ptr{Cvoid}
   override_module::Module
+  doc::Any
 end
 
 # Interpreted as a constructor for Julia  > 0.5
@@ -646,6 +647,12 @@ function build_function_expression(func::CppFunctionInfo, funcidx, julia_mod)
   end
 
   function_expression = :($(make_func_declaration((func.name,func.override_module), argmap(argtypes), julia_mod))::$(map_julia_return_type(func.julia_return_type)) = $call_exp)
+
+  if func.doc != ""
+    function_expression = :(Core.@doc $(func.doc) $function_expression)
+    println(function_expression)
+  end
+
   return function_expression
 end
 
