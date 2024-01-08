@@ -305,6 +305,9 @@ mutable struct CppFunctionInfo
   thunk_pointer::Ptr{Cvoid}
   override_module::Module
   doc::Any
+  argument_names::Array{Any,1}
+  argument_default_values::Array{Any,1}
+  n_keyword_arguments::Any
 end
 
 # Interpreted as a constructor for Julia  > 0.5
@@ -470,9 +473,9 @@ function process_fname(fn::CallOpOverload)
   return :(arg1::$(fn._type))
 end
 
-make_func_declaration(fn, argmap, julia_mod) = :($(process_fname(fn, julia_mod))($(argmap...)))
-function make_func_declaration(fn::Tuple{CallOpOverload,Module}, argmap, julia_mod)
-  return :($(process_fname(fn, julia_mod))($((argmap[2:end])...)))
+make_func_declaration(fn, argmap, kw_argmap, julia_mod) = :($(process_fname(fn, julia_mod))($(argmap...);$(kw_argmap...)))
+function make_func_declaration(fn::Tuple{CallOpOverload,Module}, argmap, kw_argmap, julia_mod)
+  return :($(process_fname(fn, julia_mod))($((argmap[2:end])...);$(kw_argmap...)))
 end
 
 # By default, no argument overloading happens
@@ -588,7 +591,9 @@ end
 function build_function_expression(func::CppFunctionInfo, funcidx, julia_mod)
   # Arguments and types
   argtypes = func.argument_types
-  argsymbols = map((i) -> Symbol(:arg,i[1]), enumerate(argtypes))
+  argnames = func.argument_names
+  argsymbols = map((i) -> i[1] <= length(argnames) ? Symbol(argnames[i[1]]) : Symbol(:arg,i[1]), enumerate(argtypes))
+  n_kw_args = func.n_keyword_arguments
 
   map_c_arg_type(t::Type) = map_c_arg_type(Base.invokelatest(cpp_trait_type, t), t)
   map_c_arg_type(::Type{IsNormalType}, t::Type) = t
@@ -646,7 +651,11 @@ function build_function_expression(func::CppFunctionInfo, funcidx, julia_mod)
     return result
   end
 
-  function_expression = :($(make_func_declaration((func.name,func.override_module), argmap(argtypes), julia_mod))::$(map_julia_return_type(func.julia_return_type)) = $call_exp)
+  complete_argmap = argmap(argtypes)
+  pos_argmap = complete_argmap[1:end-n_kw_args]
+  kw_argmap = complete_argmap[end-n_kw_args+1:end]
+
+  function_expression = :($(make_func_declaration((func.name,func.override_module), pos_argmap, kw_argmap, julia_mod))::$(map_julia_return_type(func.julia_return_type)) = $call_exp)
 
   if func.doc != ""
     function_expression = :(Core.@doc $(func.doc) $function_expression)
