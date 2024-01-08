@@ -75,6 +75,7 @@ end
 @test CppTestFunctions.concatenate_numbers(4, 2.) == "42"
 @test methods(CppTestFunctions.concatenate_numbers_with_named_args)[1].slot_syms == "#self#\0i\0d\0val\0"
 @test CppTestFunctions.concatenate_numbers_with_kwargs(d=2., i=4) == "42"
+@test CppTestFunctions.concatenate_numbers_with_default_values(3) == "35.2"
 @test hasmethod(CppTestFunctions.concatenate_numbers, (Union{Cint,CxxWrap.CxxWrapCore.argument_overloads(Cint)...},Union{Cdouble,CxxWrap.CxxWrapCore.argument_overloads(Cdouble)...}))
 @test CppTestFunctions.concatenate_strings(2, "ho", "la") == "holahola"
 @test CppTestFunctions.test_int32_array(Int32[1,2])
