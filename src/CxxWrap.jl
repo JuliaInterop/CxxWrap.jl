@@ -652,7 +652,9 @@ function build_function_expression(func::CppFunctionInfo, funcidx, julia_mod)
         # somewhat strange syntax to define default argument argument...
         kw = Expr(:kw)
         push!(kw.args, :($s::$argt))
-        push!(kw.args, arg_default_values[i])
+        # convert to t to avoid problems on the calling site with mismatchin data types
+        # (e.g. f(x::Int64 = Int32(1)) = ...  is not callable without argument because f(Int32) does not exist
+        push!(kw.args, t(arg_default_values[i]))
         push!(result, kw)
       else
         push!(result, :($s::$argt))
