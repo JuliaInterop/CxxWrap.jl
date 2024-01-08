@@ -594,6 +594,7 @@ function build_function_expression(func::CppFunctionInfo, funcidx, julia_mod)
   argnames = func.argument_names
   argsymbols = map((i) -> i[1] <= length(argnames) ? Symbol(argnames[i[1]]) : Symbol(:arg,i[1]), enumerate(argtypes))
   n_kw_args = func.n_keyword_arguments
+  arg_default_values = func.argument_default_values
 
   map_c_arg_type(t::Type) = map_c_arg_type(Base.invokelatest(cpp_trait_type, t), t)
   map_c_arg_type(::Type{IsNormalType}, t::Type) = t
@@ -645,8 +646,17 @@ function build_function_expression(func::CppFunctionInfo, funcidx, julia_mod)
   # Build an array of arg1::Type1... expressions
   function argmap(signature)
     result = Expr[]
-    for (t, s) in zip(signature, argsymbols)
-      push!(result, :($s::$(map_julia_arg_type_named(func.name, t))))
+    for (t, s, i) in zip(signature, argsymbols, range(1,length(signature)))
+      argt = map_julia_arg_type_named(func.name, t)
+      if isassigned(arg_default_values, i)
+        # somewhat strange syntax to define default argument argument...
+        kw = Expr(:kw)
+        push!(kw.args, :($s::$argt))
+        push!(kw.args, arg_default_values[i])
+        push!(result, kw)
+      else
+        push!(result, :($s::$argt))
+      end
     end
     return result
   end
