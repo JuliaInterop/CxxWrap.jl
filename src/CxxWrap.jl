@@ -650,7 +650,6 @@ function build_function_expression(func::CppFunctionInfo, funcidx, julia_mod)
 
   if func.doc != ""
     function_expression = :(Core.@doc $(func.doc) $function_expression)
-    println(function_expression)
   end
 
   return function_expression
