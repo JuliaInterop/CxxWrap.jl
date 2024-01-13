@@ -179,11 +179,11 @@ CppTypes.set(w, "hello")
 ```
 
 The manually added constructor using the `constructor` function also creates a finalizer.
-This can be disabled by adding the argument `false`:
+This can be disabled by adding the argument `jlcxx::finalize_policy::no`:
 
 ```c++
 types.add_type<World>("World")
-  .constructor<const std::string&>(false);
+  .constructor<const std::string&>(jlcxx::finalize_policy::no);
 ```
 
 The `add_type` function actually builds two Julia types related to `World`.
@@ -648,10 +648,10 @@ The behavior of the macro can be customized by adding methods to `CxxWrap.refere
 ## Exceptions
 
 When directly adding a regular free C++ function as a method, it will be called directly using `ccall` and any exception will abort the Julia program.
-To avoid this, you can force wrapping it in an `std::function` to intercept the exception automatically by setting the `force_convert` argument to `method` to true:
+To avoid this, you can force wrapping it in an `std::function` to intercept the exception automatically by setting the `jlcxx::calling_policy` argument to `std_function`:
 
 ```c++
-mod.method("test_exception", test_exception, true);
+mod.method("test_exception", test_exception, jlcxx::calling_policy::std_function);
 ```
 
 Member functions and lambdas are automatically wrapped in an `std::function` and so any exceptions thrown there are always intercepted and converted to a Julia exception.
