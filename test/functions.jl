@@ -73,7 +73,11 @@ end
 
 # Test functions from the CppTestFunctions module
 @test CppTestFunctions.concatenate_numbers(4, 2.) == "42"
-@test startswith(methods(CppTestFunctions.concatenate_numbers_with_named_args)[1].slot_syms, "#self#\0i\0d\0")
+if VERSION < v"1.7"
+  @test startswith(methods(CppTestFunctions.concatenate_numbers_with_named_args).ms[1].slot_syms, "#self#\0i\0d\0")
+else
+  @test startswith(methods(CppTestFunctions.concatenate_numbers_with_named_args)[1].slot_syms, "#self#\0i\0d\0")
+end
 @test CppTestFunctions.concatenate_numbers_with_kwargs(d=2., i=4) == "42"
 @test CppTestFunctions.concatenate_numbers_with_default_values(3) == "35.2"
 @test CppTestFunctions.concatenate_numbers_with_default_values_of_different_type(3) == "35"
