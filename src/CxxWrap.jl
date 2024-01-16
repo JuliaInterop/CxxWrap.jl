@@ -646,7 +646,7 @@ function build_function_expression(func::CppFunctionInfo, funcidx, julia_mod)
   # Build an array of arg1::Type1... expressions
   function argmap(signature)
     result = Expr[]
-    for (t, s, i) in zip(signature, argsymbols, range(1,length(signature)))
+    for (t, s, i) in zip(signature, argsymbols, 1:length(signature))
       argt = map_julia_arg_type_named(func.name, t)
       if isassigned(arg_default_values, i)
         # somewhat strange syntax to define default argument argument...
