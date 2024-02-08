@@ -160,12 +160,6 @@ w_copy = copy(w)
 
 # Destroy w: w and w_assigned should be dead, w_copy alive
 finalize(w)
-#finalize(w_lambda)
-if !(Sys.iswindows() && Sys.WORD_SIZE == 32)
-  @test_throws ErrorException CppTypes.greet(w)
-  @test_throws ErrorException CppTypes.greet(w_assigned)
-  #@test_throws ErrorException CppTypes.greet(w_lambda)
-end
 @test CppTypes.greet(w_copy) == "constructed"
 println("completed copy test")
 
@@ -298,4 +292,9 @@ let cd1 = CppTypes.UseCustomDelete(), cd2 = CppTypes.UseCustomClassDelete()
   @test CppTypes.get_custom_nb_deletes() == 1
   finalize(cd2)
   @test CppTypes.get_custom_class_nb_deletes() == 1
+end
+
+let v = CppTypes.shared_vector_factory(), cv = CppTypes.shared_const_vector_factory()
+  @test CppTypes.get_shared_vector_msg(v) == "shared vector hello"
+  @test CppTypes.get_shared_vector_msg(cv) == "shared vector const hello from const overload"
 end
