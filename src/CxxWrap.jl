@@ -935,8 +935,8 @@ ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,
 CppEnum, ConstArray, CxxBool, CxxLong, CxxULong, CxxChar, CxxChar16, CxxChar32, CxxWchar, CxxUChar, CxxSignedChar,
 CxxLongLong, CxxULongLong, ptrunion, gcprotect, gcunprotect, isnull
 
-using .StdLib: StdVector, StdString, StdWString, StdValArray, StdThread, StdDeque
+using .StdLib: StdVector, StdString, StdWString, StdValArray, StdThread, StdDeque, StdQueue
 
-export StdLib, StdVector, StdString, StdWString, StdValArray, StdThread, StdDeque
+export StdLib, StdVector, StdString, StdWString, StdValArray, StdThread, StdDeque, StdQueue
 
 end # module
