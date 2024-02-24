@@ -314,4 +314,17 @@ let
   @test length(deque2) == 1
 end
 
+let
+  @show "test queue"
+  queue = StdQueue{Int64}()
+  @test length(queue) == 0
+  push!(queue, 10)
+  push!(queue, 20)
+  @test length(queue) == 2
+  @test first(queue) == 10
+  pop!(queue)
+  @test first(queue) == 20
+  @test length(queue) == 1
+end
+
 end
