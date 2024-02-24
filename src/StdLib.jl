@@ -207,4 +207,9 @@ Base.pushfirst!(v::StdDeque, x) = push_front!(v, x)
 Base.pop!(v::StdDeque) = pop_back!(v)
 Base.popfirst!(v::StdDeque) = pop_front!(v)
 Base.resize!(v::StdDeque, n::Integer) = resize!(v, n)
+
+Base.size(v::StdQueue) = (Int(cppsize(v)),)
+Base.push!(v::StdQueue, x) = push_back!(v, x)
+Base.first(v::StdQueue) = front(v)
+Base.pop!(v::StdQueue) = pop_front!(v)
 end
