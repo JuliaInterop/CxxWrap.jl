@@ -20,21 +20,34 @@ jobs:
       matrix:
         version:
           - '1.6'
-          - '1.9'
-          - 'nightly'
+          - '1.10'
         os:
           - macOS-latest
-          - windows-latest
           - ubuntu-latest
         arch:
           - x64
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: julia-actions/setup-julia@latest
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
-      - run: julia -e "using Pkg; Pkg.status(); Pkg.Registry.add(RegistrySpec(url = \"https://github.com/barche/CxxWrapTestRegistry.git\"))"
+      - run: |
+          mkdir libcxxwrap && cd libcxxwrap
+          body="${{github.event.pull_request.body}}"
+          echo $body
+          read -r repo_url
+          read -r branch
+          git clone --branch $branch --single-branch $repo_url . .
+          if [[ "$OSTYPE" != "darwin"* ]]; then
+            rm -f /opt/hostedtoolcache/julia/1.6*/x64/lib/julia/libstdc++.so.6
+          fi
+          mkdir build && cd build
+          cmake -DCMAKE_INSTALL_PREFIX=$HOME/install -DAPPEND_OVERRIDES_TOML=ON -DOVERRIDE_VERSION_TO_JLL=ON -DCMAKE_BUILD_TYPE=Debug ..
+          VERBOSE=ON cmake --build . --config Debug --target install
+          cd ../..
       - uses: julia-actions/julia-buildpkg@latest
       - uses: julia-actions/julia-runtest@latest
 
