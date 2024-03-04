@@ -38,9 +38,17 @@ jobs:
           mkdir libcxxwrap && cd libcxxwrap
           body="${{github.event.pull_request.body}}"
           echo $body
-          read -r repo_url
-          read -r branch
+          while IFS= read -r line || [ -n "$line" ]; do
+            if [ -z "$line1" ]; then
+              repo_url="$line"
+            else
+              branch="$line"
+            fi
+          done <<< "$content"
+          echo $repo_url
+          echo $branch
           git clone --branch $branch --single-branch $repo_url . .
+          echo "done cloning"
           if [[ "$OSTYPE" != "darwin"* ]]; then
             rm -f /opt/hostedtoolcache/julia/1.6*/x64/lib/julia/libstdc++.so.6
           fi
