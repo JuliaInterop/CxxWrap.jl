@@ -1,4 +1,4 @@
-name: test
+name: test-linux-mac
 on:
   push:
     branches-ignore:
