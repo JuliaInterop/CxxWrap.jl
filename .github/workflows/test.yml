@@ -34,7 +34,8 @@ jobs:
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
-      - run: |
+      - name: Build libcxxwrap
+        run: |
           mkdir libcxxwrap && cd libcxxwrap
 
           body="${{github.event.pull_request.body}}"
@@ -42,14 +43,14 @@ jobs:
           branch=$(echo "$body" | sed -n '2p')
           echo $repo_url
           echo $branch
-
           git clone --branch $branch --single-branch $repo_url .
           echo "done cloning"
+
           if [[ "$OSTYPE" != "darwin"* ]]; then
             rm -f /opt/hostedtoolcache/julia/1.6*/x64/lib/julia/libstdc++.so.6
           fi
           mkdir build && cd build
-          cmake -DCMAKE_INSTALL_PREFIX=$HOME/install -DAPPEND_OVERRIDES_TOML=ON -DOVERRIDE_VERSION_TO_JLL=ON -DCMAKE_BUILD_TYPE=Debug ..
+          cmake -DCMAKE_INSTALL_PREFIX=$HOME/install -DAPPEND_OVERRIDES_TOML=ON -DOVERRIDE_VERSION_TO_JLL=OFF -DCMAKE_BUILD_TYPE=Debug ..
           VERBOSE=ON cmake --build . --config Debug --target install
           cd ../..
       - uses: julia-actions/julia-buildpkg@latest
