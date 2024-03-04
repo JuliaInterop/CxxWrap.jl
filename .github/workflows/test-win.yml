@@ -1,0 +1,64 @@
+name: test-win
+on:
+  push:
+    branches-ignore:
+      - prerelease
+  pull_request:
+    branches-ignore:
+      - prerelease
+
+defaults:
+  run:
+    shell: bash
+    
+jobs:
+  test:
+    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        version:
+          - '1.6'
+          - '1.10'
+        os:
+          - windows-latest
+        arch:
+          - x64
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: julia-actions/setup-julia@latest
+        with:
+          version: ${{ matrix.version }}
+          arch: ${{ matrix.arch }}
+      - name: Clone libcxxwrap
+        run: |
+          mkdir libcxxwrap && cd libcxxwrap
+
+          body="${{github.event.pull_request.body}}"
+          repo_url=$(echo "$body" | sed -n '1p')
+          branch=$(echo "$body" | sed -n '2p')
+          echo $repo_url
+          echo $branch
+          git clone --branch $branch --single-branch $repo_url .
+          echo "done cloning"
+      - name: Config 32bit
+        if: ${{ matrix.arch == 'x86'}}
+        run: |
+            cd libcxxwrap && mkdir build && cd build
+            cmake -G "Visual Studio 17 2022" -A Win32 -DOVERRIDES_PATH=$HOMEDRIVE/$HOMEPATH/.julia/artifacts/Overrides.toml -DOVERRIDE_ROOT=./ -DAPPEND_OVERRIDES_TOML=ON ..
+      - name: Config 64bit
+        if: ${{ matrix.arch == 'x64'}}
+        run: |
+            cd libcxxwrap mkdir build && cd build
+            cmake -G "Visual Studio 17 2022" -A x64 -DOVERRIDES_PATH=$HOMEDRIVE/$HOMEPATH/.julia/artifacts/Overrides.toml -DOVERRIDE_ROOT=./ -DAPPEND_OVERRIDES_TOML=ON ..
+      - name: Build libcxxwrap
+        run: |
+            cd libcxxwrap/build
+            cmake --build . --config Release
+             
+      - uses: julia-actions/julia-buildpkg@latest
+      - uses: julia-actions/julia-runtest@latest
+
