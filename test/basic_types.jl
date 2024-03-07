@@ -34,9 +34,19 @@ end
 
 @testset "$(basename(@__FILE__)[1:end-3])" begin
 
+function compare_collections(a, b)
+  equalities = a .== b
+  result = all(equalities)
+  if !result
+    neqs = (!).(equalities)
+    println("collections differ: $(a[neqs]) ≠ $(b[neqs])")
+  end
+  return result
+end
+
 let funcs = CxxWrap.CxxWrapCore.get_module_functions(CxxWrap.StdLib)
   @test CxxWrap.StdLib.__cxxwrap_methodkeys[1] == CxxWrap.CxxWrapCore.methodkey(funcs[1])
-  @test all(CxxWrap.StdLib.__cxxwrap_methodkeys .== CxxWrap.CxxWrapCore.methodkey.(funcs))
+  @test compare_collections(CxxWrap.StdLib.__cxxwrap_methodkeys, CxxWrap.CxxWrapCore.methodkey.(funcs))
 end
 
 let a = BasicTypes.A(2,3)
