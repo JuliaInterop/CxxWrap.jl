@@ -385,7 +385,8 @@ There is also an `apply_combination` method to make applying all combinations of
 
 Full example and test including non-type parameters at: [`examples/parametric.cpp`](https://github.com/JuliaInterop/libcxxwrap-julia/tree/master/examples/parametric.cpp) and [`test/parametric.jl`](test/parametric.jl).
 
-## Constructors and destructors
+## Memory management
+### Constructors and destructors
 
 The default constructor and any manually added constructor using the `constructor` function will automatically create a Julia object that has a finalizer attached that calls delete to free the memory.
 To write a C++ function that returns a new object that can be garbage-collected in Julia, use the `jlcxx::create` function:
@@ -404,6 +405,13 @@ The copy constructor is mapped to Julia's standard `copy` function. Using the `.
 wvec = cpp_function_returning_vector()
 julia_array = copy.(wvec)
 ```
+
+### Return values
+If a wrapped C++ function returns an object by value, the wrapped object gets a finalizer
+and is owned by Julia. The same holds if a smart pointer such as `shared_ptr` (automatically
+wrapped in a `SharedPtr`) is returned by value. In contrast to that, if a reference or raw
+pointer is returned from C++, then the default assumption is that the pointed-to object
+lifetime is managed by C++.
 
 ## Call operator overload
 
