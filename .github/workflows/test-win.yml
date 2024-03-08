@@ -51,7 +51,7 @@ jobs:
           fi
           echo "repo_url: '$repo_url'"
           echo "branch: '$branch'"
-          git clone --branch "$branch" --single-branch "$repo_url"
+          git clone --branch "$branch" --single-branch "$repo_url" .
           echo "done cloning"
       - name: Config 32bit
         if: ${{ matrix.arch == 'x86'}}
