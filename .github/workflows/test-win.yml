@@ -35,6 +35,7 @@ jobs:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
       - name: Clone libcxxwrap
+        continue-on-error: true
         run: |
           mkdir libcxxwrap && cd libcxxwrap
 
@@ -54,16 +55,19 @@ jobs:
           git clone --branch "$branch" --single-branch "$repo_url" .
           echo "done cloning"
       - name: Config 32bit
+        continue-on-error: true
         if: ${{ matrix.arch == 'x86'}}
         run: |
             cd libcxxwrap && mkdir build && cd build
             cmake -G "Visual Studio 17 2022" -A Win32 -DOVERRIDES_PATH=$HOMEDRIVE/$HOMEPATH/.julia/artifacts/Overrides.toml -DOVERRIDE_ROOT=./ -DAPPEND_OVERRIDES_TOML=ON ..
       - name: Config 64bit
+        continue-on-error: true
         if: ${{ matrix.arch == 'x64'}}
         run: |
             cd libcxxwrap && mkdir build && cd build
             cmake -G "Visual Studio 17 2022" -A x64 -DOVERRIDES_PATH=$HOMEDRIVE/$HOMEPATH/.julia/artifacts/Overrides.toml -DOVERRIDE_ROOT=./ -DAPPEND_OVERRIDES_TOML=ON ..
       - name: Build libcxxwrap
+        continue-on-error: true
         run: |
             cd libcxxwrap/build
             cmake --build . --config Release

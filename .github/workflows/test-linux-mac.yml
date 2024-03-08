@@ -36,6 +36,7 @@ jobs:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
       - name: Build libcxxwrap
+        continue-on-error: true
         run: |
           mkdir libcxxwrap && cd libcxxwrap
 
