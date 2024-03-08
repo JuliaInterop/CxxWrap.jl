@@ -11,7 +11,7 @@ libcxxwrap_julia_jll = "3eaa8342-bff7-56a5-9981-c04077f7cee7"
 [compat]
 MacroTools = "0.5.9"
 julia = "1.6"
-libcxxwrap_julia_jll = "0.12.1"
+libcxxwrap_julia_jll = "0.12.2"
 
 [extras]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
