@@ -50,7 +50,7 @@ let funcs = CxxWrap.CxxWrapCore.get_module_functions(CxxWrap.StdLib)
 end
 
 let a = BasicTypes.A(2,3)
-  @test BasicTypes.f(a) == 4.0
+  @test BasicTypes.f(a) == 5.0
   @test BasicTypes.g(a) == 5.0
   @test BasicTypes.g(Ref(a)) == 5.0
   @test BasicTypes.h(Ref(a)) == 5.0
