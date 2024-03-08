@@ -40,11 +40,19 @@ jobs:
           mkdir libcxxwrap && cd libcxxwrap
 
           body="${{github.event.pull_request.body}}"
-          repo_url=$(echo "$body" | sed -n '1p')
-          branch=$(echo "$body" | sed -n '2p')
-          echo $repo_url
-          echo $branch
-          git clone --branch $branch --single-branch $repo_url .
+          first_line=$(echo "$body" | sed -n '1p')
+          if [[ "$first_line" == *"#"* ]]; then
+            IFS='#' read -r left right <<< "$first_line"
+
+            repo_url=$(echo "$left" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+            branch=$(echo "$right" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+          else
+            repo_url="$first_line"
+            branch="main"
+          fi
+          echo "repo_url: '$repo_url'"
+          echo "branch: '$branch'"
+          git clone --branch "$branch" --single-branch "$repo_url"
           echo "done cloning"
 
           if [[ "$OSTYPE" != "darwin"* ]]; then
