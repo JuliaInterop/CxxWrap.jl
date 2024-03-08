@@ -59,7 +59,7 @@ jobs:
             rm -f /opt/hostedtoolcache/julia/1.6*/x64/lib/julia/libstdc++.so.6
           fi
           mkdir build && cd build
-          cmake -DCMAKE_INSTALL_PREFIX=$HOME/install -DAPPEND_OVERRIDES_TOML=ON -DOVERRIDE_VERSION_TO_JLL=OFF -DCMAKE_BUILD_TYPE=Debug ..
+          cmake -DCMAKE_INSTALL_PREFIX=$HOME/install -DAPPEND_OVERRIDES_TOML=ON -DOVERRIDE_VERSION_TO_JLL=ON -DCMAKE_BUILD_TYPE=Debug ..
           VERBOSE=ON cmake --build . --config Debug --target install
           cd ../..
       - uses: julia-actions/julia-buildpkg@latest
