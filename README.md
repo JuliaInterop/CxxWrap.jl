@@ -974,6 +974,10 @@ Often, new releases of `CxxWrap` also require a new release of the C++ component
 ## Breaking changes in v0.13
 * Automatic dereferencing of smart pointers was removed, so some code may require adding the dereferencing operator `[]` explicitly. See [PR #338](https://github.com/JuliaInterop/CxxWrap.jl/pull/338).
 
+## Breaking changes in v0.15
+* This release is based on `libcxxwrap-julia` 0.12, which is binary incompatible with previous versions, so JLLs should be rebuilt to use CxxWrap 0.15
+* The `constructor` method now takes a `jlcxx::finalize_policy` instead of a `bool`, e.g. `.constructor<Foo>(false)` becomes `.constructor<Foo>(jlcxx::finalize_policy::no)`
+
 ## References
 * [JuliaCon 2020 Talk: Julia and C++: a technical overview of CxxWrap.jl](https://www.youtube.com/watch?v=u7IaXwKSUU0)
 * [JuliaCon 2020 Workshop: Wrapping a C++ library using CxxWrap.jl](https://www.youtube.com/watch?v=VoXmXtqLhdo)
