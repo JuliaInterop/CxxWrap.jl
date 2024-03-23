@@ -23,7 +23,7 @@ jobs:
           - '1.10'
           - 'nightly'
         os:
-          - macOS-latest
+          - macos-13
           - ubuntu-latest
         arch:
           - x64
