@@ -327,4 +327,32 @@ let
   @test length(queue) == 1
 end
 
+@testset "StdFill" begin
+  @testset "fill StdVector" begin
+    v = StdVector{Int64}([1, 2, 3, 4, 5])
+    fill!(v, 1)
+    for x in v
+      @test x == 1
+    end
+  end
+
+  @testset "fill StdValArray" begin
+    v = StdValArray([1.0, 2.0, 3.0])
+    fill!(v, 2)
+    for x in v
+      @test x == 2
+    end
+  end
+
+  @testset "fill StdDeque" begin
+    deq = StdDeque{Int64}()
+    for i = 1:10
+      push!(deq, i)
+    end
+    fill!(deq, 3)
+    for x in deq
+      @test x == 3
+    end
+  end
+end
 end
