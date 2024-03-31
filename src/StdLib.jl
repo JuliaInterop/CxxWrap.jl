@@ -194,10 +194,6 @@ Base.size(v::StdValArray) = (Int(cppsize(v)),)
 Base.getindex(v::StdValArray, i::Int) = cxxgetindex(v,i)[]
 Base.setindex!(v::StdValArray{T}, val, i::Int) where {T} = cxxsetindex!(v, convert(T,val), i)
 
-function StdDeque(v::Vector{T}) where {T}
-  return StdDeque{T}(v, length(v))
-end
-
 Base.IndexStyle(::Type{<:StdDeque}) = IndexLinear()
 Base.size(v::StdDeque) = (Int(cppsize(v)),)
 Base.getindex(v::StdDeque, i::Int) = cxxgetindex(v,i)[]
@@ -212,4 +208,10 @@ Base.size(v::StdQueue) = (Int(cppsize(v)),)
 Base.push!(v::StdQueue, x) = push_back!(v, x)
 Base.first(v::StdQueue) = front(v)
 Base.pop!(v::StdQueue) = pop_front!(v)
+
+function Base.fill!(v::T, x) where T <: Union{StdVector, StdValArray, StdDeque}
+  StdFill(v, x)
+  return v
+end
+
 end
