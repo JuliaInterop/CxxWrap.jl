@@ -209,6 +209,9 @@ Base.push!(v::StdQueue, x) = push_back!(v, x)
 Base.first(v::StdQueue) = front(v)
 Base.pop!(v::StdQueue) = pop_front!(v)
 
+function Base.fill!(v::T, x) where T <: Union{StdVector, StdValArray, StdDeque}
+  StdFill(v, x)
+  return v
+end
 
-Base.fill!(v::T, x) where T <: Union{StdVector, StdValArray, StdDeque} = StdFill(v, x)
 end
