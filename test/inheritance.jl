@@ -40,7 +40,15 @@ global d = D()
 @test take_ref(d) == "D"
 
 # factory function returning an abstract type A
-@test message(create_abstract()) == "B"
+let abstract_b = create_abstract()
+  @test message(abstract_b) == "B"
+  abstract_b_ptr = CxxPtr(abstract_b)
+  @test !isnull(convert(CxxPtr{B},abstract_b_ptr))
+  @test message(convert(CxxPtr{B},abstract_b_ptr)) == "B"
+  @test isnull(convert(CxxPtr{C},abstract_b_ptr))
+  @test isnull(convert(CxxPtr{D},abstract_b_ptr))
+  @test convert(CxxPtr{A},abstract_b_ptr) === abstract_b_ptr
+end
 
 @test dynamic_message_c(c) == "C"
 

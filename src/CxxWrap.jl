@@ -294,12 +294,16 @@ Base.setindex!(x::CxxBaseRef, val, i::Int) = Base.setindex!(x[], val, i)
 Base.unsafe_convert(to_type::Type{<:CxxBaseRef}, x) = to_type(x.cpp_object)
 
 # This is defined on the C++ side for each wrapped type
+cxxdowncast(::Type{T}, x::CxxPtr{T}) where {T} = x
 cxxupcast(x) = cxxupcast(CxxRef(x))
 cxxupcast(x::CxxRef) = error("No upcast for type $(supertype(typeof(x))). Did you specialize SuperType to enable automatic upcasting?")
 function cxxupcast(::Type{T}, x) where {T}
   cxxupcast(T, cxxupcast(x))
 end
 cxxupcast(::Type{T}, x::CxxBaseRef{T}) where {T} = x
+
+# Dynamic cast equivalent
+Base.convert(::Type{CxxPtr{DerivedT}}, x::CxxPtr{SuperT}) where {SuperT, DerivedT <: SuperT} = cxxdowncast(DerivedT, x)
 
 struct ConstArray{T,N} <: AbstractArray{T,N}
   ptr::ConstCxxPtr{T}
@@ -582,6 +586,7 @@ map_julia_arg_type(t::Type{ConstCxxPtr{CxxChar}}) = Union{ConstPtrTypes{Cchar}, 
 
 # names excluded from julia type mapping
 const __excluded_names = Set([
+      :cxxdowncast,
       :cxxupcast,
       :__cxxwrap_smartptr_dereference,
       :__cxxwrap_smartptr_construct_from_other,
@@ -808,7 +813,7 @@ function readmodule(so_path_cb::Function, funcname, m::Module, flags)
   so_path = so_path_cb()
   fptr = Libdl.dlsym(Libdl.dlopen(so_path, flags), funcname)
   register_julia_module(m, fptr)
-  include_dependency(so_path)
+  include_dependency(Libdl.dlpath(so_path))
 end
 
 function wrapmodule(so_path::String, funcname, m::Module, flags)
