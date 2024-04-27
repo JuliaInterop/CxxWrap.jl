@@ -294,6 +294,29 @@ auto multi_vector_base = mod.add_type<Parametric<TypeVar<1>>>("MultiVectorBase")
 auto vector_base = mod.add_type<Parametric<TypeVar<1>>>("VectorBase", multi_vector_base.dt());
 ```
 
+### Conversion
+
+Conversion to the base type happens automatically, or can be forced by calling convert, e.g.
+
+```julia
+convert(A,b)
+```
+
+Where we have `b::B` and `B <: A`
+
+For the equivalent of a C++ `dynamic_cast`, we need to use pointers because the conversion may fail, i.e:
+
+```julia
+convert(CxxPtr{B},CxxPtr(a))
+```
+
+This is equivalent to the C++ code:
+```c++
+dynamic_cast<B*>(&a);
+```
+
+Use `isnull` on the result to check if the conversion was successful or not.
+
 See the test at [`examples/inheritance.cpp`](https://github.com/JuliaInterop/libcxxwrap-julia/tree/master/examples/inheritance.cpp) and [`test/inheritance.jl`](test/inheritance.jl).
 
 ## Enum types
