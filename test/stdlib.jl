@@ -327,6 +327,8 @@ let
   @test length(queue) == 1
 end
 
+@static if isdefined(StdLib, :HAS_RANGES)
+
 @testset "StdFill" begin
   @testset "fill StdVector" begin
     v = StdVector{Int64}([1, 2, 3, 4, 5])
@@ -355,4 +357,7 @@ end
     end
   end
 end
+
+end
+
 end
