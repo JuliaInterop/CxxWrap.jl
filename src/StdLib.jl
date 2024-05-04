@@ -194,20 +194,33 @@ Base.size(v::StdValArray) = (Int(cppsize(v)),)
 Base.getindex(v::StdValArray, i::Int) = cxxgetindex(v,i)[]
 Base.setindex!(v::StdValArray{T}, val, i::Int) where {T} = cxxsetindex!(v, convert(T,val), i)
 
+# Deque
 Base.IndexStyle(::Type{<:StdDeque}) = IndexLinear()
 Base.size(v::StdDeque) = (Int(cppsize(v)),)
 Base.getindex(v::StdDeque, i::Int) = cxxgetindex(v,i)[]
-Base.setindex!(v::StdDeque{T}, val, i::Int) where {T} = cxxsetindex!(v, convert(T,val), i)
-Base.push!(v::StdDeque, x) = push_back!(v, x)
-Base.pushfirst!(v::StdDeque, x) = push_front!(v, x)
-Base.pop!(v::StdDeque) = pop_back!(v)
-Base.popfirst!(v::StdDeque) = pop_front!(v)
-Base.resize!(v::StdDeque, n::Integer) = resize!(v, n)
+Base.setindex!(v::StdDeque{T}, val, i::Int) where {T} = cxxsetindex(v, convert(T,val), i)
+Base.push!(v::StdDeque, x) = push_back(v, x)
+Base.pushfirst!(v::StdDeque, x) = push_front(v, x)
+Base.pop!(v::StdDeque) = pop_back(v)
+Base.popfirst!(v::StdDeque) = pop_front(v)
+Base.resize!(v::StdDeque, n::Integer) = resize(v, n)
+Base.empty!(v::StdDeque) = clear(v)
 
+Base.:(==)(a::StdDequeIterator, b::StdDequeIterator) = iterator_is_equal(a,b)
+function _iteration_tuple(d::StdDeque, state::StdDequeIterator)
+  if state == iteratorend(d) return nothing end
+  return (iterator_value(state), state)
+end
+Base.iterate(d::StdDeque) = _iteration_tuple(d, iteratorbegin(d))
+Base.iterate(d::StdDeque, state::StdDequeIterator) = _iteration_tuple(d, iterator_next(state))
+
+
+
+# Queue
 Base.size(v::StdQueue) = (Int(cppsize(v)),)
-Base.push!(v::StdQueue, x) = push_back!(v, x)
+Base.push!(v::StdQueue, x) = push_back(v, x)
 Base.first(v::StdQueue) = front(v)
-Base.pop!(v::StdQueue) = pop_front!(v)
+Base.pop!(v::StdQueue) = pop_front(v)
 
 function Base.fill!(v::T, x) where T <: Union{StdVector, StdValArray, StdDeque}
   StdFill(v, x)

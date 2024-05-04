@@ -358,6 +358,18 @@ end
   end
 end
 
+@testset "StdDequeIterator" begin
+  d = StdDeque{Int64}()
+  for i = 1:4
+    push!(d, i)
+  end
+  iteration_tuple = iterate(d)
+  for i = 1:4
+    @test iteration_tuple[1] == i
+    iteration_tuple = iterate(d, iteration_tuple[2])
+  end
 end
 
 end
+
+end # StdLib
