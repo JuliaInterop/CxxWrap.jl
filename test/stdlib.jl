@@ -305,13 +305,31 @@ end
 let
   @show "test deque"
   deque1 = StdDeque{Int64}()
+  deque2 = StdDeque{Int64}(5, 3)
   @test length(deque1) == 0
+  @test length(deque2) == 5
   push!(deque1, 7)
-  push!(deque1, 9)
+  pushfirst!(deque1, 9)
   @test length(deque1) == 2
-  deque2 = deque1
+  resize!(deque2, 3)
+  @test length(deque2) == 3
+  resize!(deque2, 8)
+  @test length(deque2) == 8
+  setindex!(deque2, 0, 1)
+  @test getindex(deque2, 1) == 0
+  pop!(deque2)
   popfirst!(deque2)
-  @test length(deque2) == 1
+  @test length(deque2) == 6
+  @test isempty(deque2) == false
+  empty!(deque2)
+  @test isempty(deque2) == true
+  deque3 = deque1
+  @test length(deque3) == 2
+  (val, state) = iterate(deque3)
+  @test val == 9
+  (val, state) = iterate(deque3, state)
+  @test val == 7
+  @test state == nothing
 end
 
 let
