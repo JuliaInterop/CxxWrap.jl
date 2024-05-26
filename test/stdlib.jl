@@ -327,6 +327,52 @@ let
   @test length(queue) == 1
 end
 
+@testset "StdSet" begin
+  @testset "Set with integers" begin
+    set = StdSet{Int64}()
+    @test isempty(set) == true
+    @test length(set) == 0
+    push!(set, 10)
+    push!(set, 20)
+    @test isempty(set) == false
+    @test length(set) == 2
+    @test (10 ∈ set) == true
+    @test (20 ∈ set) == true
+    @test (30 ∈ set) == false
+    empty!(set)
+    @test isempty(set) == true
+  end
+
+  @testset "Set with bools" begin
+    set = StdSet{CxxBool}()
+    @test isempty(set) == true
+    @test length(set) == 0
+    push!(set, true)
+    push!(set, false)
+    @test isempty(set) == false
+    @test length(set) == 2
+    @test (true ∈ set) == true
+    @test (false ∈ set) == true
+    empty!(set)
+    @test isempty(set) == true
+  end
+
+  @testset "Set with floats" begin
+    set = StdSet{Float64}()
+    @test isempty(set) == true
+    @test length(set) == 0
+    push!(set, 1.4)
+    push!(set, 2.2)
+    @test isempty(set) == false
+    @test length(set) == 2
+    @test (1.4 ∈ set) == true
+    @test (10.0 ∈ set) == false
+    @test (2.2 ∈ set) == true
+    empty!(set)
+    @test isempty(set) == true
+  end
+end
+
 @static if isdefined(StdLib, :HAS_RANGES)
 
 @testset "StdFill" begin
