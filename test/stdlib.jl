@@ -338,6 +338,9 @@ end
     @test length(set) == 2
     @test (10 ∈ set) == true
     @test (20 ∈ set) == true
+    delete!(set, 20)
+    @test length(set) == 1
+    @test (20 ∈ set) == false
     @test (30 ∈ set) == false
     empty!(set)
     @test isempty(set) == true
