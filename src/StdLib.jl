@@ -212,10 +212,10 @@ Base.pop!(v::StdQueue) = pop_front!(v)
 Base.size(v::StdSet) = (Int(cppsize(v)),)
 Base.length(v::StdSet) = Int(cppsize(v))
 Base.isempty(v::StdSet) = set_isempty(v)
-Base.empty!(v::StdSet) = set_empty!(v)
-Base.push!(v::StdSet, x) = set_insert!(v, x)
+Base.empty!(v::StdSet) = (set_empty!(v); v)
+Base.push!(v::StdSet, x) = (set_insert!(v, x); v)
 Base.in(x, v::StdSet) = set_in(v, x)
-Base.delete!(v::StdSet, x) = set_delete!(v, x)
+Base.delete!(v::StdSet, x) = (set_delete!(v, x); v)
 
 function Base.fill!(v::T, x) where T <: Union{StdVector, StdValArray, StdDeque}
   StdFill(v, x)
