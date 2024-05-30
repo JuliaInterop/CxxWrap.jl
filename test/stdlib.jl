@@ -332,13 +332,13 @@ end
     set = StdSet{Int64}()
     @test isempty(set) == true
     @test length(set) == 0
-    push!(set, 10)
+    set = push!(set, 10)
     push!(set, 20)
     @test isempty(set) == false
     @test length(set) == 2
     @test (10 ∈ set) == true
     @test (20 ∈ set) == true
-    delete!(set, 20)
+    set = delete!(set, 20)
     @test length(set) == 1
     @test (20 ∈ set) == false
     @test (30 ∈ set) == false
@@ -356,7 +356,7 @@ end
     @test length(set) == 2
     @test (true ∈ set) == true
     @test (false ∈ set) == true
-    empty!(set)
+    set = empty!(set)
     @test isempty(set) == true
   end
 
