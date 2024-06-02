@@ -36,10 +36,10 @@ jobs:
           arch: ${{ matrix.arch }}
       - name: Clone libcxxwrap
         continue-on-error: true
+        env:
+          body: ${{ github.event.pull_request.body }}
         run: |
           mkdir libcxxwrap && cd libcxxwrap
-
-          body="${{github.event.pull_request.body}}"
           first_line=$(echo "$body" | sed -n '1p')
           if [[ "$first_line" == *"#"* ]]; then
             IFS='#' read -r left right <<< "$first_line"

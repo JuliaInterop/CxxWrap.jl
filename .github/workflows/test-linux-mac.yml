@@ -37,10 +37,10 @@ jobs:
           arch: ${{ matrix.arch }}
       - name: Build libcxxwrap
         continue-on-error: true
+        env:
+          body: ${{ github.event.pull_request.body }}
         run: |
           mkdir libcxxwrap && cd libcxxwrap
-
-          body="${{github.event.pull_request.body}}"
           first_line=$(echo "$body" | sed -n '1p')
           if [[ "$first_line" == *"#"* ]]; then
             IFS='#' read -r left right <<< "$first_line"
@@ -60,7 +60,7 @@ jobs:
             rm -f /opt/hostedtoolcache/julia/1.6*/x64/lib/julia/libstdc++.so.6
           fi
           mkdir build && cd build
-          cmake -DCMAKE_INSTALL_PREFIX=$HOME/install -DAPPEND_OVERRIDES_TOML=ON -DOVERRIDE_VERSION_TO_JLL=ON -DCMAKE_BUILD_TYPE=Debug ..
+          cmake -DCMAKE_INSTALL_PREFIX=$HOME/install -DAPPEND_OVERRIDES_TOML=ON -DCMAKE_BUILD_TYPE=Debug ..
           VERBOSE=ON cmake --build . --config Debug --target install
           cd ../..
       - uses: julia-actions/julia-buildpkg@latest

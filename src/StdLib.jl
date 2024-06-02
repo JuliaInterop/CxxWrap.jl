@@ -209,6 +209,23 @@ Base.push!(v::StdQueue, x) = push_back!(v, x)
 Base.first(v::StdQueue) = front(v)
 Base.pop!(v::StdQueue) = pop_front!(v)
 
+Base.size(v::StdSet) = (Int(cppsize(v)),)
+Base.length(v::StdSet) = Int(cppsize(v))
+Base.isempty(v::StdSet) = set_isempty(v)
+Base.empty!(v::StdSet) = (set_empty!(v); v)
+Base.push!(v::StdSet, x) = (set_insert!(v, x); v)
+Base.in(x, v::StdSet) = set_in(v, x)
+Base.delete!(v::StdSet, x) = (set_delete!(v, x); v)
+
+Base.size(v::StdMultiset) = (Int(cppsize(v)),)
+Base.length(v::StdMultiset) = Int(cppsize(v))
+Base.isempty(v::StdMultiset) = multiset_isempty(v)
+Base.empty!(v::StdMultiset) = (multiset_empty!(v); v)
+Base.push!(v::StdMultiset, x) = (multiset_insert!(v, x); v)
+Base.in(x, v::StdMultiset) = multiset_in(v, x)
+Base.delete!(v::StdMultiset, x) = (multiset_delete!(v, x); v)
+Base.count(x, v::StdMultiset) = multiset_count(v, x)
+
 function Base.fill!(v::T, x) where T <: Union{StdVector, StdValArray, StdDeque}
   StdFill(v, x)
   return v

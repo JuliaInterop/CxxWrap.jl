@@ -327,6 +327,113 @@ let
   @test length(queue) == 1
 end
 
+@testset "StdSet" begin
+  @testset "Set with integers" begin
+    set = StdSet{Int64}()
+    @test isempty(set) == true
+    @test length(set) == 0
+    set = push!(set, 10)
+    push!(set, 20)
+    @test isempty(set) == false
+    @test length(set) == 2
+    @test (10 ∈ set) == true
+    @test (20 ∈ set) == true
+    set = delete!(set, 20)
+    @test length(set) == 1
+    @test (20 ∈ set) == false
+    @test (30 ∈ set) == false
+    empty!(set)
+    @test isempty(set) == true
+  end
+
+  @testset "Set with bools" begin
+    set = StdSet{CxxBool}()
+    @test isempty(set) == true
+    @test length(set) == 0
+    push!(set, true)
+    push!(set, false)
+    @test isempty(set) == false
+    @test length(set) == 2
+    @test (true ∈ set) == true
+    @test (false ∈ set) == true
+    set = empty!(set)
+    @test isempty(set) == true
+  end
+
+  @testset "Set with floats" begin
+    set = StdSet{Float64}()
+    @test isempty(set) == true
+    @test length(set) == 0
+    push!(set, 1.4)
+    push!(set, 2.2)
+    @test isempty(set) == false
+    @test length(set) == 2
+    @test (1.4 ∈ set) == true
+    @test (10.0 ∈ set) == false
+    @test (2.2 ∈ set) == true
+    empty!(set)
+    @test isempty(set) == true
+  end
+end
+
+@testset "StdMultiset" begin
+  @testset "Multiset with integers" begin
+    multiset = StdMultiset{Int64}()
+    @test isempty(multiset) == true
+    @test length(multiset) == 0
+    multiset = push!(multiset, 10)
+    push!(multiset, 20)
+    push!(multiset, 20)
+    count(20, multiset) == 2
+    @test isempty(multiset) == false
+    @test length(multiset) == 3
+    @test (10 ∈ multiset) == true
+    @test (20 ∈ multiset) == true
+    multiset = delete!(multiset, 20)
+    @test length(multiset) == 1
+    @test (20 ∈ multiset) == false
+    @test (30 ∈ multiset) == false
+    empty!(multiset)
+    @test isempty(multiset) == true
+  end
+
+  @testset "Multiset with bools" begin
+    multiset = StdMultiset{CxxBool}()
+    push!(multiset, true)
+    push!(multiset, true)
+    push!(multiset, true)
+    push!(multiset, false)
+    @test isempty(multiset) == false
+    @test count(true, multiset) == 3
+    @test count(false, multiset) == 1
+    @test length(multiset) == 4
+    multiset = delete!(multiset, true)
+    @test length(multiset) == 1
+    multiset = empty!(multiset)
+    @test length(multiset) == 0
+    @test isempty(multiset) == true
+  end
+
+  @testset "Multiset with floats" begin
+    multiset = StdMultiset{Float64}()
+    @test isempty(multiset) == true
+    @test length(multiset) == 0
+    push!(multiset, 1.4)
+    push!(multiset, 2.2)
+    push!(multiset, 2.2)
+    @test isempty(multiset) == false
+    @test length(multiset) == 3
+    @test (1.4 ∈ multiset) == true
+    @test count(1.4, multiset) == 1
+    @test (10.0 ∈ multiset) == false
+    @test count(10.0, multiset) == 0
+    @test (2.2 ∈ multiset) == true
+    @test count(2.2, multiset) == 2
+    empty!(multiset)
+    @test isempty(multiset) == true
+  end
+end
+
 @static if isdefined(StdLib, :HAS_RANGES)
 
 @testset "StdFill" begin
