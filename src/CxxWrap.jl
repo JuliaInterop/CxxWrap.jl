@@ -940,8 +940,8 @@ ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,
 CppEnum, ConstArray, CxxBool, CxxLong, CxxULong, CxxChar, CxxChar16, CxxChar32, CxxWchar, CxxUChar, CxxSignedChar,
 CxxLongLong, CxxULongLong, ptrunion, gcprotect, gcunprotect, isnull
 
-using .StdLib: StdVector, StdString, StdWString, StdValArray, StdThread, StdDeque, StdQueue, StdSet, StdMultiset
+using .StdLib: StdVector, StdString, StdWString, StdValArray, StdThread, StdDeque, StdQueue, StdSet, StdMultiset, StdUnorderedSet, StdUnorderedMultiset
 
-export StdLib, StdVector, StdString, StdWString, StdValArray, StdThread, StdDeque, StdQueue, StdSet, StdMultiset
+export StdLib, StdVector, StdString, StdWString, StdValArray, StdThread, StdDeque, StdQueue, StdSet, StdMultiset, StdUnorderedSet, StdUnorderedMultiset
 
 end # module
