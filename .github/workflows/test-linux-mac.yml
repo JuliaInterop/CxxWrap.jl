@@ -19,14 +19,11 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - "1.6"
           - "1.10"
-          - "nightly"
         os:
-          - macos-13
-          - ubuntu-latest
+          - macos-14
         arch:
-          - x64
+          - aarch64
     steps:
       - uses: actions/checkout@v4
         with:
@@ -63,5 +60,7 @@ jobs:
           cmake -DCMAKE_INSTALL_PREFIX=$HOME/install -DAPPEND_OVERRIDES_TOML=ON -DCMAKE_BUILD_TYPE=Debug ..
           VERBOSE=ON cmake --build . --config Debug --target install
           cd ../..
+      - name: Override JLL
+        run: julia --project -e 'using Pkg; Pkg.add(url="https://github.com/barche/libcxxwrap_julia_jll.jl.git")'
       - uses: julia-actions/julia-buildpkg@latest
       - uses: julia-actions/julia-runtest@latest
