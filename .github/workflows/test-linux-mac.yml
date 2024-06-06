@@ -57,8 +57,8 @@ jobs:
             rm -f /opt/hostedtoolcache/julia/1.6*/x64/lib/julia/libstdc++.so.6
           fi
           mkdir build && cd build
-          cmake -DCMAKE_INSTALL_PREFIX=$HOME/install -DAPPEND_OVERRIDES_TOML=ON -DCMAKE_BUILD_TYPE=Debug ..
-          VERBOSE=ON cmake --build . --config Debug --target install
+          cmake -DCMAKE_INSTALL_PREFIX=$HOME/install -DAPPEND_OVERRIDES_TOML=ON -DCMAKE_BUILD_TYPE=Release ..
+          VERBOSE=ON cmake --build . --config Release --target install
           cd ../..
       - name: Override JLL
         run: julia --project -e 'using Pkg; Pkg.add(url="https://github.com/barche/libcxxwrap_julia_jll.jl.git")'
