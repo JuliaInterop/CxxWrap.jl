@@ -72,5 +72,7 @@ jobs:
           cd libcxxwrap/build
           cmake --build . --config Release
 
+      - name: Override JLL
+        run: julia --project -e 'using Pkg; Pkg.add(url="https://github.com/barche/libcxxwrap_julia_jll.jl.git")'
       - uses: julia-actions/julia-buildpkg@latest
       - uses: julia-actions/julia-runtest@latest
