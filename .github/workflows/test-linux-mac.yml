@@ -23,10 +23,16 @@ jobs:
           - "1.10"
           - "nightly"
         os:
-          - macos-13
+          - macos-14
           - ubuntu-latest
         arch:
           - x64
+          - aarch64
+        exclude:
+          - os: ubuntu-latest
+            arch: aarch64
+          - version: 1.6
+            arch: aarch64
     steps:
       - uses: actions/checkout@v4
         with:
@@ -42,6 +48,9 @@ jobs:
         run: |
           mkdir libcxxwrap && cd libcxxwrap
           first_line=$(echo "$body" | sed -n '1p')
+          if [[ "$first_line" != "http"* ]]; then
+            exit 0
+          fi
           if [[ "$first_line" == *"#"* ]]; then
             IFS='#' read -r left right <<< "$first_line"
 
