@@ -1,7 +1,7 @@
 name = "CxxWrap"
 uuid = "1f15a43c-97ca-5a2a-ae31-89f07a497df4"
 authors = ["Bart Janssens <bart@bartjanssens.org>"]
-version = "0.15.1"
+version = "0.16.0"
 
 [deps]
 Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
@@ -11,7 +11,7 @@ libcxxwrap_julia_jll = "3eaa8342-bff7-56a5-9981-c04077f7cee7"
 [compat]
 MacroTools = "0.5.9"
 julia = "1.6"
-libcxxwrap_julia_jll = "0.12.3"
+libcxxwrap_julia_jll = "0.13.0"
 
 [extras]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
