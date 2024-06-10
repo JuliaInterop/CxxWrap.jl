@@ -991,15 +991,24 @@ Often, new releases of `CxxWrap` also require a new release of the C++ component
 * Defining a C++ supertype in C++ must now be done using the `jlcxx::julia_base_type<T>()` function instead of `jlcxx::julia_type<T>()`
 
 ## Breaking changes in v0.10
+
 * Requires Julia 1.3 for the use of JLL packages
 * Reorganized integer types so the fixed-size types always map to built-in Julia types
 
 ## Breaking changes in v0.13
+
 * Automatic dereferencing of smart pointers was removed, so some code may require adding the dereferencing operator `[]` explicitly. See [PR #338](https://github.com/JuliaInterop/CxxWrap.jl/pull/338).
 
 ## Breaking changes in v0.15
+
 * This release is based on `libcxxwrap-julia` 0.12, which is binary incompatible with previous versions, so JLLs should be rebuilt to use CxxWrap 0.15
 * The `constructor` method now takes a `jlcxx::finalize_policy` instead of a `bool`, e.g. `.constructor<Foo>(false)` becomes `.constructor<Foo>(jlcxx::finalize_policy::no)`
+
+## Breaking changes in v0.16
+
+There was no change in the API, but because of a change in the way the mapping between C++ and Julia types is implemented the C++ modules need to be recompiled against `libcxxwrap-julia` 0.13.
+The reason for this change is that the old method caused crahses on macOS with Apple CPUs (M1, ...).
+
 
 ## References
 * [JuliaCon 2020 Talk: Julia and C++: a technical overview of CxxWrap.jl](https://www.youtube.com/watch?v=u7IaXwKSUU0)
