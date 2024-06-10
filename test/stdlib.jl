@@ -327,6 +327,26 @@ let
   @test length(queue) == 1
 end
 
+@testset "StdPriorityQueue" begin
+  pq = StdPriorityQueue{Int64}()
+  @test length(pq) == 0
+  push!(pq, 5)
+  push!(pq, 1)
+  @test isempty(pq) == false
+  pq = push!(pq, 4)
+  pq = push!(pq, 10)
+  @test length(pq) == 4
+  @test first(pq) == 10
+  @test pop!(pq) == 10
+  @test length(pq) == 3
+  @test pop!(pq) == 5
+  @test pop!(pq) == 4
+  @test pop!(pq) == 1
+  @test isempty(pq) == true
+  @test isnothing(first(pq))
+  @test_throws ArgumentError pop!(pq)
+end
+
 @testset "StdSet and StdUnorderedSet" begin
   for StdSetType in (StdSet, StdUnorderedSet)
     @testset "Set with integers" begin
