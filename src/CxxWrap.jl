@@ -110,8 +110,7 @@ function Base.promote_rule(::Type{CT}, ::Type{JT}) where {CT <: CxxNumber, JT <:
   end
   return Base.promote_rule(julia_int_type(CT), JT)
 end
-Base.promote_type(::Type{T}, ::Type{T}) where {T<:CxxNumber} = julia_int_type(T)
-Base.promote_rule(::Type{T}, ::Type{T}) where {T<:CxxNumber} = Base.promote_type(T,T)
+Base.promote_rule(::Type{T}, ::Type{T}) where {T<:CxxNumber} = julia_int_type(T)
 Base.promote_rule(::Type{T1}, ::Type{T2}) where {T1<:CxxNumber, T2<:CxxNumber} = Base.promote_rule(julia_int_type(T1), julia_int_type(T2))
 Base.AbstractFloat(x::CxxNumber) = Base.AbstractFloat(to_julia_int(x))
 
@@ -124,6 +123,15 @@ Base.Bool(x::T) where {T<:CxxNumber} = Bool(reinterpret(julia_int_type(T), x))::
 (::Type{T})(x::T) where {T<:CxxNumber} = x
 
 Base.flipsign(x::T, y::T) where {T <: CxxSigned} = reinterpret(T, flipsign(to_julia_int(x), to_julia_int(y)))
+
+for op in (:+, :-, :*, :&, :|, :xor)
+  @eval function Base.$op(a::S, b::S) where {S<:CxxNumber}
+    T = julia_int_type(S)
+    aT, bT = a % T, b % T
+    Base.not_sametype((a, b), (aT, bT))
+    return $op(aT, bT)
+  end
+end
 
 # Trait type to indicate a type is a C++-wrapped type
 struct IsCxxType end
