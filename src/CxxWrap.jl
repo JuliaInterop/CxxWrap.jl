@@ -124,6 +124,15 @@ Base.Bool(x::T) where {T<:CxxNumber} = Bool(reinterpret(julia_int_type(T), x))::
 
 Base.flipsign(x::T, y::T) where {T <: CxxSigned} = reinterpret(T, flipsign(to_julia_int(x), to_julia_int(y)))
 
+for op in (:+, :-, :*, :&, :|, :xor)
+  @eval function Base.$op(a::S, b::S) where {S<:CxxNumber}
+    T = julia_int_type(S)
+    aT, bT = a % T, b % T
+    Base.not_sametype((a, b), (aT, bT))
+    return S($op(aT, bT))
+  end
+end
+
 # Trait type to indicate a type is a C++-wrapped type
 struct IsCxxType end
 struct IsNormalType end
