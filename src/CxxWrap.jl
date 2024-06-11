@@ -129,7 +129,7 @@ for op in (:+, :-, :*, :&, :|, :xor)
     T = julia_int_type(S)
     aT, bT = a % T, b % T
     Base.not_sametype((a, b), (aT, bT))
-    return S($op(aT, bT))
+    return $op(aT, bT)
   end
 end
 
