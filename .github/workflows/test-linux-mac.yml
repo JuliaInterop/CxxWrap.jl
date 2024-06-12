@@ -23,16 +23,17 @@ jobs:
           - "1.10"
           - "nightly"
         os:
-          - macos-14
+          - macos-13
           - ubuntu-latest
         arch:
           - x64
-          - aarch64
-        exclude:
-          - os: ubuntu-latest
+        include:
+          - os: macos-14
             arch: aarch64
-          - version: 1.6
+            version: "1.10"
+          - os: macos-14
             arch: aarch64
+            version: "nightly"
     steps:
       - uses: actions/checkout@v4
         with:
