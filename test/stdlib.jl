@@ -364,6 +364,40 @@ end
   @test_throws ArgumentError pop!(pq)
 end
 
+@testset "StdStack" begin
+  @testset "Stack with integers" begin
+    stack = StdStack{Int64}()
+    @test length(stack) == 0
+    @test isempty(stack) == true
+    push!(stack, 7)
+    stack = push!(stack, 20)
+    push!(stack, 2)
+    @test first(stack) == 2
+    @test length(stack) == 3
+    stack = pop!(stack)
+    @test first(stack) == 20
+    @test isempty(stack) == false
+    while !isempty(stack) 
+      pop!(stack)
+    end
+    @test isempty(stack) == true
+  end
+
+  @testset "Stack with floats" begin
+    stack = StdStack{Float64}()
+    @test length(stack) == 0
+    @test isempty(stack) == true
+    push!(stack, 1.54)
+    push!(stack, 20.2)
+    @test length(stack) == 2
+    @test first(stack) == 20.2
+    pop!(stack)
+    @test first(stack) == 1.54
+    @test length(stack) == 1
+    @test isempty(stack) == false  
+  end
+end
+
 @testset "StdSet and StdUnorderedSet" begin
   for StdSetType in (StdSet, StdUnorderedSet)
     @testset "Set with integers" begin

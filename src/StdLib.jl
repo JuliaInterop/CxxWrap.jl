@@ -211,6 +211,13 @@ Base.push!(v::StdQueue, x) = (push_back!(v, x); v)
 Base.first(v::StdQueue) = front(v)
 Base.pop!(v::StdQueue) = (pop_front!(v); v)
 
+Base.size(v::StdStack) = (Int(cppsize(v)),)
+Base.length(v::StdStack) = Int(cppsize(v))
+Base.isempty(v::StdStack) = stack_isempty(v)
+Base.push!(v::StdStack, x) = (stack_push!(v, x); v)
+Base.first(v::StdStack) = stack_top(v)
+Base.pop!(v::StdStack) = (stack_pop!(v); v)
+
 for StdSetType in (StdSet, StdUnorderedSet)
   Base.size(v::StdSetType) = (Int(cppsize(v)),)
   Base.length(v::StdSetType) = Int(cppsize(v))
