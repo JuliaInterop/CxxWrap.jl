@@ -314,17 +314,34 @@ let
   @test length(deque2) == 1
 end
 
-let
-  @show "test queue"
-  queue = StdQueue{Int64}()
-  @test length(queue) == 0
-  push!(queue, 10)
-  push!(queue, 20)
-  @test length(queue) == 2
-  @test first(queue) == 10
-  pop!(queue)
-  @test first(queue) == 20
-  @test length(queue) == 1
+@testset "StdQueue" begin
+  @testset "Queue with integers" begin
+    queue = StdQueue{Int64}()
+    @test length(queue) == 0
+    @test isempty(queue) == true
+    push!(queue, 10)
+    queue = push!(queue, 20)
+    @test length(queue) == 2
+    @test first(queue) == 10
+    pop!(queue)
+    @test first(queue) == 20
+    @test length(queue) == 1
+    @test isempty(queue) == false  
+  end
+
+  @testset "Queue with floats" begin
+    queue = StdQueue{Float64}()
+    @test length(queue) == 0
+    @test isempty(queue) == true
+    push!(queue, 1.54)
+    push!(queue, 20.2)
+    @test length(queue) == 2
+    @test first(queue) == 1.54
+    queue = pop!(queue)
+    @test first(queue) == 20.2
+    @test length(queue) == 1
+    @test isempty(queue) == false  
+  end
 end
 
 @testset "StdPriorityQueue" begin
