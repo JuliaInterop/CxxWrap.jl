@@ -416,7 +416,14 @@ To write a C++ function that returns a new object that can be garbage-collected 
 jlcxx::create<Class>(constructor_arg1, ...);
 ```
 
-This will return the new C++ object wrapped in a `jl_value_t*` that has a finalizer.
+This will return the new C++ object wrapped in a `jl_value_t*` that has a
+finalizer. The default constructor can be explicitly disabled by specializing
+the `DefaultConstructible` type trait, for example:
+```c++
+namespace jlcxx {
+  template<> struct DefaultConstructible<Class> : std::false_type { };
+}
+```
 
 ### Copy constructor
 
@@ -425,6 +432,14 @@ The copy constructor is mapped to Julia's standard `copy` function. Using the `.
 ```julia
 wvec = cpp_function_returning_vector()
 julia_array = copy.(wvec)
+```
+
+It can be explicitly disabled for a type by specializing the `CopyConstructible`
+type trait, for example:
+```c++
+namespace jlcxx {
+  template<> struct CopyConstructible<Class> : std::false_type { };
+}
 ```
 
 ### Return values
