@@ -509,6 +509,70 @@ end
   end
 end
 
+@testset "StdList" begin
+  @testset "StdList with StdString" begin
+    list = StdList{StdString}()
+    @test isempty(list) == true
+    @test length(list) == 0
+    push!(list, StdString("ab"))
+    list = pushfirst!(list, StdString("cd"))
+    list = push!(list, StdString("ef"))
+    @test length(list) == 3
+    @test first(list) == "cd"
+    @test last(list) == "ef"
+    list = pop!(list)
+    @test last(list) == "ab"
+    list = popfirst!(list)
+    @test first(list) == "ab"
+    list = empty!(list)
+    @test isempty(list) == true
+  end
+  
+  @testset "StdList with integers" begin
+    list = StdList{Int64}()
+    @test isempty(list) == true
+    @test length(list) == 0
+    list = push!(list, 10)
+    pushfirst!(list, 20)
+    list = pushfirst!(list, 30)
+    @test first(list) == 30
+    list = popfirst!(list)
+    @test first(list) == 20
+    @test last(list) == 10
+    @test length(list) == 2
+    empty!(list)
+    @test isempty(list) == true
+  end
+end
+
+@testset "StdForwardList" begin
+  @testset "StdForwardList with integers" begin
+    forwardlist = StdList{Int64}()
+    @test isempty(forwardlist) == true
+    forwardlist = pushfirst!(forwardlist, 10)
+    pushfirst!(forwardlist, 20)
+    @test first(forwardlist) == 20
+    forwardlist = popfirst!(forwardlist)
+    @test first(forwardlist) == 10
+    @test isempty(forwardlist) == false
+    forwardlist = empty!(forwardlist)
+    @test isempty(forwardlist) == true
+  end
+
+  @testset "StdForwardList with StdString" begin
+    forwardlist = StdList{StdString}()
+    @test isempty(forwardlist) == true
+    forwardlist = pushfirst!(forwardlist, StdString("ab"))
+    pushfirst!(forwardlist, StdString("cd"))
+    @test first(forwardlist) == "cd"
+    forwardlist = popfirst!(forwardlist)
+    @test first(forwardlist) == "ab"
+    @test isempty(forwardlist) == false
+    forwardlist = empty!(forwardlist)
+    @test isempty(forwardlist) == true
+  end
+end
+
 @static if isdefined(StdLib, :HAS_RANGES)
 
 @testset "StdFill" begin
