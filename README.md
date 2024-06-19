@@ -817,6 +817,20 @@ An extra file has to be included to have constant array functionality: `#include
 
 Replacing `make_const_array` in the examples above by `make_julia_array` creates a mutable, regular Julia array with memory owned by C++.
 
+### Returning a Julia array
+
+A Julia-owned `Array` can be created and returned from C++ using the
+`jlcxx::Array` class:
+```c++
+mymodule.method("array", [] () {
+    jlcxx::Array<int> data{ };
+    data.push_back(1);
+    data.push_back(2);
+    data.push_back(3);
+
+    return data;
+});
+```
 
 ## Calling Julia functions from C++
 
