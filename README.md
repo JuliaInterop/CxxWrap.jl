@@ -944,7 +944,23 @@ You  can also further specialize on `T` to get specific behavior depending on th
 
 ## STL support
 
-Version 0.9 introduces basic support for the C++ standard library, with mappings for `std::vector` (`StdVector`) and `std::string` (`StdString`).
+| Julia Type Name        | STL container             | CxxWrap Version |
+|------------------------|---------------------------|-----------------|
+| `StdString`            | `std::string`             | v0.9.0+         |
+| `StdVector`            | `std::vector`             | v0.9.0+         |
+| `StdValArray`          | `std::valarray`           | v0.9.0+         |
+| `StdDeque`             | `std::deque`              | v0.13.4+        |
+| `StdQueue`             | `std::queue`              | v0.15.0+        |
+| `StdPriorityQueue`     | `std::priority_queue`     | To be released  |
+| `StdStack`             | `std::stack`              | To be released  |
+| `StdSet`               | `std::set`                | v0.16.0+        |
+| `StdMultiset`          | `std::multiset`           | v0.16.0+        |
+| `StdUnorderedSet`      | `std::unordered_set`      | To be released  |
+| `StdUnorderedMultiset` | `std::unordered_multiset` | To be released  |
+| `StdList`              | `std::list`               | To be released  |
+| `StdForwardList`       | `std::forward_list`       | To be released  |
+|                        |                           |                 |
+
 To add support for e.g. vectors of your own type `World`, either just add methods that use an `std::vector<World>` as an argument, or manually wrap them using `jlcxx::stl::apply_stl<World>(mod);`.
 For this to work, add `#include "jlcxx/stl.hpp"` to your C++ file.
 
