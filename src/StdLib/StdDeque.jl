@@ -9,3 +9,8 @@ Base.pushfirst!(v::StdDeque, x) = push_front!(v, x)
 Base.pop!(v::StdDeque) = pop_back!(v)
 Base.popfirst!(v::StdDeque) = pop_front!(v)
 Base.resize!(v::StdDeque, n::Integer) = resize!(v, n)
+
+Base.:(==)(a::StdDequeIterator, b::StdDequeIterator) = iterator_is_equal(a, b)
+_deque_iteration_tuple(v::StdDeque, state::StdDequeIterator) = (state == iteratorend(v)) ? nothing : (iterator_value(state), state)
+Base.iterate(v::StdDeque) = _deque_iteration_tuple(v, iteratorbegin(v))
+Base.iterate(v::StdDeque, state::StdDequeIterator) = (state != iteratorend(v)) ? _deque_iteration_tuple(v, iterator_next(state)) : nothing
