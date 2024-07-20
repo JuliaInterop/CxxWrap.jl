@@ -418,6 +418,7 @@ end
       @test length(set) == 2
       @test (10 ∈ set) == true
       @test (20 ∈ set) == true
+      @test Set(set) == Set([10, 20]) # Tests the iterators
       set = delete!(set, 20)
       @test length(set) == 1
       @test (20 ∈ set) == false
@@ -471,6 +472,15 @@ end
       @test length(multiset) == 3
       @test (10 ∈ multiset) == true
       @test (20 ∈ multiset) == true
+      ten_count = 0
+      twenty_count = 0
+      # Tests the iterators
+      for x in multiset
+        ten_count += x == 10
+        twenty_count += x == 20
+      end
+      @test ten_count == 1
+      @test twenty_count == 2
       multiset = delete!(multiset, 20)
       @test length(multiset) == 1
       @test (20 ∈ multiset) == false
