@@ -309,6 +309,14 @@ let
   push!(deque1, 7)
   push!(deque1, 9)
   @test length(deque1) == 2
+  for (i, x) in enumerate(deque1)
+    if i == 1
+      @test x == 7
+    elseif i == 2
+      @test x == 9
+    end
+  end
+  @test sum(deque1) == 16
   deque2 = deque1
   popfirst!(deque2)
   @test length(deque2) == 1
@@ -518,6 +526,16 @@ end
     list = pushfirst!(list, StdString("cd"))
     list = push!(list, StdString("ef"))
     @test length(list) == 3
+    for (i, x) in enumerate(list)
+      if i == 1
+        @test x == "cd"
+      elseif i == 2
+        @test x == "ab"
+      elseif i == 3
+        @test x == "ef"
+      end
+    end
+    @test prod(list) == "cdabef"
     @test first(list) == "cd"
     @test last(list) == "ef"
     list = pop!(list)
@@ -552,8 +570,18 @@ end
     forwardlist = pushfirst!(forwardlist, 10)
     pushfirst!(forwardlist, 20)
     @test first(forwardlist) == 20
+    for (i, x) in enumerate(forwardlist)
+      if i == 1
+        @test x == 20
+      elseif i == 2
+        @test x == 10
+      end
+    end
     forwardlist = popfirst!(forwardlist)
     @test first(forwardlist) == 10
+    for x in forwardlist
+      @test x == 10
+    end
     @test isempty(forwardlist) == false
     forwardlist = empty!(forwardlist)
     @test isempty(forwardlist) == true
