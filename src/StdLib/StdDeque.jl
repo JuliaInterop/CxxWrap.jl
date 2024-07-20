@@ -4,13 +4,14 @@ Base.IndexStyle(::Type{<:StdDeque}) = IndexLinear()
 Base.size(v::StdDeque) = (Int(cppsize(v)),)
 Base.getindex(v::StdDeque, i::Int) = cxxgetindex(v, i)[]
 Base.setindex!(v::StdDeque{T}, val, i::Int) where {T} = cxxsetindex!(v, convert(T, val), i)
-Base.push!(v::StdDeque, x) = push_back!(v, x)
 Base.pushfirst!(v::StdDeque, x) = push_front!(v, x)
+Base.push!(v::StdDeque, x) = isempty(v) ? push_front!(v, x) : push_back!(v, x)
 Base.pop!(v::StdDeque) = pop_back!(v)
 Base.popfirst!(v::StdDeque) = pop_front!(v)
 Base.resize!(v::StdDeque, n::Integer) = resize!(v, n)
 
 Base.:(==)(a::StdDequeIterator, b::StdDequeIterator) = iterator_is_equal(a, b)
-_deque_iteration_tuple(v::StdDeque, state::StdDequeIterator) = (state == iteratorend(v)) ? nothing : (iterator_value(state), state)
+
+_deque_iteration_tuple(v::StdDeque, state::StdDequeIterator) = state == iteratorend(v) ? nothing : (iterator_value(state), state)
 Base.iterate(v::StdDeque) = _deque_iteration_tuple(v, iteratorbegin(v))
 Base.iterate(v::StdDeque, state::StdDequeIterator) = (state != iteratorend(v)) ? _deque_iteration_tuple(v, iterator_next(state)) : nothing
