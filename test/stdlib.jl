@@ -547,7 +547,7 @@ end
 
 @testset "StdForwardList" begin
   @testset "StdForwardList with integers" begin
-    forwardlist = StdList{Int64}()
+    forwardlist = StdForwardList{Int64}()
     @test isempty(forwardlist) == true
     forwardlist = pushfirst!(forwardlist, 10)
     pushfirst!(forwardlist, 20)
@@ -560,7 +560,7 @@ end
   end
 
   @testset "StdForwardList with StdString" begin
-    forwardlist = StdList{StdString}()
+    forwardlist = StdForwardList{StdString}()
     @test isempty(forwardlist) == true
     forwardlist = pushfirst!(forwardlist, StdString("ab"))
     pushfirst!(forwardlist, StdString("cd"))
