@@ -14,12 +14,20 @@ Base.iterate(v::StdForwardList, state::StdForwardListIterator) = (state != itera
 function Base.show(io::IO, ::MIME"text/plain", container::StdForwardList)
     print(io, "StdForwardList[")
 
-    for (i, item) in enumerate(Iterators.take(container, 5))
+    iterator = iterate(container)
+    for i in 1:5
+        if iterator === nothing
+            break
+        end
+        item, state = iterator
         i > 1 && print(io, ", ")
         print(io, item)
+        iterator = iterate(container, state)
     end
 
-    length(container) > 5 && print(io, ", ...")
+    if iterator !== nothing
+        print(io, ", ...")
+    end
 
     print(io, "]")
 end
