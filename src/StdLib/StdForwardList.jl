@@ -10,3 +10,16 @@ Base.:(==)(a::StdForwardListIterator, b::StdForwardListIterator) = iterator_is_e
 _forward_list_iteration_tuple(v::StdForwardList, state::StdForwardListIterator) = (state == iteratorend(v)) ? nothing : (iterator_value(state), state)
 Base.iterate(v::StdForwardList) = _forward_list_iteration_tuple(v, iteratorbegin(v))
 Base.iterate(v::StdForwardList, state::StdForwardListIterator) = (state != iteratorend(v)) ? _forward_list_iteration_tuple(v, iterator_next(state)) : nothing
+
+function Base.show(io::IO, ::MIME"text/plain", container::StdForwardList)
+    print(io, "StdForwardList[")
+
+    for (i, item) in enumerate(Iterators.take(container, 5))
+        i > 1 && print(io, ", ")
+        print(io, item)
+    end
+
+    length(container) > 5 && print(io, ", ...")
+
+    print(io, "]")
+end

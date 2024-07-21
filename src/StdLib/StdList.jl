@@ -16,3 +16,16 @@ Base.:(==)(a::StdListIterator, b::StdListIterator) = iterator_is_equal(a, b)
 _list_iteration_tuple(v::StdList, state::StdListIterator) = (state == iteratorend(v)) ? nothing : (iterator_value(state), state)
 Base.iterate(v::StdList) = _list_iteration_tuple(v, iteratorbegin(v))
 Base.iterate(v::StdList, state::StdListIterator) = (state != iteratorend(v)) ? _list_iteration_tuple(v, iterator_next(state)) : nothing
+
+function Base.show(io::IO, ::MIME"text/plain", container::StdList)
+    print(io, "StdList[")
+
+    for (i, item) in enumerate(Iterators.take(container, 5))
+        i > 1 && print(io, ", ")
+        print(io, item)
+    end
+
+    length(container) > 5 && print(io, ", ...")
+
+    print(io, "]")
+end
