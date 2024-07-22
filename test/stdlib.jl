@@ -307,7 +307,7 @@ let
   deque1 = StdDeque{Int64}()
   @test length(deque1) == 0
   push!(deque1, 7)
-  push!(deque1, 9)
+  deque1 = push!(deque1, 9)
   @test length(deque1) == 2
   for (i, x) in enumerate(deque1)
     if i == 1
