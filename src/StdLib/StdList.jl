@@ -17,15 +17,16 @@ _list_iteration_tuple(v::StdList, state::StdListIterator) = (state == iteratoren
 Base.iterate(v::StdList) = _list_iteration_tuple(v, iteratorbegin(v))
 Base.iterate(v::StdList, state::StdListIterator) = (state != iteratorend(v)) ? _list_iteration_tuple(v, iterator_next(state)) : nothing
 
-function Base.show(io::IO, ::MIME"text/plain", container::StdList)
-    print(io, "StdList[")
+function Base.show(io::IO, ::MIME"text/plain", container::StdList{T}) where {T}
+    n = length(container)
+    print(io, "StdList{", T, "} with ", n, " element", n == 1 ? "" : "s")
 
-    for (i, item) in enumerate(Iterators.take(container, 5))
-        i > 1 && print(io, ", ")
-        print(io, item)
+    n == 0 && return
+    print(io, ":")
+    for item in Iterators.take(container, 10)
+        print(io, "\n  ", item)
     end
-
-    length(container) > 5 && print(io, ", ...")
-
-    print(io, "]")
+    if n > 10
+        print(io, "\n  ⋮")
+    end
 end
