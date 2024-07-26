@@ -38,7 +38,7 @@ include("StdLib/StdValArray.jl")
 include("StdLib/StdVector.jl")
 
 
-function Base.fill!(v::T, x) where {T<:Union{StdVector,StdValArray,StdDeque}}
+function Base.fill!(v::T, x) where {T<:Union{StdList,StdForwardList}}
   StdFill(v, x)
   return v
 end

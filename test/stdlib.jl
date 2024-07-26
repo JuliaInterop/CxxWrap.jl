@@ -613,31 +613,26 @@ end
 
 @static if isdefined(StdLib, :HAS_RANGES)
 
-@testset "StdFill" begin
-  @testset "fill StdVector" begin
-    v = StdVector{Int64}([1, 2, 3, 4, 5])
+@testset "STL algorithms" begin
+  @testset "fill StdList" begin
+    v = StdList{Int64}()
+    for x in 1:10
+      push!(v, x)
+    end
     fill!(v, 1)
     for x in v
       @test x == 1
     end
   end
 
-  @testset "fill StdValArray" begin
-    v = StdValArray([1.0, 2.0, 3.0])
-    fill!(v, 2)
+  @testset "fill StdForwardList" begin
+    v = StdForwardList{Int64}()
+    for x in 1:10
+      pushfirst!(v, x)
+    end
+    fill!(v, 1)
     for x in v
-      @test x == 2
-    end
-  end
-
-  @testset "fill StdDeque" begin
-    deq = StdDeque{Int64}()
-    for i = 1:10
-      push!(deq, i)
-    end
-    fill!(deq, 3)
-    for x in deq
-      @test x == 3
+      @test x == 1
     end
   end
 end
