@@ -614,7 +614,7 @@ end
 @static if isdefined(StdLib, :HAS_RANGES)
 
 @testset "STL algorithms" begin
-  @testset "fill StdList" begin
+  @testset "StdFill" begin
     v = StdList{Int64}()
     for x in 1:10
       push!(v, x)
@@ -623,9 +623,7 @@ end
     for x in v
       @test x == 1
     end
-  end
-
-  @testset "fill StdForwardList" begin
+    
     v = StdForwardList{Int64}()
     for x in 1:10
       pushfirst!(v, x)
@@ -633,6 +631,37 @@ end
     fill!(v, 1)
     for x in v
       @test x == 1
+    end
+  end
+
+  @testset "StdUpperBound and StdLowerBound" begin
+    containers = (StdSet{Int64}(), StdMultiset{Int64}(), StdList{Int64}())
+    for container in containers
+      for i in 1:2:11
+        push!(container, i)
+      end
+    end
+    
+    for container in containers
+      for val in container
+        @test StdLib.iterator_value(StdLowerBound(container, val)) == val
+        @test StdLib.iterator_value(StdUpperBound(container, val - 1)) == val
+      end
+    end
+  end
+  
+  @testset "StdBinarySearch" begin
+    containers = (StdVector{Int64}(), StdDeque{Int64}(), StdSet{Int64}(), StdMultiset{Int64}(), StdList{Int64}())
+    for container in containers
+      for i in 1:2:11
+        push!(container, i)
+      end
+    end
+
+    for container in containers
+      for i in 1:11
+        @test StdBinarySearch(container, i) == isodd(i)
+      end
     end
   end
 end
