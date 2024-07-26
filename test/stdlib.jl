@@ -664,6 +664,19 @@ end
       end
     end
   end
+
+  @testset "StdListSort" begin
+    list = StdList{Int64}()
+    v = [1, -1, 0, 4, 20]
+    for x in v
+      push!(list, x)
+    end
+    v = sort!(v)
+    list = sort!(list)
+    for (a, b) in zip(list, v)
+      @test a == b
+    end
+  end
 end
 
 end
