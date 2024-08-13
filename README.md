@@ -961,7 +961,7 @@ You  can also further specialize on `T` to get specific behavior depending on th
 | `StdForwardList`       | `std::forward_list`       | To be released  |
 |                        |                           |                 |
 
-View [StdLib](./src/StdLib) to check available methods.
+View [StdLib](./src/StdLib) to check available methods. The containers have iterators defined, and hence are iterable.
 
 To add support for e.g. vectors of your own type `World`, either just add methods that use an `std::vector<World>` as an argument, or manually wrap them using `jlcxx::stl::apply_stl<World>(mod);`.
 For this to work, add `#include "jlcxx/stl.hpp"` to your C++ file.
