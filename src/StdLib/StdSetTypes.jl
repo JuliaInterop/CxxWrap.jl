@@ -9,13 +9,3 @@ for StdSetType in (StdSet, StdUnorderedSet)
     Base.in(x, v::StdSetType) = set_in(v, x)
     Base.delete!(v::StdSetType, x) = (set_delete!(v, x); v)
 end
-
-Base.:(==)(a::StdSetIterator, b::StdSetIterator) = iterator_is_equal(a, b)
-_set_iteration_tuple(v::StdSet, state::StdSetIterator) = (state == iteratorend(v)) ? nothing : (iterator_value(state), state)
-Base.iterate(v::StdSet) = _set_iteration_tuple(v, iteratorbegin(v))
-Base.iterate(v::StdSet, state::StdSetIterator) = (state != iteratorend(v)) ? _set_iteration_tuple(v, iterator_next(state)) : nothing
-
-Base.:(==)(a::StdUnorderedSetIterator, b::StdUnorderedSetIterator) = iterator_is_equal(a, b)
-_unordered_set_iteration_tuple(v::StdUnorderedSet, state::StdUnorderedSetIterator) = (state == iteratorend(v)) ? nothing : (iterator_value(state), state)
-Base.iterate(v::StdUnorderedSet) = _unordered_set_iteration_tuple(v, iteratorbegin(v))
-Base.iterate(v::StdUnorderedSet, state::StdUnorderedSetIterator) = (state != iteratorend(v)) ? _unordered_set_iteration_tuple(v, iterator_next(state)) : nothing

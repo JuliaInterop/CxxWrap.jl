@@ -25,6 +25,26 @@ function __init__()
   @initcxx
 end
 
+macro additerators(container_type, iterator_type)
+  quote
+    Base.:(==)(a::$(iterator_type), b::$(iterator_type)) = iterator_is_equal(a, b)
+    function _iteration_tuple(v::$(container_type), state::$(iterator_type))
+      (state == iteratorend(v)) ? nothing : (iterator_value(state), state)
+    end
+    Base.iterate(v::$(container_type)) = _iteration_tuple(v, iteratorbegin(v))
+    Base.iterate(v::$(container_type), state::$(iterator_type)) =
+      (state != iteratorend(v)) ? _iteration_tuple(v, iterator_next(state)) : nothing
+  end
+end
+
+@additerators StdDeque StdDequeIterator
+@additerators StdForwardList StdForwardListIterator
+@additerators StdList StdListIterator
+@additerators StdMultiset StdMultisetIterator
+@additerators StdUnorderedMultiset StdUnorderedMultisetIterator
+@additerators StdSet StdSetIterator
+@additerators StdUnorderedSet StdUnorderedSetIterator
+
 include("StdLib/StdDeque.jl")
 include("StdLib/StdForwardList.jl")
 include("StdLib/StdList.jl")
