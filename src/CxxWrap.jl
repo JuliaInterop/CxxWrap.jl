@@ -949,11 +949,14 @@ CppEnum, ConstArray, CxxBool, CxxLong, CxxULong, CxxChar, CxxChar16, CxxChar32, 
 CxxLongLong, CxxULongLong, ptrunion, gcprotect, gcunprotect, isnull
 
 using .StdLib: StdVector, StdString, StdWString, StdValArray, StdThread, StdDeque, StdQueue, StdStack,
-  StdSet, StdMultiset, StdUnorderedSet, StdUnorderedMultiset, StdPriorityQueue, StdList, StdForwardList,
-  StdUpperBound, StdLowerBound, StdBinarySearch
+  StdSet, StdMultiset, StdUnorderedSet, StdUnorderedMultiset, StdPriorityQueue, StdList, StdForwardList
 
 export StdLib, StdVector, StdString, StdWString, StdValArray, StdThread, StdDeque, StdQueue, StdStack,
-  StdSet, StdMultiset, StdUnorderedSet, StdUnorderedMultiset, StdPriorityQueue, StdList, StdForwardList,
-  StdUpperBound, StdLowerBound, StdBinarySearch
+  StdSet, StdMultiset, StdUnorderedSet, StdUnorderedMultiset, StdPriorityQueue, StdList, StdForwardList
+
+@static if isdefined(StdLib, :HAS_RANGES)
+  using .StdLib: StdUpperBound, StdLowerBound, StdBinarySearch
+  export StdUpperBound, StdLowerBound, StdBinarySearch
+end
 
 end # module
