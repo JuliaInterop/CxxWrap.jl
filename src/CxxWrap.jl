@@ -10,7 +10,7 @@ ConstCxxPtr, ConstCxxRef, CxxRef, CxxPtr,
 CppEnum, ConstArray, CxxBool, CxxLong, CxxULong, CxxChar, CxxChar16, CxxChar32, CxxWchar, CxxUChar, CxxSignedChar,
 CxxLongLong, CxxULongLong, ptrunion, gcprotect, gcunprotect, isnull, libcxxwrapversion
 
-const libcxxwrap_version_range = (v"0.13.0",  v"0.14")
+const libcxxwrap_version_range = (v"0.14.0",  v"0.15")
 
 using libcxxwrap_julia_jll # for libcxxwrap_julia and libcxxwrap_julia_stl
 
