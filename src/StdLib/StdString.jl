@@ -81,9 +81,11 @@ julia> StdString(b"visible\\0hidden")
 """
 StdString(::Union{Cstring,Base.CodeUnits,Vector{UInt8},Ref{Int8},Array{Int8}})
 
-StdString(x::Cstring) = StdString(convert(Ptr{Int8}, x))
-StdString(x::Base.CodeUnits) = StdString(collect(x))
-StdString(x::Vector{UInt8}) = StdString(collect(reinterpret(Int8, x)))
+StdString(x::Cstring) = StdString(convert(Ptr{Cchar}, x))
+StdString(x::Base.CodeUnits) = StdString(collect(reinterpret(Cchar,x)))
+@static if Cchar != UInt8
+    StdString(x::Vector{UInt8}) = StdString(collect(reinterpret(Cchar, x)))
+end
 
 """
     StdString(str, n::Integer)
