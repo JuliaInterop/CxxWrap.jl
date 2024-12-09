@@ -180,19 +180,21 @@ end
     @test vec isa StdVector{StdString}
     @test vec == ["a", "b", "c"]
 
-    svec_ref = CxxRef.(StdString["a", "b", "c"])
-    vec = StdVector{StdString}(svec_ref)
-    @test vec isa StdVector{StdString}
-    @test vec == ["a", "b", "c"]
+    let svec = StdString["a", "b", "c"]
+      svec_ref = CxxRef.(svec)
+      vec = StdVector{StdString}(svec_ref)
+      @test vec isa StdVector{StdString}
+      @test vec == ["a", "b", "c"]
 
-    svec_deref = getindex.(svec_ref)::Vector{CxxWrap.StdLib.StdStringDereferenced}
-    vec = StdVector{StdString}(svec_deref)
-    @test vec isa StdVector{StdString}
-    @test vec == ["a", "b", "c"]
+      svec_deref = getindex.(svec_ref)::Vector{CxxWrap.StdLib.StdStringDereferenced}
+      vec = StdVector{StdString}(svec_deref)
+      @test vec isa StdVector{StdString}
+      @test vec == ["a", "b", "c"]
 
-    @test_throws MethodError StdVector{Bool}([true])
-    @test_throws MethodError StdVector{eltype(svec_alloc)}(svec_alloc)
-    @test_throws MethodError StdVector{eltype(svec_deref)}(svec_deref)
+      @test_throws MethodError StdVector{Bool}([true])
+      @test_throws MethodError StdVector{eltype(svec_alloc)}(svec_alloc)
+      @test_throws MethodError StdVector{eltype(svec_deref)}(svec_deref)
+    end
   end
 
   @testset "constructors" begin
@@ -231,15 +233,17 @@ end
     @test vec isa StdVector{StdString}
     @test vec == ["a", "b", "c"]
 
-    svec_ref = CxxRef.(StdString["a", "b", "c"])
-    vec = StdVector(svec_ref)
-    @test vec isa StdVector{StdString}
-    @test vec == ["a", "b", "c"]
+    let svec = StdString["a", "b", "c"]
+      svec_ref = CxxRef.(svec)
+      vec = StdVector(svec_ref)
+      @test vec isa StdVector{StdString}
+      @test vec == ["a", "b", "c"]
 
-    svec_deref = getindex.(svec_ref)::Vector{CxxWrap.StdLib.StdStringDereferenced}
-    vec = StdVector(svec_deref)
-    @test vec isa StdVector{StdString}
-    @test vec == ["a", "b", "c"]
+      svec_deref = getindex.(svec_ref)::Vector{CxxWrap.StdLib.StdStringDereferenced}
+      vec = StdVector(svec_deref)
+      @test vec isa StdVector{StdString}
+      @test vec == ["a", "b", "c"]
+    end
 
     @test_throws MethodError StdVector(["a", "b", "c"])
   end
