@@ -832,6 +832,20 @@ mymodule.method("array", [] () {
 });
 ```
 
+## Type arguments
+
+The C++ type `jlcxx::SingletonType` maps to the Julia `Type` parametric type (e.g. `jlcxx::SingletonType<double>` becomes `Type{Float64}`). This can be used to make C++ functions that dispatch on a type argument:
+
+```c++
+mod.method("test_datatype_conversion", [] (jlcxx::SingletonType<double>) { return jl_float64_type; });
+```
+
+Similarly, compile time constants can be wrapped using `jlcxx::Val`, which maps to Julia's `Val`type:
+
+```c++
+mod.method("test_val", [](jlcxx::Val<int, 1>) { return 1; });
+```
+
 ## Calling Julia functions from C++
 
 ### Direct call to Julia
