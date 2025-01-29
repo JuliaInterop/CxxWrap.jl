@@ -766,17 +766,19 @@ end
 
 # Wrap functions from the cpp module to the passed julia module
 function wrap_functions(functions, julia_mod)
-  if !isempty(julia_mod.__cxxwrap_pointers)
-    empty!(julia_mod.__cxxwrap_methodkeys)
-    empty!(julia_mod.__cxxwrap_pointers)
+  cxxp = Base.invokelatest(getproperty, julia_mod, :__cxxwrap_pointers)
+  cxxmk = Base.invokelatest(getproperty, julia_mod, :__cxxwrap_methodkeys)
+  if !isempty(cxxp)
+    empty!(cxxmk)
+    empty!(cxxp)
   end
   precompiling = true
 
   for func in functions
     (mkey,fptrs) = _register_function_pointers(func, precompiling)
-    push!(julia_mod.__cxxwrap_methodkeys, mkey)
-    push!(julia_mod.__cxxwrap_pointers, fptrs)
-    funcidx = length(julia_mod.__cxxwrap_pointers)
+    push!(cxxmk, mkey)
+    push!(cxxp, fptrs)
+    funcidx = length(cxxp)
 
     Core.eval(julia_mod, build_function_expression(func, funcidx, julia_mod))
   end
