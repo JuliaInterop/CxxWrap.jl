@@ -1,7 +1,7 @@
 name = "CxxWrap"
 uuid = "1f15a43c-97ca-5a2a-ae31-89f07a497df4"
 authors = ["Bart Janssens <bart@bartjanssens.org>"]
-version = "0.16.0"
+version = "0.16.1"
 
 [deps]
 Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
