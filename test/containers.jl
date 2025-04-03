@@ -51,6 +51,7 @@ mm .= 1.0
 Containers.do_embedding_test()
 
 @test Containers.array_return() == ["hello", "world"]
+@test Containers.int_array_return() == [1, 2, 3]
 @test Containers.tuple_int_pointer() == (C_NULL,1)
 
 let a1 = [UInt8(3)], a2 = [UInt8(5)]
