@@ -171,18 +171,20 @@ end
     @test vec isa StdVector{CxxBool}
     @test vec == [true, false, true]
 
-    vec = StdVector{StdString}(["a", "b", "c"])
+    vec = StdVector{StdString}(["p", "q", "r"])
     @test vec isa StdVector{StdString}
-    @test vec == ["a", "b", "c"]
+    @test vec == ["p", "q", "r"]
 
-    svec_alloc = StdString.(["a", "b", "c"])::Vector{CxxWrap.StdLib.StdStringAllocated}
+    svec_alloc = StdString.(["p", "q", "r"])::Vector{CxxWrap.StdLib.StdStringAllocated}
     vec = StdVector{StdString}(svec_alloc)
     @test vec isa StdVector{StdString}
-    @test vec == ["a", "b", "c"]
+    @test vec == ["p", "q", "r"]
 
     let svec = StdString["a", "b", "c"]
       svec_ref = CxxRef.(svec)
+      GC.gc()
       vec = StdVector{StdString}(svec_ref)
+      GC.gc()
       @test vec isa StdVector{StdString}
       @test vec == ["a", "b", "c"]
 
@@ -194,6 +196,10 @@ end
       @test_throws MethodError StdVector{Bool}([true])
       @test_throws MethodError StdVector{eltype(svec_alloc)}(svec_alloc)
       @test_throws MethodError StdVector{eltype(svec_deref)}(svec_deref)
+
+      @test svec[1] == "a"
+      @test svec[2] == "b"
+      @test svec[3] == "c"
     end
   end
 
@@ -224,28 +230,28 @@ end
     @test vec isa StdVector{CxxBool}
     @test vec == [true, false, true]
 
-    vec = StdVector(StdString["a", "b", "c"])
+    vec = StdVector(StdString["x", "y", "z"])
     @test vec isa StdVector{StdString}
-    @test vec == ["a", "b", "c"]
+    @test vec == ["x", "y", "z"]
 
-    svec_alloc = StdString.(["a", "b", "c"])::Vector{CxxWrap.StdLib.StdStringAllocated}
+    svec_alloc = StdString.(["x", "y", "z"])::Vector{CxxWrap.StdLib.StdStringAllocated}
     vec = StdVector(svec_alloc)
     @test vec isa StdVector{StdString}
-    @test vec == ["a", "b", "c"]
+    @test vec == ["x", "y", "z"]
 
-    let svec = StdString["a", "b", "c"]
+    let svec = StdString["x", "y", "z"]
       svec_ref = CxxRef.(svec)
       vec = StdVector(svec_ref)
       @test vec isa StdVector{StdString}
-      @test vec == ["a", "b", "c"]
+      @test vec == ["x", "y", "z"]
 
       svec_deref = getindex.(svec_ref)::Vector{CxxWrap.StdLib.StdStringDereferenced}
       vec = StdVector(svec_deref)
       @test vec isa StdVector{StdString}
-      @test vec == ["a", "b", "c"]
+      @test vec == ["x", "y", "z"]
     end
 
-    @test_throws MethodError StdVector(["a", "b", "c"])
+    @test_throws MethodError StdVector(["x", "y", "z"])
   end
 
   @testset "mutating with integer" begin
