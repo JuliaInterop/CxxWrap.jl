@@ -60,4 +60,15 @@ let a1 = [UInt8(3)], a2 = [UInt8(5)]
   @test Containers.uint8_arrayref([pointer(a1), pointer(a2)]) == 8
 end
 
+let tup = (1.0, Int32(2), true)
+  @test Containers.copy_tuple(tup) == tup
+end
+
+let artup = ([1.0,1.0,1.0], [3.0,3.0])
+  @test Containers.read_array_tuple(artup) == [1.0, 1.0, 1.0, 3.0, 3.0]
+  @test Containers.make_array_tuple() == ([1.0,2.0], [3.0])
+end
+
+@test Containers.make_tuple_vector() == [(1.0,2.0), (3.0,4.0)]
+
 end
