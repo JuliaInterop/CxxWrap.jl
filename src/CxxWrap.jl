@@ -591,6 +591,7 @@ map_julia_arg_type(t::Type{CxxPtr{CxxChar}}) = Union{PtrTypes{Cchar}, String}
 map_julia_arg_type(t::Type{<:Array{T}}) where {T <: CxxNumber} = Union{t, Array{julia_int_type(T)}}
 map_julia_arg_type(t::Type{<:Array{Ptr{T}}}) where {T <: CxxNumber} = Union{t, Array{Ptr{julia_int_type(T)}}}
 map_julia_arg_type(t::Type{ConstCxxPtr{CxxChar}}) = Union{ConstPtrTypes{Cchar}, String}
+map_julia_arg_type(::Type{T}) where {T<:Tuple} = Tuple{map_julia_arg_type.(T.parameters)...}
 
 # names excluded from julia type mapping
 const __excluded_names = Set([

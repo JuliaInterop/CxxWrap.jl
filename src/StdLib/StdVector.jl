@@ -34,6 +34,7 @@ StdVector(v::Vector{Bool}) = StdVector{CxxBool}(v)
 Base.IndexStyle(::Type{<:StdVector}) = IndexLinear()
 Base.size(v::StdVector) = (Int(cppsize(v)),)
 Base.getindex(v::StdVector, i::Int) = cxxgetindex(v, i)[]
+Base.getindex(v::StdVector{<:Tuple}, i::Int) = cxxgetindex(v, i)
 Base.setindex!(v::StdVector{T}, val, i::Int) where {T} = cxxsetindex!(v, convert(T, val), i)
 
 @cxxdereference function Base.push!(v::StdVector, x)
