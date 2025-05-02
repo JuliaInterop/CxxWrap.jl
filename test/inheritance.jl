@@ -1,5 +1,7 @@
 include(joinpath(@__DIR__, "testcommon.jl"))
 
+GC.enable(true)
+
 # Wrap the functions defined in C++
 module CppInheritance
 
@@ -42,10 +44,20 @@ CppInheritance.virtualfunc(x::AbstractJuliaExtended) = CppInheritance.virtualfun
 struct JuliaExtended <: AbstractJuliaExtended
   function JuliaExtended(len, value)
     ref_obj = CppInheritance.VirtualCfunctionExtended(len,value)
-    CppInheritance.set_callback(ref_obj, c_double)
-    return new(ref_obj)
+
+    # Get a reference in case the value changes
+    firstval_ref = CxxWrap.StdLib.cxxgetindex(CppInheritance.getData(ref_obj), 1)
+
+    function cb(x::Float64)
+      return 2x + firstval_ref[]
+    end
+    c_cb = @safe_cfunction($cb, Float64, (Float64,))
+
+    CppInheritance.set_callback(ref_obj, c_cb)
+    return new(ref_obj, c_cb)
   end
   referred_object::CppInheritance.VirtualCfunctionExtended
+  callback::CxxWrap.SafeCFunction # Needed to avoid garbage collection of the function
 end
 
 @testset "$(basename(@__FILE__)[1:end-3])" begin
@@ -112,7 +124,8 @@ let virt_extended_julia = CppInheritance.VirtualCfunctionExtended(100000,2.0)
 end
 
 let virt_extended_julia = JuliaExtended(100000, 4.0)
-  @test CppInheritance.virtualfunc(virt_extended_julia) == 800000
+  @test CppInheritance.virtualfunc(virt_extended_julia) == 1200000
+  GC.gc()
   @time CppInheritance.virtualfunc(virt_extended_julia)
 end
 
