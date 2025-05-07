@@ -40,6 +40,17 @@ abstract type AbstractJuliaExtended <: CppInheritance.VirtualCpp end
 # Every C++ function called on the Julia extended classes needs this kind of specialization
 CppInheritance.virtualfunc(x::AbstractJuliaExtended) = CppInheritance.virtualfunc(x.referred_object)
 
+function make_callback(firstval_ref)
+  cb(x::Float64) = 2x + firstval_ref[]
+  cb_noclosure(x::Float64) = 3x
+  try
+    return @safe_cfunction($cb, Float64, (Float64,))
+  catch e
+    @warn "Creating cfunction failed with error $e"
+    return @safe_cfunction($cb_noclosure, Float64, (Float64,))
+  end
+end
+
 # Example of an extension implemented in Julia
 struct JuliaExtended <: AbstractJuliaExtended
   function JuliaExtended(len, value)
@@ -48,10 +59,7 @@ struct JuliaExtended <: AbstractJuliaExtended
     # Get a reference in case the value changes
     firstval_ref = CxxWrap.StdLib.cxxgetindex(CppInheritance.getData(ref_obj), 1)
 
-    function cb(x::Float64)
-      return 2x + firstval_ref[]
-    end
-    c_cb = @safe_cfunction($cb, Float64, (Float64,))
+    c_cb = make_callback(firstval_ref)
 
     CppInheritance.set_callback(ref_obj, c_cb)
     return new(ref_obj, c_cb)
