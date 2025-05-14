@@ -1,5 +1,7 @@
 include(joinpath(@__DIR__, "testcommon.jl"))
 
+GC.enable(true)
+
 # Wrap the functions defined in C++
 module CppInheritance
 
@@ -24,6 +26,47 @@ module VirtualSolver
 end
 
 using .CppInheritance
+
+# Normal Julia callback
+function double(x::Float64)
+  return 2x
+end
+
+# callback as a C function
+c_double = @safe_cfunction(double, Float64, (Float64,))
+
+# Base class for extended classes in Julia
+abstract type AbstractJuliaExtended <: CppInheritance.VirtualCpp end
+# Every C++ function called on the Julia extended classes needs this kind of specialization
+CppInheritance.virtualfunc(x::AbstractJuliaExtended) = CppInheritance.virtualfunc(x.referred_object)
+
+function make_callback(firstval_ref)
+  cb(x::Float64) = 2x + firstval_ref[]
+  cb_noclosure(x::Float64) = 3x
+  try
+    return @safe_cfunction($cb, Float64, (Float64,))
+  catch e
+    @warn "Creating cfunction failed with error $e"
+    return @safe_cfunction($cb_noclosure, Float64, (Float64,))
+  end
+end
+
+# Example of an extension implemented in Julia
+struct JuliaExtended <: AbstractJuliaExtended
+  function JuliaExtended(len, value)
+    ref_obj = CppInheritance.VirtualCfunctionExtended(len,value)
+
+    # Get a reference in case the value changes
+    firstval_ref = CxxWrap.StdLib.cxxgetindex(CppInheritance.getData(ref_obj), 1)
+
+    c_cb = make_callback(firstval_ref)
+
+    CppInheritance.set_callback(ref_obj, c_cb)
+    return new(ref_obj, c_cb)
+  end
+  referred_object::CppInheritance.VirtualCfunctionExtended
+  callback::CxxWrap.SafeCFunction # Needed to avoid garbage collection of the function
+end
 
 @testset "$(basename(@__FILE__)[1:end-3])" begin
 
@@ -76,4 +119,23 @@ VirtualSolver.solve(a)
 b = VirtualSolver.F(@safe_cfunction(x -> 2x, Float64, (Float64,)))
 VirtualSolver.solve(b)
 
+let virt_extended_julia = CppInheritance.VirtualCppJuliaExtended(100000,1.0)
+  CppInheritance.set_callback(virt_extended_julia, double)
+  @test CppInheritance.virtualfunc(virt_extended_julia) == 200000
+  @time CppInheritance.virtualfunc(virt_extended_julia)
 end
+
+let virt_extended_julia = CppInheritance.VirtualCfunctionExtended(100000,2.0)
+  CppInheritance.set_callback(virt_extended_julia, c_double)
+  @test CppInheritance.virtualfunc(virt_extended_julia) == 400000
+  @time CppInheritance.virtualfunc(virt_extended_julia)
+end
+
+let virt_extended_julia = JuliaExtended(100000, 4.0)
+  @test CppInheritance.virtualfunc(virt_extended_julia) == 1200000
+  GC.gc()
+  @time CppInheritance.virtualfunc(virt_extended_julia)
+end
+
+end
+
