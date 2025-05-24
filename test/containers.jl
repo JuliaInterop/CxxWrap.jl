@@ -70,5 +70,6 @@ let artup = ([1.0,1.0,1.0], [3.0,3.0])
 end
 
 @test Containers.make_tuple_vector() == [(1.0,2.0), (3.0,4.0)]
+@test Containers.catstrings(["aaa", "bb"]) == "aaabb"
 
 end

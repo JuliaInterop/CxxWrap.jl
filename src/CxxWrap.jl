@@ -590,6 +590,7 @@ map_julia_arg_type(t::Type{CxxPtr{T}}, ::Type{IsCxxType}) where {T} = Union{CxxP
 map_julia_arg_type(t::Type{CxxPtr{CxxChar}}) = Union{PtrTypes{Cchar}, String}
 map_julia_arg_type(t::Type{<:Array{T}}) where {T <: CxxNumber} = Union{t, Array{julia_int_type(T)}}
 map_julia_arg_type(t::Type{<:Array{Ptr{T}}}) where {T <: CxxNumber} = Union{t, Array{Ptr{julia_int_type(T)}}}
+map_julia_arg_type(t::Type{Vector{Ptr{CxxChar}}}) = Union{t, Vector{Ptr{julia_int_type(CxxChar)}}, Vector{String}}
 map_julia_arg_type(t::Type{ConstCxxPtr{CxxChar}}) = Union{ConstPtrTypes{Cchar}, String}
 map_julia_arg_type(::Type{T}) where {T<:Tuple} = Tuple{map_julia_arg_type.(T.parameters)...}
 
@@ -616,8 +617,10 @@ Base.unsafe_convert(to_type::Type{<:CxxBaseRef{T}}, v::CxxBaseRef) where {T} = t
 Base.unsafe_convert(to_type::Type{<:CxxBaseRef}, v::Base.RefValue) = to_type(pointer_from_objref(v))
 
 Base.cconvert(::Type{CxxPtr{CxxPtr{CxxChar}}}, v::Vector{String}) = Base.cconvert(Ptr{Ptr{Cchar}}, v)
+Base.cconvert(::Type{Vector{Ptr{CxxChar}}}, v::Vector{String}) = Base.cconvert(Ptr{Ptr{Cchar}}, v)
 Base.unsafe_convert(to_type::Type{CxxPtr{CxxPtr{CxxChar}}}, a::Base.RefArray{Ptr{Cchar}, Vector{Ptr{Cchar}}, Any}) = to_type(Base.unsafe_convert(Ptr{Ptr{Cchar}}, a))
 Base.unsafe_convert(to_type::Type{CxxPtr{CxxPtr{CxxChar}}}, a::Base.RefArray{Ptr{Cchar}, Vector{Ptr{Cchar}}, Vector{Any}}) = to_type(Base.unsafe_convert(Ptr{Ptr{Cchar}}, a))
+Base.unsafe_convert(::Type{Vector{Ptr{CxxChar}}}, a::Union{Base.RefArray{Ptr{Cchar}, Vector{Ptr{Cchar}}, Any}, Base.RefArray{Ptr{Cchar}, Vector{Ptr{Cchar}}, Vector{Any}}}) = a.x[1:end-1]
 
 cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x, ::Type{IsNormalType}) where {T} = Ref{T}(convert(T,x))
 cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x::Base.RefValue, ::Type{IsNormalType}) where {T} = x

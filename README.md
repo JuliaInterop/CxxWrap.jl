@@ -1070,6 +1070,9 @@ Often, new releases of `CxxWrap` also require a new release of the C++ component
 There was no change in the API, but because of a change in the way the mapping between C++ and Julia types is implemented the C++ modules need to be recompiled against `libcxxwrap-julia` 0.13.
 The reason for this change is that the old method caused crahses on macOS with Apple CPUs (M1, ...).
 
+## Breaking changes in v0.17
+
+* The binary parts of dependent packages need to be rebuilt against `libcxxwrap-julia` 0.14, which has a better way of adding STL functionality
 
 ## References
 * [JuliaCon 2020 Talk: Julia and C++: a technical overview of CxxWrap.jl](https://www.youtube.com/watch?v=u7IaXwKSUU0)
