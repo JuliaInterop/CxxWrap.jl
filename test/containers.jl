@@ -71,4 +71,9 @@ end
 
 @test Containers.make_tuple_vector() == [(1.0,2.0), (3.0,4.0)]
 
+# Defined only in libcxxwrap-julia main.
+if isdefined(Containers, :catstrings)
+  @test Containers.catstrings(["aaa", "bb"]) == "aaabb"
+end
+
 end
