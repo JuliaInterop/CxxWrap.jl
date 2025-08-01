@@ -21,6 +21,7 @@ jobs:
         version:
           - "1.6"
           - "1.11"
+          - "pre"
           - "nightly"
         os:
           - macos-13
@@ -34,6 +35,9 @@ jobs:
           - os: macos-14
             arch: aarch64
             version: "nightly"
+          - os: macos-14
+            arch: aarch64
+            version: "pre"
     steps:
       - uses: actions/checkout@v4
         with:
