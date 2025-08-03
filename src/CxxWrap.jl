@@ -738,7 +738,7 @@ function makereftype(::Type{T}, mod) where {T}
     end
     return Core.eval(mod, :(struct $refname <: $T cpp_object::Ptr{Cvoid} end; $refname))
   end
-  if !isdefined(tmod, refname)
+  if !Base.invokelatest(isdefined, tmod, refname)
     parameternames = (Symbol(:T,i) for i in 1:length(params))
     expr = :(struct $refname{$(parameternames...)} <: $basename{$(parameternames...)} cpp_object::Ptr{Cvoid} end)
     Core.eval(mod, expr)
