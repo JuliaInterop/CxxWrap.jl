@@ -977,18 +977,8 @@ You  can also further specialize on `T` to get specific behavior depending on th
 
 View [StdLib](./src/StdLib) to check available methods. The containers have iterators defined, and hence are iterable.
 
-To add support for e.g. vectors of your own type `World`, either just add methods that use an `std::vector<World>` as an argument, or manually wrap them using `jlcxx::stl::apply_stl<World>(mod);`.
+To add support for e.g. vectors of your own type `World`, just add methods that use an `std::vector<World>` as an argument or return type.
 For this to work, add `#include "jlcxx/stl.hpp"` to your C++ file.
-
-If the type `World` contains methods that take or return `std::` collections of type `World` or `World*`, however, you must first complete the type, so that CxxWrap can generate the type and the template specializations for the `std::` collections.
-In this case, you can add those methods to your type like this:
-
-```
-jlcxx::stl::apply_stl<World*>(mod);
-mod.method("getSecondaryWorldVector", [](const World* p)->const std::vector<World*>& {
-    return p->getSecondaries();
-});
-```
 
 Linking wrappers using STL support requires adding `JlCxx::cxxwrap_julia_stl` to the `target_link_libraries` command in `CMakeLists.txt`.
 
@@ -1072,7 +1062,7 @@ The reason for this change is that the old method caused crahses on macOS with A
 
 ## Breaking changes in v0.17
 
-* The binary parts of dependent packages need to be rebuilt against `libcxxwrap-julia` 0.14, which has a better way of adding STL functionality
+* The binary parts of dependent packages need to be rebuilt against `libcxxwrap-julia` 0.14, which has a better way of adding STL functionality. This means the `apply_stl` function has been removed and calls to it should just be removed, since the appropriate types are now generated automatically.
 
 ## References
 * [JuliaCon 2020 Talk: Julia and C++: a technical overview of CxxWrap.jl](https://www.youtube.com/watch?v=u7IaXwKSUU0)
