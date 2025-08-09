@@ -197,6 +197,19 @@ end
 @show CppTypes.EnumClassBlue
 @test CppTypes.check_red(CppTypes.EnumClassRed)
 
+@test CppTypes.newenum_to_int(CppTypes.EnumVal1) == 0
+@test CppTypes.newenum_to_int(CppTypes.EnumVal2) == 1
+@test CppTypes.MyEnumNew(1) == CppTypes.EnumVal2
+@test CppTypes.newenum_to_int(CppTypes.MyEnumNew(1)) == 1
+@test CppTypes.newenum_from_int(0) == CppTypes.EnumVal1
+@test CppTypes.newenum_from_int(1) == CppTypes.EnumVal2
+@test CppTypes.newenum_byref(CppTypes.EnumVal1) == 0
+@test CppTypes.newenum_byref(CppTypes.EnumVal2) == 1
+
+@test typeof(Integer(CppTypes.zero)) == UInt64
+@test UInt64(CppTypes.zero) == 0
+@test UInt64(CppTypes.verybig) == typemax(UInt64)
+
 foovec = Any[CppTypes.Foo(StdWString("a"), [1.0, 2.0, 3.0]), CppTypes.Foo(StdWString("b"), [11.0, 12.0, 13.0])] # Must be Any because of the boxing
 @test CppTypes.name(foovec[1]) == "a"
 @test CppTypes.data(foovec[1]) == [1.0, 2.0, 3.0]
