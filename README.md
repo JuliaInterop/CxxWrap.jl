@@ -321,7 +321,7 @@ See the test at [`examples/inheritance.cpp`](https://github.com/JuliaInterop/lib
 
 ## Enum types
 
-Enum types are converted to strongly-typed bits types on the Julia side.
+Enum types are converted to standard Julia enums by calling the `@enum` macro in the backend.
 Consider the C++ enum:
 
 ```c++
@@ -337,14 +337,16 @@ This is registered as follows:
 ```c++
 JLCXX_MODULE define_types_module(jlcxx::Module& types)
 {
-  types.add_bits<MyEnum>("MyEnum", jlcxx::julia_type("CppEnum"));
-  types.set_const("EnumValA", EnumValA);
-  types.set_const("EnumValB", EnumValB);
+  types.add_enum<MyEnum>("MyEnum",
+    std::vector<const char*>({"EnumValA", "EnumValB"}),
+    std::vector<int>({EnumValA, EnumValB}));
 }
 ```
 
 The enum constants will be available on the Julia side as `CppTypes.EnumValA` and `CppTypes.EnumValB`, both of type `CppTypes.MyEnum`.
 Wrapped C++ functions taking a `MyEnum` will only accept a value of type `CppTypes.MyEnum` in Julia.
+
+Note that the old method (CxxWrap 0.17.2 and earlier) of adding enums using `add_bits` and `set_const` should be considered as deprecated.
 
 ## Template (parametric) types
 

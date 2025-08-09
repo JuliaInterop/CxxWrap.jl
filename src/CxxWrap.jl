@@ -143,7 +143,7 @@ end
 
 @inline cpp_trait_type(::Type) = IsNormalType
 
-# Enum type interface
+# Legacy enum type interface
 abstract type CppEnum <: Integer end
 (::Type{T})(x::CppEnum) where {T <: Integer} = T(reinterpret(Int32, x))::T
 (::Type{T})(x::Integer) where {T <: CppEnum} = reinterpret(T, Int32(x))
@@ -152,6 +152,41 @@ import Base: +, |
 +(a::T, b::T) where {T <: CppEnum} = reinterpret(T, convert(Int32,a) + convert(Int32,b))
 |(a::T, b::T) where {T <: CppEnum} = reinterpret(T, convert(Int32,a) | convert(Int32,b))
 Base.promote_rule(::Type{E}, ::Type{T}) where {E <: CppEnum, T <: Integer} = Int32
+
+Base.unsafe_string(s::Ptr{CxxChar}) = unsafe_string(reinterpret(Ptr{Cchar}, s))
+
+function has_enum(wrapped_module, typesym, labels, values::Vector{BaseT}) where BaseT
+  if !Base.invokelatest(isdefined, wrapped_module, typesym)
+    return false
+  end
+  existing_type = Base.invokelatest(getproperty, wrapped_module, typesym)
+  if (existing_type isa DataType) && (supertype(existing_type) <: Enum{BaseT})
+    istces = instances(existing_type)
+    return all(BaseT.(istces) .== values) && all(Symbol.(istces) .== labels)
+  end
+  return false
+end
+
+# New enum wrapping
+function add_enum(wrapped_module, type_name, labels, values::Vector{BaseT}) where BaseT
+  typesym = Symbol(type_name)
+  labelsyms = Symbol.(unsafe_string.(labels))
+  if has_enum(wrapped_module, typesym, labelsyms, values)
+    return Base.invokelatest(getproperty, wrapped_module, typesym)
+  end
+  enum_block = Expr(:block)
+  try
+    for (label, value) in zip(labelsyms, values)
+      push!(enum_block.args, :($label = $value))
+    end
+    @eval wrapped_module @enum $(typesym)::$BaseT $enum_block
+    return Base.invokelatest(getproperty, wrapped_module, typesym)
+  catch e
+    @error "Error adding enum $type_name: " e
+    display(stacktrace())
+    return nothing
+  end
+end
 
 """
 Base class for smart pointers
