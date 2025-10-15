@@ -242,7 +242,7 @@ end
 # Julia version
 half_julia(d::Float64) = d*0.5
 
-const libfunctions = CxxWrap.CxxWrapCore.libfunctions()
+libfunctions = CxxWrap.CxxWrapCore.libfunctions()
 
 # C version
 half_c(d::Float64) = ccall((:half_c, libfunctions), Cdouble, (Cdouble,), d)
