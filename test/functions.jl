@@ -243,7 +243,11 @@ end
 half_julia(d::Float64) = d*0.5
 
 # C version
-half_c(d::Float64) = ccall((:half_c, CxxWrap.CxxWrapCore.libfunctions()), Cdouble, (Cdouble,), d)
+@static if VERSION ≥ v"1.12"
+  half_c(d::Float64) = ccall((:half_c, CxxWrap.CxxWrapCore.libfunctions), Cdouble, (Cdouble,), d)
+else
+  half_c(d::Float64) = ccall((:half_c, CxxWrap.CxxWrapCore.libfunctions()), Cdouble, (Cdouble,), d)
+end
 
 # Bring C++ versions into scope
 using .CppHalfFunctions: half_d, half_lambda, half_loop_cpp!, half_loop_jlcall!, half_loop_cfunc!

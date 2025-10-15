@@ -1,6 +1,10 @@
 include(joinpath(@__DIR__, "testcommon.jl"))
 
-const libexcept = CxxWrap.CxxWrapCore.libexcept()
+@static if VERSION ≥ v"1.12"
+  using CxxWrap.CxxWrapCore: libexcept
+else
+  const libexcept = CxxWrap.CxxWrapCore.libexcept()
+end
 
 @testset "$(basename(@__FILE__)[1:end-3])" begin
 

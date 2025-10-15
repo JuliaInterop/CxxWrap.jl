@@ -18,6 +18,13 @@ if !isdefined(libcxxwrap_julia_jll, :libcxxwrap_julia_path)
     error("libcxxwrap_julia_jll not available on this platform")
 end
 
+@static if VERSION ≥ v"1.12"
+  using Libdl: LazyLibrary, LazyLibraryPath
+
+  struct LazyLibcxxwrapDir; end
+  Base.string(::LazyLibcxxwrapDir) = dirname(libcxxwrap_julia_jll.libcxxwrap_julia_path)
+end
+
 # These can't be products, since we want to control how and when they are dlopened
 for libname in ["jlcxx_containers", "except", "extended", "functions", "hello", "basic_types", "inheritance", "parametric", "pointer_modification", "types"]
   libcxxwrap_julia_name = basename(libcxxwrap_julia_jll.libcxxwrap_julia_path)
@@ -25,7 +32,13 @@ for libname in ["jlcxx_containers", "except", "extended", "functions", "hello", 
   libext = libcxxwrap_julia_name[findlast('.', libcxxwrap_julia_name):end]
   full_libname = libprefix * libname * libext
   symname = "lib"*libname
-  @eval $(Symbol(symname))() = joinpath(dirname(libcxxwrap_julia_jll.libcxxwrap_julia_path), $(full_libname))
+  if VERSION ≥ v"1.12"
+    # use as ccall((:fn_symbol, libfunctions), ...)
+    @eval const $(Symbol(symname)) = LazyLibrary(LazyLibraryPath(LazyLibcxxwrapDir(), $(full_libname)))
+  else
+    # use as ccall((:fn_symbol, libfunctions()), ...)
+    @eval $(Symbol(symname))() = joinpath(dirname(libcxxwrap_julia_jll.libcxxwrap_julia_path), $(full_libname))
+  end
 end
 
 prefix_path() = dirname(dirname(libcxxwrap_julia_jll.libcxxwrap_julia_path))
@@ -847,6 +860,12 @@ function readmodule(so_path::String, funcname, m::Module, flags)
   __stringsoname_error("readmodule")
 end
 
+@static if VERSION ≥ v"1.12"
+  function readmodule(so_path::LazyLibrary, funcname, m::Module, flags)
+    readmodule(() -> string(so_path.path), funcname, m, flags)
+  end
+end
+
 function readmodule(so_path_cb::Function, funcname, m::Module, flags)
   if isdefined(m, :__cxxwrap_methodkeys)
     return
@@ -868,6 +887,12 @@ end
 function wrapmodule(so_path::String, funcname, m::Module, flags)
   wrapmodule(() -> so_path, funcname, m, flags)
   __stringsoname_error("wrapmodule")
+end
+
+@static if VERSION ≥ v"1.12"
+  function wrapmodule(so_path::LazyLibrary, funcname, m::Module, flags)
+    wrapmodule(() -> string(so_path.path), funcname, m, flags)
+  end
 end
 
 function wrapmodule(so_path_cb::Function, funcname, m::Module, flags)
