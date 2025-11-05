@@ -14,7 +14,7 @@ end
 
 end
 
-import .ParametricTypes.TemplateType, .ParametricTypes.NonTypeParam
+import .ParametricTypes: TemplateType, PartialTemplate, NonTypeParam
 
 p1 = TemplateType{ParametricTypes.P1, ParametricTypes.P2}()
 p2 = TemplateType{ParametricTypes.P2, ParametricTypes.P1}()
@@ -40,6 +40,8 @@ dump(p1)
 @test ParametricTypes.get_second(p1) == 10.
 @test typeof(ParametricTypes.get_first(p2)) == Float64
 @test typeof(ParametricTypes.get_second(p1)) == Float64
+
+@test supertype(PartialTemplate{ParametricTypes.P1}) == TemplateType{ParametricTypes.P2,ParametricTypes.P1}
 
 @test ParametricTypes.TemplateDefaultType{ParametricTypes.P1}() != nothing
 
