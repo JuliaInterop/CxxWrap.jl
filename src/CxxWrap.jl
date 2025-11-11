@@ -338,6 +338,7 @@ Base.unsafe_convert(to_type::Type{<:CxxBaseRef}, x) = to_type(x.cpp_object)
 
 # This is defined on the C++ side for each wrapped type
 cxxdowncast(::Type{T}, x::CxxPtr{T}) where {T} = x
+cxxdowncast(::Type{T}, x::ConstCxxPtr{BaseT}) where {BaseT, T <: BaseT} = ConstCxxPtr(cxxdowncast(T,CxxPtr(x)))
 cxxupcast(x) = cxxupcast(CxxRef(x))
 cxxupcast(x::CxxRef) = error("No upcast for type $(supertype(typeof(x))). Did you specialize SuperType to enable automatic upcasting?")
 function cxxupcast(::Type{T}, x) where {T}
@@ -347,6 +348,8 @@ cxxupcast(::Type{T}, x::CxxBaseRef{T}) where {T} = x
 
 # Dynamic cast equivalent
 Base.convert(::Type{CxxPtr{DerivedT}}, x::CxxPtr{SuperT}) where {SuperT, DerivedT <: SuperT} = cxxdowncast(DerivedT, x)
+Base.convert(::Type{ConstCxxPtr{DerivedT}}, x::ConstCxxPtr{SuperT}) where {SuperT, DerivedT <: SuperT} = cxxdowncast(DerivedT, x)
+Base.convert(::Type{ConstCxxPtr{DerivedT}}, x::CxxPtr{SuperT}) where {SuperT, DerivedT <: SuperT} = ConstCxxPtr(cxxdowncast(DerivedT, x))
 
 struct ConstArray{T,N} <: AbstractArray{T,N}
   ptr::ConstCxxPtr{T}
