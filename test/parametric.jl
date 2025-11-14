@@ -42,6 +42,9 @@ dump(p1)
 @test typeof(ParametricTypes.get_second(p1)) == Float64
 
 @test supertype(PartialTemplate{ParametricTypes.P1}) == TemplateType{ParametricTypes.P2,ParametricTypes.P1}
+let partial = PartialTemplate{ParametricTypes.P1}()
+    @test convert(TemplateType{ParametricTypes.P2,ParametricTypes.P1}, partial).cpp_object == partial.cpp_object
+end
 
 @test ParametricTypes.TemplateDefaultType{ParametricTypes.P1}() != nothing
 
