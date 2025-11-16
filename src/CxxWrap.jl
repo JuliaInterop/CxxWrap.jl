@@ -632,6 +632,8 @@ map_julia_arg_type(t::Type{Vector{Ptr{CxxChar}}}) = Union{t, Vector{Ptr{julia_in
 map_julia_arg_type(t::Type{ConstCxxPtr{CxxChar}}) = Union{ConstPtrTypes{Cchar}, String}
 map_julia_arg_type(::Type{T}) where {T<:Tuple} = Tuple{map_julia_arg_type.(T.parameters)...}
 
+map_julia_arg_type(::Type{Ptr{Libc.FILE}}) = Libc.FILE
+
 # names excluded from julia type mapping
 const __excluded_names = Set([
       :cxxdowncast,
@@ -673,6 +675,9 @@ function cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x::CxxBaseRef, ::Type{IsCxxT
   return to_type(convert(T,x[]))
 end
 
+convert_return(x) = x
+convert_return(fp::Ptr{Libc.FILE}) = Libc.FILE(fp)
+
 # Build the expression to wrap the given function
 function build_function_expression(func::CppFunctionInfo, funcidx, julia_mod)
   # Arguments and types
@@ -713,6 +718,7 @@ function build_function_expression(func::CppFunctionInfo, funcidx, julia_mod)
   map_julia_return_type(t) = t
   map_julia_return_type(::Type{T}) where {T<:CxxNumber} = map_c_arg_type(T)
   map_julia_return_type(::Type{CxxBool}) = Bool
+  map_julia_return_type(::Type{Ptr{Libc.FILE}}) = Libc.FILE
 
   # Build the final call expression
   call_exp = quote end
@@ -753,7 +759,7 @@ function build_function_expression(func::CppFunctionInfo, funcidx, julia_mod)
   pos_argmap = complete_argmap[1:end-n_kw_args]
   kw_argmap = complete_argmap[end-n_kw_args+1:end]
 
-  function_expression = :($(make_func_declaration((func.name,func.override_module), pos_argmap, kw_argmap, julia_mod))::$(map_julia_return_type(func.julia_return_type)) = $call_exp)
+  function_expression = :($(make_func_declaration((func.name,func.override_module), pos_argmap, kw_argmap, julia_mod))::$(map_julia_return_type(func.julia_return_type)) = $convert_return($call_exp))
 
   if func.doc != ""
     function_expression = :(Core.@doc $(func.doc) $function_expression)

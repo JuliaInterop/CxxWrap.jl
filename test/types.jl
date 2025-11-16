@@ -315,3 +315,11 @@ let v = CppTypes.shared_vector_factory(), cv = CppTypes.shared_const_vector_fact
   @test CppTypes.get_shared_vector_msg(v) == "shared vector hello"
   @test CppTypes.get_shared_vector_msg(cv) == "shared vector const hello from const overload"
 end
+
+let filename = tempname()
+  file = CppTypes.makefptr(filename)
+  CppTypes.writefptr(file)
+  CppTypes.closefptr(file)
+  @test readlines(filename)[1] == "Hello world!"
+  rm(filename)
+end
