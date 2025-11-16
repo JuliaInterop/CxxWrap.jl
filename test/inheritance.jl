@@ -137,5 +137,16 @@ let virt_extended_julia = JuliaExtended(100000, 4.0)
   @time CppInheritance.virtualfunc(virt_extended_julia)
 end
 
+# Tests for issue #493
+import .CppInheritance: make_a, make_b, make_const_a, make_const_b, DerivedA, DerivedB
+let a = make_a(), b = make_b(), ac = make_const_a(), bc = make_const_b()
+  @test convert(CxxPtr{DerivedA}, a).cpp_object == a.cpp_object
+  @test convert(CxxPtr{DerivedB}, a) == C_NULL
+  @test convert(ConstCxxPtr{DerivedB}, b).cpp_object == b.cpp_object
+  @test convert(ConstCxxPtr{DerivedB}, a) == C_NULL
+  @test convert(ConstCxxPtr{DerivedB}, ac) == C_NULL
+  @test convert(ConstCxxPtr{DerivedB}, bc).cpp_object == bc.cpp_object
+end
+
 end
 
