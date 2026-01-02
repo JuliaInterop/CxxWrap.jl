@@ -53,6 +53,12 @@ function testf2(p::ConstCxxPtr{Float64}, n_elems::Int)
   return
 end
 
+unsigned_sum(a::Ptr{UInt32},b::Int32) = Int32(sum(unsafe_wrap(Array,a,b)))
+function uint64_array(n::Int32)
+  global __tmp_arr = ones(UInt64, n)
+  return pointer(__tmp_arr)
+end
+
 @testset "$(basename(@__FILE__)[1:end-3])" begin
 
 @test isdir(CxxWrap.prefix_path())
@@ -217,6 +223,13 @@ let bref = Ref{Cuchar}(0)
   @test bref[] == false
 end
 
+let safe_unsigned_sum = CxxWrap.@safe_cfunction(unsigned_sum, Int32, (Ptr{UInt32}, Int32))
+  @test CppTestFunctions.test_safe_cfunction_uint(safe_unsigned_sum) == 6
+end
+
+let safe_uint64_array = CxxWrap.@safe_cfunction(uint64_array, Ptr{UInt64}, (Int32,))
+  @test CppTestFunctions.test_safe_cfunction_uint64(safe_uint64_array) == 3
+end
 
 end # testset end
 
