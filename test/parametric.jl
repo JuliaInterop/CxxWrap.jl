@@ -92,4 +92,14 @@ vec3 = ParametricTypes.CppVector{Complex{Float32}}(pointer(carr), 2)
 @test ParametricTypes.get(vec3,0)[] == 1+2im
 @test ParametricTypes.get(vec3,1)[] == 3+4im
 
+
+cyclicDepA_i = ParametricTypes.CyclicParamDepA{Cint}()
+cyclicDepA_f = ParametricTypes.CyclicParamDepA{Cdouble}()
+cyclicDepB_i = ParametricTypes.CyclicParamDepB{Cint}()
+cyclicDepB_f = ParametricTypes.CyclicParamDepB{Cdouble}()
+
+@test ParametricTypes.f(cyclicDepA_i) isa Cint && ParametricTypes.f(cyclicDepA_i) == one(Cint)
+@test ParametricTypes.f(cyclicDepA_f) isa Cdouble && ParametricTypes.f(cyclicDepA_i) == one(Cdouble)
+@test ParametricTypes.f(cyclicDepB_i) isa Cint && ParametricTypes.f(cyclicDepB_i) == 2
+@test ParametricTypes.f(cyclicDepB_f) isa Cdouble && ParametricTypes.f(cyclicDepB_i) == Cdouble(2)
 end
