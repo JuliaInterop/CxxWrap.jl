@@ -93,13 +93,11 @@ vec3 = ParametricTypes.CppVector{Complex{Float32}}(pointer(carr), 2)
 @test ParametricTypes.get(vec3,1)[] == 3+4im
 
 
-cyclicDepA_i = ParametricTypes.CyclicParamDepA{Cint}()
-cyclicDepA_f = ParametricTypes.CyclicParamDepA{Cdouble}()
-cyclicDepB_i = ParametricTypes.CyclicParamDepB{Cint}()
-cyclicDepB_f = ParametricTypes.CyclicParamDepB{Cdouble}()
-
-@test ParametricTypes.f(cyclicDepA_i) isa Cint && ParametricTypes.f(cyclicDepA_i) == one(Cint)
-@test ParametricTypes.f(cyclicDepA_f) isa Cdouble && ParametricTypes.f(cyclicDepA_i) == one(Cdouble)
-@test ParametricTypes.f(cyclicDepB_i) isa Cint && ParametricTypes.f(cyclicDepB_i) == 2
-@test ParametricTypes.f(cyclicDepB_f) isa Cdouble && ParametricTypes.f(cyclicDepB_i) == Cdouble(2)
+# CyclicParamDepA::f() method takes a CylicParamDepB instance as argument
+# and vice-versa for CylicParamDepB::f(). We check that both classes can
+# be instantiated and their methods (that both return true) can be called.
+cyclicDepA = ParametricTypes.CyclicParamDepA{Cint}()
+cyclicDepB = ParametricTypes.CyclicParamDepB{Cint}()
+@test ParametricTypes.f(cyclicDepA, cyclicDepB)
+@test ParametricTypes.f(cyclicDepB, cyclicDepA)
 end
