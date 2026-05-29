@@ -261,16 +261,8 @@ struct B : A
 };
 ```
 
-When adding the type, add the supertype as a second argument:
-
-```c++
-types.add_type<A>("A").method("message", &A::message);
-types.add_type<B>("B", jlcxx::julia_base_type<A>());
-```
-
-The supertype is of type `jl_datatype_t*` and using the template function `jlcxx::julia_base_type` looks up the abstract type associated with `A` here.
 Since the concrete arguments given to `ccall` are the reference types, we need a way to convert `BRef` into `ARef`.
-To allow CxxWrap to figure out the correct static_cast to use, the hierarchy must be defined at compile time as follows:
+To allow CxxWrap to figure out the correct `static_cast` to use, the hierarchy must be defined at compile time as follows:
 
 ```c++
 namespace jlcxx
@@ -279,19 +271,26 @@ namespace jlcxx
 }
 ```
 
+Missing and incorrect (i.e. non-derived) `SuperType` specializations will cause compile time errors.
 
+When adding the derived type, pass the supertype as a second argument to `add_type` using `jlcxx::julia_base_type`:
 
-There is also a variant taking a string for the type name and an optional Julia module name as second argument, which is useful for inheriting from a type defined in Julia, e.g.:
+```c++
+types.add_type<A>("A").method("message", &A::message);
+types.add_type<B>("B", jlcxx::julia_base_type<A>());
+
+auto multi_vector_base = mod.add_type<Parametric<TypeVar<1>>>("MultiVectorBase");
+auto vector_base = mod.add_type<Parametric<TypeVar<1>>>("VectorBase", jlcxx::julia_base_type(multi_vector_base));
+```
+
+The template function `jlcxx::julia_base_type` looks up the abstract Julia type associated with `A` here (i.e. `A` must already be wrapped for the look up to succeed). It can be used whenever the base type is a fully-specialized, concrete type known at compile time, e.g. `A` or `AbstractTemplate<double>`.
+
+Alternately, when inheriting from a template type, pass the `TypeWrapper` returned by `add_type` to the function-argument overload of `jlcxx::julia_base_type`.
+
+There is also a variant of `add_type` taking a string for the supertype name and an optional Julia module name as second argument, which is useful for inheriting from a type defined in Julia, e.g.:
 
 ```c++
 mod.add_type<Teuchos::ParameterList>("ParameterList", jlcxx::julia_type("AbstractDict", "Base"))
-```
-
-The value returned by `add_type` also had a `dt()` method, useful in the case of template types:
-
-```c++
-auto multi_vector_base = mod.add_type<Parametric<TypeVar<1>>>("MultiVectorBase");
-auto vector_base = mod.add_type<Parametric<TypeVar<1>>>("VectorBase", multi_vector_base.dt());
 ```
 
 ### Conversion
@@ -526,8 +525,8 @@ Due to the fact that built-in integer types don't have an imposed size, they can
 
 The following table gives an overview of the mapping, where some of the `Cxx*` types may actually be aliases for a Julia type:
 
-| C++                | Julia              | 
-| -------------------|--------------------| 
+| C++                | Julia              |
+| -------------------|--------------------|
 |`int8_t`            |`Int8`              |
 |`uint8_t`           |`UInt8`             |
 |`int16_t`           |`Int16`             |
