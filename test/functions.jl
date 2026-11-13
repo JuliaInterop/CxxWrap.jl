@@ -299,6 +299,18 @@ if cxx_available
   test_half_function(half_loop_cxxjl!)
 end
 
+function runfill(n, iterations)
+  buf = Vector{Cint}(undef, n)
+  s = 0.0
+  for i in 1:iterations
+    CppTestFunctions.fill_buffer(buf, n)
+    GC.gc()
+  end
+  return s
+end
+
+runfill(2^25, 5)
+
 # Run timing tests
 println("---- Half test timings ----")
 println("Julia test:")

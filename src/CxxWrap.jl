@@ -666,7 +666,8 @@ cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x, ::Type{IsNormalType}) where {T} = 
 cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x::Base.RefValue, ::Type{IsNormalType}) where {T} = x
 cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x::Ptr{T}, ::Type{IsNormalType}) where {T} = to_type(x)
 cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x::Ptr{Cvoid}, ::Type{IsNormalType}) where {T} = to_type(x)
-cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x::Union{Array,String}, ::Type{IsNormalType}) where {T} = to_type(pointer(x))
+cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x::Union{Array,String}, ::Type{IsNormalType}) where {T} = x
+Base.unsafe_convert(to_type::Type{<:CxxBaseRef{T}}, x::Union{Array,String}) where {T} = to_type(pointer(x))
 function cxxconvert(to_type::Type{<:CxxBaseRef{T}}, x, ::Type{IsCxxType}) where {T}
   return convert(T,x)
 end
